@@ -43,26 +43,16 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 	thirdPersonMeshComponent->SetRelativeLocationAndRotation(FVector(0, 0, -90), FRotator(0, -90, 0));
 	thirdPersonMeshComponent->SetOwnerNoSee(true);
 
-	// rotation Axis setting
+	// 초기 시점은 1인칭 시점으로 설정
+	Viewpoint = ECharacterViewpoint::FirstPerson;
+
+	// Rotation Axis setting
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
 	bUseControllerRotationRoll = false;
 
-	Viewpoint = ECharacterViewpoint::FirstPerson;
-
-#pragma region First Person Viewpoint Settings
-
-	// 3인칭 시점 카메라 비활성화
-	ThirdPersonCameraComponent->SetActive(false);
-
-	// 이동 방향으로 캐릭터 회전 옵션 활성화
+	// 이동 방향으로 캐릭터 회전 옵션 비활성화
 	GetCharacterMovement()->bOrientRotationToMovement = false;
-
-	// SkeletalMeshComponent 설정
-	GetMesh()->SetOwnerNoSee(true);	// 3인칭 캐릭터가 보이도록 설정
-	FirstPersonMeshComponent->SetOnlyOwnerSee(true);	// 1인칭 캐릭터가 보이지 않도록 설정
-
-#pragma endregion
 }
 
 // Called when the game starts or when spawned
@@ -70,19 +60,26 @@ void ALA_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 	
-	if (APlayerController* playerController = CastChecked<APlayerController>(Controller))
+	// InputMappingContext 적용
+	if (Controller != nullptr)
 	{
-		if (ULocalPlayer* localPlayer = playerController->GetLocalPlayer())
+		if (APlayerController* playerController = CastChecked<APlayerController>(Controller))
 		{
-			if (UEnhancedInputLocalPlayerSubsystem* subSystem = localPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
+			if (ULocalPlayer* localPlayer = playerController->GetLocalPlayer())
 			{
-				if (MappingContext != nullptr)
+				if (UEnhancedInputLocalPlayerSubsystem* subSystem = localPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
 				{
-					subSystem->AddMappingContext(MappingContext, 0);
+					if (MappingContext != nullptr)
+					{
+						subSystem->AddMappingContext(MappingContext, 0);
+					}
 				}
 			}
 		}
 	}
+
+	// 캐릭터 시점 설정 적용
+	SetCharacterViewPoint(Viewpoint);
 }
 
 // Called every frame
@@ -156,6 +153,18 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		if (ChangeViewpointInputAction != nullptr)
 		{
 			enhancedInputComponent->BindAction(ChangeViewpointInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::ChangeViewpointAction);
+		}
+		// sprint
+		if (SprintInputAction != nullptr)
+		{
+			enhancedInputComponent->BindAction(SprintInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SprintStartedAction);
+			enhancedInputComponent->BindAction(SprintInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::SprintCompletedAction);
+		}
+		// crouch
+		if (CrouchInputAction != nullptr)
+		{
+			enhancedInputComponent->BindAction(CrouchInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CrouchStartedAction);
+			enhancedInputComponent->BindAction(CrouchInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CrouchCompletedAction);
 		}
 	}
 }
@@ -231,6 +240,7 @@ void ALA_PlayerCharacter::MoveAction(const FInputActionValue& value)
 
 		// 이동 입력 대입
 		AddMovementInput(Direction);
+		return;
 	}
 }
 
@@ -271,6 +281,96 @@ void ALA_PlayerCharacter::ChangeViewpointAction(const FInputActionValue& value)
 	}
 }
 
+void ALA_PlayerCharacter::SprintStartedAction()
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+	
+	// 현재 걷기 상태에서 키 입력 시 달리기
+	// 현재 달리기 상태에서 키 입력 시 걷기
+	if (SprintInputMode == EMovementInputMode::Toggle)
+	{
+		// 현재 달리기 상태의 반대 값 적용
+		SetSprintState(!bIsSprint);
+		return;
+	}
+
+	// 현재 상태와 관계없이 즉시 달리기 상태로 변경
+	if (SprintInputMode == EMovementInputMode::Hold)
+	{
+		SetSprintState(true);
+		return;
+	}
+}
+
+void ALA_PlayerCharacter::SprintCompletedAction()
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// Hold 옵션인 경우에만 동작
+	if (SprintInputMode == EMovementInputMode::Hold)
+	{
+		// 웅크린 상태가 아니면 걷기 상태로 변경
+		if (IsCrouched() == false)
+		{
+			SetSprintState(false);
+		}
+	}
+}
+
+void ALA_PlayerCharacter::CrouchStartedAction()
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// 토글 옵션인 경우
+	if (CrouchInputMode == EMovementInputMode::Toggle && IsCrouched() == true)
+	{
+		// 앉기 상태 해제
+		UnCrouch();
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("일어서기"));
+		return;
+	}
+	
+	// 앉을 수 있는지 확인
+	if (CanCrouch() == true)
+	{
+		// 달리기 상태인 경우 달리기 해제
+		if (bIsSprint == true)
+		{
+			SetSprintState(false);
+		}
+
+		// 앉기 실행
+		Crouch();
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("웅크리기"));
+	}
+}
+
+void ALA_PlayerCharacter::CrouchCompletedAction()
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// Hold 옵션인 경우
+	if (CrouchInputMode == EMovementInputMode::Hold && IsCrouched() == true)
+	{
+		// 앉기 상태 해제
+		UnCrouch();
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("일어서기"));
+		return;
+	}
+}
+
 float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (ULA_HealthComponent* HealthComponent = FindComponentByClass<ULA_HealthComponent>())
@@ -282,3 +382,42 @@ float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEv
 	return Damage;
 }
 
+void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
+{
+	if (bIsSprint == bNewSprint)
+	{
+		return;
+	}
+	bIsSprint = bNewSprint;
+
+	// 웅크린 상태인 경우 웅크리기 해제
+	if (IsCrouched() == true)
+	{
+		UnCrouch();
+	}
+
+	if (bIsSprint == true)
+	{
+		// 이동 속도 변경 (27 km/s)
+		GetCharacterMovement()->MaxWalkSpeed = 750;
+
+		// 카메라의 FOV 값 변경
+		FirstPersonCameraComponent->FieldOfView = 103;
+		ThirdPersonCameraComponent->FieldOfView = 103;
+
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("달리기 시작"));
+		return;
+	}
+	else
+	{
+		// 이동 속도 변경 (5.4 km/s)
+		GetCharacterMovement()->MaxWalkSpeed = 150;
+
+		// 카메라의 FOV 값 변경
+		FirstPersonCameraComponent->FieldOfView = 90;
+		ThirdPersonCameraComponent->FieldOfView = 90;
+
+		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("달리기 종료"));
+		return;
+	}
+}
