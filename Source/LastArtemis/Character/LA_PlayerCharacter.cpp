@@ -220,6 +220,87 @@ void ALA_PlayerCharacter::SetCharacterViewPoint(ECharacterViewpoint NewViewpoint
 	}
 }
 
+void ALA_PlayerCharacter::AttachActorMeshes_Implementation(AActor* HoldActor, UMeshComponent* FirstPersonMesh, UMeshComponent* ThirdPersonMesh)
+{
+	// 캐릭터 메쉬의 소켓에 객체의 MeshComponent를 부착
+	// UE_5.7.4의 기본 캐릭터(Manny_Simple) 기준 오른쪽 손에 부착하는 코드
+	FirstPersonMesh->SetupAttachment(FirstPersonMeshComponent, FName("HandGrip_R"));
+	ThirdPersonMesh->SetupAttachment(ThirdPersonCameraComponent, FName("HandGrip_R"));
+
+	// 메쉬의 상대 위치 및 회전 초기화
+	FirstPersonMesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+	ThirdPersonMesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
+
+	// 캐릭터 메쉬의 AnimInstace 교체
+	//FirstPersonMeshComponent->GetAnimInstance()
+	//GetMesh()->SetAnimInstanceClass()
+}
+
+void ALA_PlayerCharacter::PlayAnimMontage_Implementation(UAnimMontage* FirstPersonMontage, UAnimMontage* ThirdPersonMontage)
+{
+	if (FirstPersonMontage != nullptr)
+	{
+		if (UAnimInstance* AnimInstance1P = FirstPersonMeshComponent->GetAnimInstance())
+		{
+			AnimInstance1P->Montage_Play(FirstPersonMontage);
+		}
+	}
+	if (ThirdPersonMontage != nullptr)
+	{
+		if (UAnimInstance* AnimInstance3P = GetMesh()->GetAnimInstance())
+		{
+			AnimInstance3P->Montage_Play(ThirdPersonMontage);
+		}
+	}
+}
+
+void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(AActor* HoldActor)
+{
+}
+
+FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
+{
+	// 바라보는 방향 구하기
+	FVector Direction;
+	FVector StartLocation;
+	if (Viewpoint == ECharacterViewpoint::FirstPerson)
+	{
+		Direction = FirstPersonCameraComponent->GetForwardVector();
+		StartLocation = FirstPersonCameraComponent->GetComponentLocation();
+	}
+	else
+	{
+		Direction = ThirdPersonCameraComponent->GetForwardVector();;
+		StartLocation = ThirdPersonCameraComponent->GetComponentLocation();
+	}
+
+	// LineTrace 실행
+	FHitResult hitResult;
+	FVector EndLocation = StartLocation + 10000 * Direction;	// 100 m 검사
+	FCollisionQueryParams queryParams;
+	queryParams.AddIgnoredActor(this);
+
+	GetWorld()->LineTraceSingleByChannel(hitResult, StartLocation, EndLocation, ECC_Visibility, queryParams);
+
+	if (hitResult.bBlockingHit == true)
+	{
+		return hitResult.ImpactPoint;
+	}
+	return hitResult.TraceEnd;
+}
+
+void ALA_PlayerCharacter::ActivateActor_Implementation(AActor* HoldActor)
+{
+	// 캐릭터 메쉬의 AnimInstace 교체
+	//FirstPersonMeshComponent->GetAnimInstance()
+	//GetMesh()->SetAnimInstanceClass()
+}
+
+void ALA_PlayerCharacter::DeactivateActor_Implementation(AActor* HoldActor)
+{
+	return;
+}
+
 void ALA_PlayerCharacter::MoveAction(const FInputActionValue& value)
 {
 	// 컨트롤러 확인
@@ -315,7 +396,7 @@ void ALA_PlayerCharacter::SprintCompletedAction()
 	// Hold 옵션인 경우에만 동작
 	if (SprintInputMode == EMovementInputMode::Hold)
 	{
-		// 웅크린 상태가 아니면 걷기 상태로 변경
+		// 앉아있는 상태가 아니면 걷기 상태로 변경
 		if (IsCrouched() == false)
 		{
 			SetSprintState(false);
@@ -330,19 +411,18 @@ void ALA_PlayerCharacter::CrouchStartedAction()
 		return;
 	}
 
-	// 토글 옵션인 경우
+	// 토글 옵션이면서 앉아있는 상태의 경우
 	if (CrouchInputMode == EMovementInputMode::Toggle && IsCrouched() == true)
 	{
 		// 앉기 상태 해제
 		UnCrouch();
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("일어서기"));
 		return;
 	}
 	
 	// 앉을 수 있는지 확인
 	if (CanCrouch() == true)
 	{
-		// 달리기 상태인 경우 달리기 해제
+		// 달리기 상태인 경우 달리기 해제 (시야각 복원)
 		if (bIsSprint == true)
 		{
 			SetSprintState(false);
@@ -350,7 +430,6 @@ void ALA_PlayerCharacter::CrouchStartedAction()
 
 		// 앉기 실행
 		Crouch();
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("웅크리기"));
 	}
 }
 
@@ -361,12 +440,11 @@ void ALA_PlayerCharacter::CrouchCompletedAction()
 		return;
 	}
 
-	// Hold 옵션인 경우
+	// Hold 옵션이면서 앉아있는 상태의 경우
 	if (CrouchInputMode == EMovementInputMode::Hold && IsCrouched() == true)
 	{
 		// 앉기 상태 해제
 		UnCrouch();
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("일어서기"));
 		return;
 	}
 }
@@ -384,18 +462,20 @@ float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEv
 
 void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
 {
+	// 현재 상태와 동일한 경우 함수 조기 종료
 	if (bIsSprint == bNewSprint)
 	{
 		return;
 	}
 	bIsSprint = bNewSprint;
 
-	// 웅크린 상태인 경우 웅크리기 해제
+	// 달리기 시작 시 앉은 상태 해제
 	if (IsCrouched() == true)
 	{
 		UnCrouch();
 	}
 
+	// 달리기 상태로 변경
 	if (bIsSprint == true)
 	{
 		// 이동 속도 변경 (27 km/s)
@@ -404,20 +484,17 @@ void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
 		// 카메라의 FOV 값 변경
 		FirstPersonCameraComponent->FieldOfView = 103;
 		ThirdPersonCameraComponent->FieldOfView = 103;
-
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("달리기 시작"));
 		return;
 	}
+	// 걷기 상태로 변경
 	else
 	{
-		// 이동 속도 변경 (5.4 km/s)
-		GetCharacterMovement()->MaxWalkSpeed = 150;
+		// 이동 속도 변경 (10.8 km/s)
+		GetCharacterMovement()->MaxWalkSpeed = 300;
 
 		// 카메라의 FOV 값 변경
 		FirstPersonCameraComponent->FieldOfView = 90;
 		ThirdPersonCameraComponent->FieldOfView = 90;
-
-		GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Green, TEXT("달리기 종료"));
 		return;
 	}
 }
