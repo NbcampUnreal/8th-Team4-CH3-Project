@@ -3,6 +3,8 @@
 
 #include "LA_AIController_Ally.h"
 #include "LA_BaseCharacter.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/BehaviorTreeComponent.h""
 
 ALA_AIController_Ally::ALA_AIController_Ally():
 	SightConfig(nullptr)
@@ -39,7 +41,9 @@ void ALA_AIController_Ally::OntargetDetected(AActor* Actor, FAIStimulus Stimulus
 			// 적 감지했을 때
 			// 적이 사정거리 바깥에 있으면 이동
 			//
-
+            GetBlackboardComponent()->SetValueAsObject(
+                FName("TargetActor")
+            );
 		}
 	}
 }
