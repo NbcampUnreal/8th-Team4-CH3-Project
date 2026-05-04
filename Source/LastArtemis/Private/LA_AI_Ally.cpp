@@ -2,4 +2,25 @@
 
 
 #include "LA_AI_Ally.h"
+#include "BehaviorTree/BlackboardComponent.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
 
+ALA_AI_Ally::ALA_AI_Ally()
+{
+
+}
+
+void ALA_AI_Ally::Attack()
+{
+	
+}
+
+void ALA_AI_Ally::Heal()
+{
+
+}
+
+void ALA_AI_Ally::Decontaminate()
+{
+
+}

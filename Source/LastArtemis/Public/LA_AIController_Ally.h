@@ -13,4 +13,16 @@ class LASTARTEMIS_API ALA_AIController_Ally : public AAIController
 {
 	GENERATED_BODY()
 	
+public:
+	
+	ALA_AIController_Ally();
+
+	UPROPERTY(VisibleAnywhere)
+	UAISenseConfig_Sight* SightConfig;
+
+	UFUNCTION()
+	void OntargetDetected(AActor* Actor, FAIStimulus Stimulus);
+
+private:
+	virtual void BeginPlay() override;
 };
