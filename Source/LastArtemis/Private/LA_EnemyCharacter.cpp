@@ -1,7 +1,6 @@
 ﻿#include "LA_EnemyCharacter.h"
 
 #include "AI/LA_EnemyController.h"
-#include "Components/CapsuleComponent.h"
 #include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
@@ -9,26 +8,37 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
 	AIControllerClass = ALA_EnemyController::StaticClass();
 	AutoPossessAI = EAutoPossessAI::Spawned;
-	
+
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	MaxHealth = 80.0f;
 	CurrentHealth = MaxHealth;
-    
+
 	MaxShield = 30.0f;
 	CurrentShield = MaxShield;
 
 	AttackPower = 15.0f;
 	Defense = 3.0f;
+
+    FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
+    if (EnemyTag.IsValid())
+    {
+        GameplayTags.AddTag(EnemyTag);
+    }
+}
+
+void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
+{
+    TagContainer.AppendTags(GameplayTags);
 }
 
 void ALA_EnemyCharacter::TakeDamageCustom(float DamageAmount)
 {
-	
+
 	if (bIsDead) return;
-	
+
 	Super::TakeDamageCustom(DamageAmount);
-	
+
 	// 피격 애니메이션 재생
 	if (HitMontage)
 	{
@@ -39,10 +49,10 @@ void ALA_EnemyCharacter::TakeDamageCustom(float DamageAmount)
 void ALA_EnemyCharacter::Die()
 {
 	if (bIsDead) return;
-	
+
 	// 부모 클래스의 사망 로직(충돌 비활성화 등) 실행
 	Super::Die();
-	
+
 	// 사망 애니메이션 재생
 	if (DeathMontage)
 	{
@@ -54,13 +64,14 @@ void ALA_EnemyCharacter::Die()
 	{
 		GetCharacterMovement()->DisableMovement();
 	}
-	
+
 	SetLifeSpan(5.0f);
 }
+
 
 void ALA_EnemyCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 }
 
