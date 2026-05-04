@@ -1,12 +1,12 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LA_AIController_Ally.h"
+#include "LA_AllyAIController.h"
 #include "LA_BaseCharacter.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 
-ALA_AIController_Ally::ALA_AIController_Ally():
+ALA_AllyAIController::ALA_AllyAIController():
 	SightConfig(nullptr)
 {
 	UAIPerceptionComponent* NewPerception = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("PerceptionComponent"));
@@ -25,7 +25,7 @@ ALA_AIController_Ally::ALA_AIController_Ally():
 
 }
 
-void ALA_AIController_Ally::OntargetDetected(AActor* Actor, FAIStimulus Stimulus)
+void ALA_AllyAIController::OntargetDetected(AActor* Actor, FAIStimulus Stimulus)
 {
 
 	// 감지
@@ -40,18 +40,18 @@ void ALA_AIController_Ally::OntargetDetected(AActor* Actor, FAIStimulus Stimulus
 			
 			// 적 감지했을 때
 			// 적이 사정거리 바깥에 있으면 이동
-			//
+			
             GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), DetectedCharacter);
 		}
 	}
 }
 
 
-void ALA_AIController_Ally::BeginPlay()
+void ALA_AllyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
 	PerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(
-		this, &ALA_AIController_Ally::OntargetDetected
+		this, &ALA_AllyAIController::OntargetDetected
 	);
 }
