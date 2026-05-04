@@ -17,12 +17,13 @@ public:
 	
 	ALA_AllyAIController();
 
-	UPROPERTY(VisibleAnywhere)
-	UAISenseConfig_Sight* SightConfig;
-
-	UFUNCTION()
-	void OntargetDetected(AActor* Actor, FAIStimulus Stimulus);
-
 private:
 	virtual void BeginPlay() override;
+
+    UPROPERTY()
+    UAISenseConfig_Sight* SightConfig;
+
+    UFUNCTION(BlueprintCallable)
+    void OnTargetDetected(AActor* Actor, FAIStimulus Stimulus);
+    
 };
