@@ -15,44 +15,28 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+	
+	Camera = CreateDefaultSubobject<UCameraComponent>(FName("Camera"));
+	Camera->SetupAttachment(RootComponent);
+	Camera->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
 
-	// FirstPersonMeshComponent Settings
-	FirstPersonMeshComponent = CreateDefaultSubobject<USkeletalMeshComponent>(FName("FirstPersonMeshComponent"));
-	FirstPersonMeshComponent->SetupAttachment(GetMesh());
-	FirstPersonMeshComponent->SetOnlyOwnerSee(true);
+	USkeletalMeshComponent* SkeletalMesh = GetMesh();
+	SkeletalMesh->SetupAttachment(Camera);
+	SkeletalMesh->bCastDynamicShadow = false;
+	SkeletalMesh->SetCastShadow(false);
 
-	// FirstPersonCameraComponent Settings
-	FirstPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("FirstPersonCameraComponent"));
-	FirstPersonCameraComponent->SetupAttachment(FirstPersonMeshComponent);
-	FirstPersonCameraComponent->SetRelativeLocationAndRotation(FVector(0, 10, 90 + BaseEyeHeight), FRotator(0, 90, 0));
-	FirstPersonCameraComponent->bUsePawnControlRotation = true;
-
-	// SpringArmComponent Settings
-	SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(FName("SpringArmComponent"));
-	SpringArmComponent->SetupAttachment(RootComponent);
-	SpringArmComponent->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
-	SpringArmComponent->TargetArmLength = 400;
-	SpringArmComponent->bUsePawnControlRotation = true;
-
-	// ThirdPersonCameraComponent Settings
-	ThirdPersonCameraComponent = CreateDefaultSubobject<UCameraComponent>(FName("ThirdPersonCameraComponent"));
-	ThirdPersonCameraComponent->SetupAttachment(SpringArmComponent);
-
-	// Extra Settings
-	USkeletalMeshComponent* thirdPersonMeshComponent = GetMesh();
-	thirdPersonMeshComponent->SetRelativeLocationAndRotation(FVector(0, 0, -90), FRotator(0, -90, 0));
-	thirdPersonMeshComponent->SetOwnerNoSee(true);
-
-	// 초기 시점은 1인칭 시점으로 설정
-	Viewpoint = ECharacterViewpoint::FirstPerson;
+	// Mesh의 Relative Transform 조정
+	FRotator MeshRotator = FRotator(0, -90, 0);		// 회전
+	FVector MeshLocation = FVector(-11, 0, -21);	// 위치
+	FVector MeshScale = FVector(0.4, 0.4, 0.4);		// 크기
+	SkeletalMesh->SetRelativeTransform(FTransform(MeshRotator, MeshLocation, MeshScale));
 
 	// Rotation Axis setting
-	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = true;
-	bUseControllerRotationRoll = false;
+	Camera->bUsePawnControlRotation = true;
 
-	// 이동 방향으로 캐릭터 회전 옵션 비활성화
-	GetCharacterMovement()->bOrientRotationToMovement = false;
+	// 줌(조준) 시 사용될 카메라 컴포넌트 생성
+	AimCamera = CreateDefaultSubobject<UCameraComponent>(FName("AimCamera"));
 }
 
 // Called when the game starts or when spawned
@@ -63,7 +47,7 @@ void ALA_PlayerCharacter::BeginPlay()
 	// InputMappingContext 적용
 	if (Controller != nullptr)
 	{
-		if (APlayerController* playerController = CastChecked<APlayerController>(Controller))
+		if (APlayerController* playerController = Cast<APlayerController>(Controller))
 		{
 			if (ULocalPlayer* localPlayer = playerController->GetLocalPlayer())
 			{
@@ -78,8 +62,7 @@ void ALA_PlayerCharacter::BeginPlay()
 		}
 	}
 
-	// 캐릭터 시점 설정 적용
-	SetCharacterViewPoint(Viewpoint);
+	AimCamera->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("AimEyeSocket"));
 }
 
 // Called every frame
@@ -87,6 +70,13 @@ void ALA_PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+	if (bIsAimed == true)
+	{
+		Camera->SetWorldRotation(GetControlRotation());
+		FRotator AimCameraRotator = AimCamera->GetComponentRotation();
+		AimCameraRotator.Roll = 0;
+		AimCamera->SetWorldRotation(AimCameraRotator);
+	}
 }
 
 // Called to bind functionality to input
@@ -120,11 +110,6 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 	//		{
 	//			enhancedInputComponent->BindAction(playerController->LookInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::LookAction);
 	//		}
-	//		// change viewpoint
-	//		if (playerController->ChangeViewpointInputAction != nullptr)
-	//		{
-	//			enhancedInputComponent->BindAction(playerController->ChangeViewpointInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::ChangeViewpointAction);
-	//		}
 	//	}
 	//}
 
@@ -149,11 +134,6 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		{
 			enhancedInputComponent->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::LookAction);
 		}
-		// change viewpoint
-		if (ChangeViewpointInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(ChangeViewpointInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::ChangeViewpointAction);
-		}
 		// sprint
 		if (SprintInputAction != nullptr)
 		{
@@ -166,116 +146,74 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 			enhancedInputComponent->BindAction(CrouchInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CrouchStartedAction);
 			enhancedInputComponent->BindAction(CrouchInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CrouchCompletedAction);
 		}
-	}
-}
-
-void ALA_PlayerCharacter::SetCharacterViewPoint(ECharacterViewpoint NewViewpoint)
-{
-	// 기존 시점과 동일하게 설정하는 경우 함수 조기 종료
-	if (Viewpoint == NewViewpoint)
-	{
-		return;
-	}
-	Viewpoint = NewViewpoint;
-
-	// 1인칭 설정
-	if (Viewpoint == ECharacterViewpoint::FirstPerson)
-	{
-		// 컨트롤러의 회전 값을 액터의 현재 회전 값으로 적용
-		Controller->SetControlRotation(GetActorRotation());
-
-		// 1인칭 시점 카메라 활성화
-		FirstPersonCameraComponent->SetActive(true);
-		// 3인칭 시점 카메라 비활성화
-		ThirdPersonCameraComponent->SetActive(false);
-
-		// 컨트롤러의 Yaw 회전 입력이 액터에 적용되도록 설정
-		bUseControllerRotationYaw = true;
-
-		// 이동 방향으로 캐릭터 회전 옵션 비활성화
-		GetCharacterMovement()->bOrientRotationToMovement = false;
-
-		// SkeletalMeshComponent 설정
-		GetMesh()->SetOwnerNoSee(true);		// 3인칭 캐릭터가 보여지지 않도록 설정
-		FirstPersonMeshComponent->SetOnlyOwnerSee(true);	// 1인칭 캐릭터가 보여지도록 설정
-		return;
-	}
-	// 3인칭 설정
-	if (Viewpoint == ECharacterViewpoint::ThirdPerson)
-	{
-		// 3인칭 시점 카메라 활성화
-		ThirdPersonCameraComponent->SetActive(true);
-		// 1인칭 시점 카메라 비활성화
-		FirstPersonCameraComponent->SetActive(false);
-
-		// 컨트롤러의 Yaw 회전 입력이 액터에 적용되지 않도록 설정
-		bUseControllerRotationYaw = false;
-
-		// 이동 방향으로 캐릭터 회전 옵션 활성화
-		GetCharacterMovement()->bOrientRotationToMovement = true;
-
-		// SkeletalMeshComponent 설정
-		GetMesh()->SetOwnerNoSee(false);		// 3인칭 캐릭터가 보여지도록 설정
-		FirstPersonMeshComponent->SetOnlyOwnerSee(false);	// 1인칭 캐릭터가 보여지지 않도록 설정
-	}
-}
-
-void ALA_PlayerCharacter::AttachActorMeshes_Implementation(AActor* HoldActor, UMeshComponent* FirstPersonMesh, UMeshComponent* ThirdPersonMesh)
-{
-	// 캐릭터 메쉬의 소켓에 객체의 MeshComponent를 부착
-	// UE_5.7.4의 기본 캐릭터(Manny_Simple) 기준 오른쪽 손에 부착하는 코드
-	FirstPersonMesh->SetupAttachment(FirstPersonMeshComponent, FName("HandGrip_R"));
-	ThirdPersonMesh->SetupAttachment(ThirdPersonCameraComponent, FName("HandGrip_R"));
-
-	// 메쉬의 상대 위치 및 회전 초기화
-	FirstPersonMesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
-	ThirdPersonMesh->SetRelativeLocationAndRotation(FVector::ZeroVector, FRotator::ZeroRotator);
-
-	// 캐릭터 메쉬의 AnimInstace 교체
-	//FirstPersonMeshComponent->GetAnimInstance()
-	//GetMesh()->SetAnimInstanceClass()
-}
-
-void ALA_PlayerCharacter::PlayAnimMontage_Implementation(UAnimMontage* FirstPersonMontage, UAnimMontage* ThirdPersonMontage)
-{
-	if (FirstPersonMontage != nullptr)
-	{
-		if (UAnimInstance* AnimInstance1P = FirstPersonMeshComponent->GetAnimInstance())
+		if (FireInputAction != nullptr)
 		{
-			AnimInstance1P->Montage_Play(FirstPersonMontage);
+			enhancedInputComponent->BindAction(FireInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::FireStartedAction);
+			enhancedInputComponent->BindAction(FireInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::FireCompletedAction);
 		}
-	}
-	if (ThirdPersonMontage != nullptr)
-	{
-		if (UAnimInstance* AnimInstance3P = GetMesh()->GetAnimInstance())
+		if (AimingInputAction != nullptr)
 		{
-			AnimInstance3P->Montage_Play(ThirdPersonMontage);
+			enhancedInputComponent->BindAction(AimingInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::AimingStartedAction);
+			enhancedInputComponent->BindAction(AimingInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::AimingCompletedAction);
 		}
 	}
 }
 
-void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(AActor* HoldActor)
+void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& DesiredView)
 {
+	UCameraComponent* component = bIsAimed == true ? AimCamera : Camera;
+
+	if (component != nullptr)
+	{
+		component->GetCameraView(DeltaTime, DesiredView);
+		return;
+	}
+
+	Super::CalcCamera(DeltaTime, DesiredView);
 }
 
-FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
-{
-	// 바라보는 방향 구하기
-	FVector Direction;
-	FVector StartLocation;
-	if (Viewpoint == ECharacterViewpoint::FirstPerson)
-	{
-		Direction = FirstPersonCameraComponent->GetForwardVector();
-		StartLocation = FirstPersonCameraComponent->GetComponentLocation();
-	}
-	else
-	{
-		Direction = ThirdPersonCameraComponent->GetForwardVector();;
-		StartLocation = ThirdPersonCameraComponent->GetComponentLocation();
-	}
+//void ALA_PlayerCharacter::AttachActorMeshes_Implementation(AActor* HoldActor, UMeshComponent* FirstPersonMesh, UMeshComponent* ThirdPersonMesh)
+//{
+//	// 캐릭터의 Mesh 교체
+//	if (FirstPersonMesh != nullptr)
+//	{
+//		if (USkeletalMesh* SkeletalMesh1P = CastChecked<USkeletalMesh>(FirstPersonMesh))
+//		{
+//			// 캐릭터의 AnimInstance 초기화
+//			if (GetMesh()->GetAnimInstance() != nullptr)
+//			{
+//				GetMesh()->ClearAnimScriptInstance();
+//			}
+//			// 캐릭터의 Mesh 변경
+//			GetMesh()->SetSkeletalMesh(SkeletalMesh1P);
+//		}
+//	}
+//	
+//	// 캐릭터의 AnimInstance 교체
+//}
+//
+//void ALA_PlayerCharacter::PlayAnimMontage_Implementation(UAnimMontage* FirstPersonMontage, UAnimMontage* ThirdPersonMontage)
+//{
+//	// 몽타주 재생
+//	if (FirstPersonMontage != nullptr)
+//	{
+//		if (UAnimInstance* AnimInstance1P = GetMesh()->GetAnimInstance())
+//		{
+//			AnimInstance1P->Montage_Play(FirstPersonMontage);
+//		}
+//	}
+//}
+//
+//void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(AActor* HoldActor)
+//{
+//}
 
+FVector ALA_PlayerCharacter::GetFocusLocation()
+{
 	// LineTrace 실행
 	FHitResult hitResult;
+	FVector StartLocation = bIsAimed == true ? AimCamera->GetComponentLocation() : Camera->GetComponentLocation();
+	FVector Direction = bIsAimed == true ? AimCamera->GetForwardVector() : Camera->GetForwardVector();
 	FVector EndLocation = StartLocation + 10000 * Direction;	// 100 m 검사
 	FCollisionQueryParams queryParams;
 	queryParams.AddIgnoredActor(this);
@@ -289,17 +227,17 @@ FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
 	return hitResult.TraceEnd;
 }
 
-void ALA_PlayerCharacter::ActivateActor_Implementation(AActor* HoldActor)
-{
-	// 캐릭터 메쉬의 AnimInstace 교체
-	//FirstPersonMeshComponent->GetAnimInstance()
-	//GetMesh()->SetAnimInstanceClass()
-}
-
-void ALA_PlayerCharacter::DeactivateActor_Implementation(AActor* HoldActor)
-{
-	return;
-}
+//void ALA_PlayerCharacter::ActivateActor_Implementation(AActor* HoldActor)
+//{ 
+//	// 캐릭터의 Mesh 교체
+//
+//	// 캐릭터 Mesh의 AnimInstance 교체
+//}
+//
+//void ALA_PlayerCharacter::DeactivateActor_Implementation(AActor* HoldActor)
+//{
+//	return;
+//}
 
 void ALA_PlayerCharacter::MoveAction(const FInputActionValue& value)
 {
@@ -340,25 +278,6 @@ void ALA_PlayerCharacter::LookAction(const FInputActionValue& value)
 		// Yaw, Pitch 회전값 적용
 		AddControllerYawInput(InputVector.X);
 		AddControllerPitchInput(InputVector.Y);
-	}
-}
-
-void ALA_PlayerCharacter::ChangeViewpointAction(const FInputActionValue& value)
-{
-	// 컨트롤러 확인
-	if (Controller == nullptr)
-	{
-		return;
-	}
-
-	// 현재 시점과 다른 시점으로 변경
-	if (Viewpoint == ECharacterViewpoint::FirstPerson)
-	{
-		SetCharacterViewPoint(ECharacterViewpoint::ThirdPerson);
-	}
-	else
-	{
-		SetCharacterViewPoint(ECharacterViewpoint::FirstPerson);
 	}
 }
 
@@ -449,6 +368,52 @@ void ALA_PlayerCharacter::CrouchCompletedAction()
 	}
 }
 
+void ALA_PlayerCharacter::AimingStartedAction()
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// 토글 옵션이면서 조준 상태인 경우
+	if (CrouchInputMode == EMovementInputMode::Toggle)
+	{
+		// 조준 상태 반전
+		bIsAimed = !bIsAimed;
+		return;
+	}
+
+	// 조준 상태로 설정
+	bIsAimed = true;
+}
+
+void ALA_PlayerCharacter::AimingCompletedAction()
+{
+	if (Controller == nullptr)
+	{
+		return;
+	}
+
+	// Hold 옵션이면서 앉아있는 상태의 경우
+	if (CrouchInputMode == EMovementInputMode::Hold && bIsAimed == true)
+	{
+		// 비조준 상태로 설정
+		bIsAimed = false;
+		return;
+	}
+}
+
+void ALA_PlayerCharacter::FireStartedAction()
+{
+	bIsFired = true;
+	OnBeginShot();
+}
+
+void ALA_PlayerCharacter::FireCompletedAction()
+{
+	bIsFired = false;
+}
+
 float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
 	if (ULA_HealthComponent* HealthComponent = FindComponentByClass<ULA_HealthComponent>())
@@ -482,8 +447,7 @@ void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
 		GetCharacterMovement()->MaxWalkSpeed = 750;
 
 		// 카메라의 FOV 값 변경
-		FirstPersonCameraComponent->FieldOfView = 103;
-		ThirdPersonCameraComponent->FieldOfView = 103;
+		Camera->FieldOfView = 103;
 		return;
 	}
 	// 걷기 상태로 변경
@@ -493,8 +457,32 @@ void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
 		GetCharacterMovement()->MaxWalkSpeed = 300;
 
 		// 카메라의 FOV 값 변경
-		FirstPersonCameraComponent->FieldOfView = 90;
-		ThirdPersonCameraComponent->FieldOfView = 90;
+		Camera->FieldOfView = 90;
 		return;
+	}
+}
+
+void ALA_PlayerCharacter::OnBeginShot()
+{
+	// 사격 입력이 들어오지 않고있거나 장전 중일 때 사격 불가
+	if (bIsFired == false || bIsReloading == true)
+	{
+		return;
+	}
+	
+	bIsReloading = true;
+	FVector startLocation = GetMesh()->GetSocketLocation(FName("Muzzle"));
+	FVector endLocation = GetFocusLocation();
+	DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 3.f, 0, 1);
+
+	PlayAnimMontage(TestMontage, 1, FName("Defualt"));
+}
+
+void ALA_PlayerCharacter::OnEndShot()
+{
+	bIsReloading = false;
+	if (bIsAuto == true)
+	{
+		OnBeginShot();
 	}
 }
