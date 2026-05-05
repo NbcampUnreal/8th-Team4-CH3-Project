@@ -1,17 +1,17 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "LA_BaseCharacter.h"
-#include "LA_AI_Ally.generated.h"
+#include "LA_AllyAI.generated.h"
 
 UCLASS()
-class LASTARTEMIS_API ALA_AI_Ally : public ALA_BaseCharacter
+class LASTARTEMIS_API ALA_AllyAI : public ALA_BaseCharacter
 {
 	GENERATED_BODY()
 	
 public:
 
-	ALA_AI_Ally();
+    ALA_AllyAI();
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
 	float AttackRange;

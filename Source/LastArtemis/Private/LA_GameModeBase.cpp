@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "LA_GameModeBase.h"
@@ -31,9 +31,9 @@ void ALA_GameModeBase::StartNewGame()
 		GameState->SetGameFlowState(ELA_GameFlowState::Playing);
 		UGameplayStatics::SetGamePaused(GetWorld(), false);
 
-		// HUD Ç¥½Ã
-		// ÀÔ·Â ¸ğµå¸¦ Game Only·Î º¯°æ
-		// ¿şÀÌºê ½ÃÀÛ
+		// HUD í‘œì‹œ
+		// ì…ë ¥ ëª¨ë“œë¥¼ Game Onlyë¡œ ë³€ê²½
+		// ì›¨ì´ë¸Œ ì‹œì‘
 	}
 }
 
@@ -59,8 +59,8 @@ void ALA_GameModeBase::PauseGame()
 		GameState->SetGameFlowState(ELA_GameFlowState::Paused);
 		UGameplayStatics::SetGamePaused(GetWorld(), true);
 
-		// ÀÏ½Ã Á¤Áö UI
-		// ÀÔ·Â ¸ğµå UI Only·Î º¯°æ
+		// ì¼ì‹œ ì •ì§€ UI
+		// ì…ë ¥ ëª¨ë“œ UI Onlyë¡œ ë³€ê²½
 	}
 }
 
@@ -71,8 +71,8 @@ void ALA_GameModeBase::ResumeGame()
 		GameState->SetGameFlowState(ELA_GameFlowState::Playing);
 		UGameplayStatics::SetGamePaused(GetWorld(), false);
 
-		// ÀÏ½Ã Á¤Áö UI ´İ±â
-		// ÀÔ·Â ¸ğµå Game Only·Î º¯°æ
+		// ì¼ì‹œ ì •ì§€ UI ë‹«ê¸°
+		// ì…ë ¥ ëª¨ë“œ Game Onlyë¡œ ë³€ê²½
 	}
 }
 
@@ -83,7 +83,7 @@ void ALA_GameModeBase::OnGameOver()
 		GameState->SetGameFlowState(ELA_GameFlowState::GameOver);
 		UGameplayStatics::SetGamePaused(GetWorld(), true);
 
-		// °ÔÀÓ ¿À¹ö UI
+		// ê²Œì„ ì˜¤ë²„ UI
 	}
 }
 
@@ -94,7 +94,7 @@ void ALA_GameModeBase::OnGameClear()
 		GameState->SetGameFlowState(ELA_GameFlowState::GameClear);
 		UGameplayStatics::SetGamePaused(GetWorld(), true);
 
-		// °ÔÀÓ Å¬¸®¾î UI
+		// ê²Œì„ í´ë¦¬ì–´ UI
 	}
 }
 
