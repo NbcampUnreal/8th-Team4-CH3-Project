@@ -40,12 +40,12 @@ void ALA_AllyAIController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
     {
         if (ALA_BaseCharacter* DetectedCharacter = Cast<ALA_BaseCharacter>(Actor))
         {
-            /*if (DetectedCharacter->HasMatchingGameplayTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")))) {
+            if (DetectedCharacter->CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")))) {
                 return;
-            }*/
+            }
 
 
-            //GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), DetectedCharacter);
+            GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), DetectedCharacter);
         }
     }
 

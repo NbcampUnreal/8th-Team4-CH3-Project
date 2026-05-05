@@ -70,8 +70,7 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnDeathDelegate OnDeath;
 
-    // Todo: EnemyCharacter에서 GameplayTag 지우고 아래 코드 활성화
-    // UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
-    // FGameplayTagContainer GameplayTags;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
+    FGameplayTagContainer CharacterTags;
 
 };
