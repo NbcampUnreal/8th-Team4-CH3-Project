@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "GameplayTagContainer.h"
 #include "LA_BaseCharacter.generated.h"
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedDelegate, float, NewHealth);
@@ -11,62 +12,65 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
 UCLASS()
 class LASTARTEMIS_API ALA_BaseCharacter : public ACharacter
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
+
 protected:
-	virtual void BeginPlay() override;
-	
+    virtual void BeginPlay() override;
+
 public:
-	ALA_BaseCharacter();
+    ALA_BaseCharacter();
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float MaxHealth;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float MaxHealth;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	float CurrentHealth;
-	
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float MaxShield;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+    float CurrentHealth;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
-	float CurrentShield;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float MaxShield;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float AttackPower;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+    float CurrentShield;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-	float Defense;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float AttackPower;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
-	bool bIsDead;
-	
-	/*
-	UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-	TSubclassOf<class ALA_Weapon> DefaultWeaponClass;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float Defense;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-	class ALA_Weapon* CurrentWeapon; */
-	
-	// --- 기본 함수 ---
-	UFUNCTION(BlueprintCallable, Category = "Health")
-	virtual void TakeDamageCustom(float DamageAmount);
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
+    bool bIsDead;
 
-	UFUNCTION(BlueprintCallable, Category = "Health")
-	virtual void Die();
-	
-	/*UFUNCTION(BlueprintCallable, Category = "Weapon")
-	virtual void EquipWeapon(TSubclassOf<ALA_Weapon> WeaponClass);
+    /*
+    UPROPERTY(EditDefaultsOnly, Category = "Weapon")
+    TSubclassOf<class ALA_Weapon> DefaultWeaponClass;
 
-	UFUNCTION(BlueprintCallable, Category = "Stats")
-	virtual float GetAttackPower() const; */
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
+    class ALA_Weapon* CurrentWeapon; */
 
-	UPROPERTY(BlueprintAssignable, Category = "Events")
-	FOnHealthChangedDelegate OnHealthChanged;
+    // --- 기본 함수 ---
+    UFUNCTION(BlueprintCallable, Category = "Health")
+    virtual void TakeDamageCustom(float DamageAmount);
 
-	UPROPERTY(BlueprintAssignable, Category = "Events")
-	FOnShieldChangedDelegate OnShieldChanged;
+    UFUNCTION(BlueprintCallable, Category = "Health")
+    virtual void Die();
 
-	UPROPERTY(BlueprintAssignable, Category = "Events")
-	FOnDeathDelegate OnDeath;;
-	
+    /*UFUNCTION(BlueprintCallable, Category = "Weapon")
+    virtual void EquipWeapon(TSubclassOf<ALA_Weapon> WeaponClass);
+
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    virtual float GetAttackPower() const; */
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnHealthChangedDelegate OnHealthChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnShieldChangedDelegate OnShieldChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnDeathDelegate OnDeath;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
+    FGameplayTagContainer CharacterTags;
+
 };
