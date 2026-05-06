@@ -1,9 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "LA_GameType.h"
+#include "LA_GameStateBase.h"
 #include "LA_GameModeBase.generated.h"
 
 
@@ -16,29 +18,49 @@ public:
 	ALA_GameModeBase();
 
 protected:
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
-	// ¸ŞÀÎ ¸Ş´º
-	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void StartNewGame();		// »õ °ÔÀÓ ½ÃÀÛ
-	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void LoadSaveGame();		// ÀúÀåµÈ °ÔÀÓ ºÒ·¯¿À±â
+public:
+	// ë©”ì¸ ë©”ë‰´
+	UFUNCTION(BlueprintCallable, Category = "Main Menu")
+	void StartNewGame();		// ìƒˆ ê²Œì„ ì‹œì‘
+	UFUNCTION(BlueprintCallable, Category = "Main Menu")
+	void LoadSaveGame();		// ì €ì¥ëœ ê²Œì„ ë¶ˆëŸ¬ì˜¤ê¸°
 
-	// Wave ½ÃÀÛ / Á¾·á
-	UFUNCTION(BlueprintCallable, Category = "Wave")
-	void StartWave(int32 WaveIndex);	// WaveIndex ¿şÀÌºê ½ÃÀÛ
-	UFUNCTION(BlueprintCallable, Category = "Wave")
-	void EndWave();						// ¿şÀÌºê Á¾·á
+    // ë¯¸ì…˜ ì„ íƒ
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void SelectMission();
 
-	// ÀÏ½Ã Á¤Áö
-	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void PauseGame();		// °ÔÀÓ ÀÏ½Ã Á¤Áö
-	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void ResumeGame();		// °ÔÀÓ Àç°³
+    // Phase ì§„í–‰
+    UFUNCTION(BlueprintCallable, Category = "Phase")
+    void CompleteCurrentPhase();
 
-	// °ÔÀÓ Á¾·á / Å¬¸®¾î
+    UFUNCTION(BlueprintCallable, Category = "Phase")
+    void AdvanceToNextPhase();
+
+	// ì¼ì‹œ ì •ì§€
+	UFUNCTION(BlueprintCallable, Category = "Paused")
+	void PauseGame();		// ê²Œì„ ì¼ì‹œ ì •ì§€
+	UFUNCTION(BlueprintCallable, Category = "Paused")
+	void ResumeGame();		// ê²Œì„ ì¬ê°œ
+
+	// ê²Œì„ ì¢…ë£Œ / í´ë¦¬ì–´
 	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void OnGameOver();		// °ÔÀÓ Á¾·á
+	void OnGameOver();		// ê²Œì„ ì¢…ë£Œ
 	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void OnGameClear();		// °ÔÀÓ Å¬¸®¾î
+	void OnGameClear();		// ê²Œì„ í´ë¦¬ì–´
+
+protected:
+    void StartPhase(int32 PhaseIndex);
+
+    void StartCombatPhase(const FLA_PhaseData& PhaseData);
+    void StartRestPhase(const FLA_PhaseData& PhaseData);
+    void StartBossPhase(const FLA_PhaseData& PhaseData);
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission|Invasion")
+    TArray<FLA_PhaseData> InvasionPhaseList;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
+    bool bCurrentPhaseCompleted = false;
 };

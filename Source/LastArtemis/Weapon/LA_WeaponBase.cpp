@@ -30,18 +30,14 @@ void ALA_WeaponBase::BeginPlay()
 
 void ALA_WeaponBase::StartFire()
 {
-	if (bCanFire)
-	{
-		bCanFire = false;
-		FTimerDelegate ResetFire;
-		ResetFire.BindLambda([this]()
-		{
-			bCanFire = true;
-		});
+	if (!bCanFire) return;
 
-		Fire();
-		GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, ResetFire, FireRate, false);
-	}
+	bCanFire = false;
+	FTimerDelegate ResetFire;
+	ResetFire.BindLambda([this](){ bCanFire = true; });
+
+	Fire();
+	GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, ResetFire, FireRate, false);
 }
 
 void ALA_WeaponBase::StopFire()
