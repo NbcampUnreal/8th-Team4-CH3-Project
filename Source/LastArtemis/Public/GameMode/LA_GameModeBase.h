@@ -5,11 +5,13 @@
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
 #include "UI/LA_GameType.h"
-#include "GameMode/LA_GameStateBase.h"
 #include "LA_GameModeBase.generated.h"
 
+class ALA_GameStateBase;
+class ULA_MissionDataAsset;
+class ULA_MissionLogic;
 
-UCLASS()
+UCLASS(Blueprintable)
 class LASTARTEMIS_API ALA_GameModeBase : public AGameModeBase
 {
 	GENERATED_BODY()
@@ -21,46 +23,56 @@ protected:
     virtual void BeginPlay() override;
 
 public:
-	// 메인 메뉴
-	UFUNCTION(BlueprintCallable, Category = "Main Menu")
-	void StartNewGame();		// 새 게임 시작
-	UFUNCTION(BlueprintCallable, Category = "Main Menu")
-	void LoadSaveGame();		// 저장된 게임 불러오기
+    ALA_GameStateBase* GetLAGameState() const;
 
-    // 미션 선택
+    ////////////////////////
+    /// 게음 흐름 제어
+    ////////////////////////
+    // 새 게임 시작
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void StartNewGame();
+
+    // 일시 정지 (UI로 조작 가능)
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void PauseGame();
+
+    // 일시정지 된 게임 재개
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void ResumeGame();
+
+    // 게임 오버 조건 충족 시 호출
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void OnGameOver();
+
+    // 게임 클리어 시 호출
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void OnGameClear();
+
+
+    ////////////////////////
+    /// 미션 진행 제어
+    ////////////////////////
+    
+    // 현재 미션 데이터(MissionDataAsset)을 바탕으로 Phase 시작
     UFUNCTION(BlueprintCallable, Category = "Mission")
-    void SelectMission();
+    void StartMission();
 
-    // Phase 진행
-    UFUNCTION(BlueprintCallable, Category = "Phase")
+    // 현재 Phase의 목표 진행도 증가
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void AddObjectiveProgress(int32 AddCount);
+    // 현재 Phase의 목표 완료
+    UFUNCTION(BlueprintCallable, Category = "Mission")
     void CompleteCurrentPhase();
-
-    UFUNCTION(BlueprintCallable, Category = "Phase")
+    // 다음 Phase 진행
+    UFUNCTION(BlueprintCallable, Category = "Mission")
     void AdvanceToNextPhase();
 
-	// 일시 정지
-	UFUNCTION(BlueprintCallable, Category = "Paused")
-	void PauseGame();		// 게임 일시 정지
-	UFUNCTION(BlueprintCallable, Category = "Paused")
-	void ResumeGame();		// 게임 재개
-
-	// 게임 종료 / 클리어
-	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void OnGameOver();		// 게임 종료
-	UFUNCTION(BlueprintCallable, Category = "Game Flow")
-	void OnGameClear();		// 게임 클리어
-
 protected:
-    void StartPhase(int32 PhaseIndex);
+    // Mission Data Asset 할당
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mission")
+    TObjectPtr<ULA_MissionDataAsset> MissionDataAsset;
 
-    void StartCombatPhase(const FLA_PhaseData& PhaseData);
-    void StartRestPhase(const FLA_PhaseData& PhaseData);
-    void StartBossPhase(const FLA_PhaseData& PhaseData);
-
-protected:
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission|Invasion")
-    TArray<FLA_PhaseData> InvasionPhaseList;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
-    bool bCurrentPhaseCompleted = false;
+    // 게임 시작 시 할당된 MissionDataAsset을 기반으로 Mission Logic 진행
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission")
+    TObjectPtr<ULA_MissionLogic> CurrentMissionLogic;
 };
