@@ -8,19 +8,10 @@
 #include "LA_PlayerCharacter.generated.h"
 
 class UCameraComponent;
-class USpringArmComponent;
 class UInputMappingContext;
 class UInputAction;
 
 struct FInputActionValue;
-
-// 플레이어 캐릭터를 바라보는 시점을 나타내는 열거형
-UENUM()
-enum class ECharacterViewpoint : uint8
-{
-	FirstPerson UMETA(DisplayName = "First Person View"),
-	ThirdPerson UMETA(DisplayName = "Third Person View")
-};
 
 // 달리기, 앉기 키 입력 방식에 대한 옵션을 나타내는 열거형
 UENUM()
@@ -33,7 +24,7 @@ enum class EMovementInputMode : uint8
 * (Apex Legend) 스타일의 달리기 지정
 */
 UCLASS()
-class LASTARTEMIS_API ALA_PlayerCharacter : public ACharacter
+class LASTARTEMIS_API ALA_PlayerCharacter : public ACharacter, public ILA_Holder
 {
 	GENERATED_BODY()
 
@@ -52,20 +43,36 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
-	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& DesiredView) override;
+    // Get Actors Viewport
+    virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
 
 public:
+#pragma region General Settings
+
+    // 달리기 키 입력에 대한 처리 방식을 결정하는 변수
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    EMovementInputMode SprintInputMode = EMovementInputMode::Toggle;
+
+    // 앉기 키 입력에 대한 처리 방식을 결정하는 변수
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    EMovementInputMode CrouchInputMode = EMovementInputMode::Toggle;
+
+    // 조준 키 입력에 대한 처리 방식을 결정하는 변수
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    EMovementInputMode AimInputMode = EMovementInputMode::Toggle;
+
+#pragma endregion
 
 protected:
 #pragma region Components
 
-	// 캐릭터 기본 시야 카메라
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
-	TObjectPtr<UCameraComponent> Camera;
+	// 캐릭터 테스트 용도 카메라 사용 여부
+	UPROPERTY(EditAnywhere, Category = "0_Debug", meta = (AllowPrivateAccess = true))
+	bool bDebugCamera;
 
-	// 줌(조준) 시 사용되는 카메라
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
-	TObjectPtr<UCameraComponent> AimCamera;
+	// 캐릭터 테스트 용도 카메라
+	UPROPERTY(EditAnywhere, Category = "0_Debug", meta = (AllowPrivateAccess = true))
+	TObjectPtr<UCameraComponent> TestCamera;
 
 #pragma endregion
 
@@ -102,93 +109,60 @@ protected:
 
 	// Zoom InputAction
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> AimingInputAction;
+	TObjectPtr<UInputAction> AimInputAction;
 
 #pragma endregion
 
 #pragma region General Settings
 
-	// 캐릭터의 현재 시점을 나타내는 변수
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "3_General Settings")
-	ECharacterViewpoint Viewpoint = ECharacterViewpoint::FirstPerson;
-
-	// 달리기 키 입력에 대한 처리 방식을 결정하는 변수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-	EMovementInputMode SprintInputMode = EMovementInputMode::Toggle;
-
-	// 앉기 키 입력에 대한 처리 방식을 결정하는 변수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-	EMovementInputMode CrouchInputMode = EMovementInputMode::Toggle;
-
 	// 캐릭터의 현재 달리기 상태를 판별하는 변수 (true == 달리는 중)
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "3_General Settings")
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "3_General Settings")
 	bool bIsSprint = false;
 
-	// 줌(조준) 키 입력에 대한 처리 방식을 결정하는 변수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-	EMovementInputMode AimInputMode = EMovementInputMode::Toggle;
-
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
-	bool bIsAimed;
+    // 현재 조준(줌) 상태인지 판별하는 변수 (true == 조준 상태)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+	bool bIsAimed = false;
 
 #pragma endregion
 
-	// 발사 입력 상태를 나타내는 변수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-	bool bIsFired;
+#pragma region Weapons Settings
 
-	// 들고있는 무기에 대하여 연사가 가능한지를 나타내는 변수
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-	bool bIsAuto;
+    // 보유하고 있는 무기의 목록을 저장하는 배열
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    TArray<ALA_WeaponBase*> WeaponsContainer;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "4_Weapon Settings")
-	bool bIsReloading;
+    // 현재 장착중인 무기를 저장하는 변수
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    ALA_WeaponBase* EquipedWeapon;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Test")
-	TObjectPtr<UAnimMontage> TestMontage;
+#pragma endregion
 
 public:
 #pragma region Derived From IHolder
 
-	///// <summary>
-	///// 임의 액터를 장착(부착)하는 함수
-	///// </summary>
-	///// <param name="HoldActor">부착되는 액터</param>
-	///// <param name="FirstPersonMesh">1인칭 시점에서 부착되는 Mesh 컴포넌트</param>
-	///// <param name="ThirdPersonMesh">3인칭 시점에서 부착되는 Mesh 컴포넌트</param>
-	//virtual void AttachActorMeshes_Implementation(AActor* HoldActor, UMeshComponent* FirstPersonMesh, UMeshComponent* ThirdPersonMesh) override;
+    /// <summary>
+    /// 임의 무기를 장착(부착)하는 함수
+    /// </summary>
+    /// <param name="WeaponActor">무기 액터</param>
+    /// <param name="WeaponCharacterMesh">무기를 장착한 캐릭터의 SkeletalMesh</param>
+    virtual void ActivateWeapon_Implementation(ALA_WeaponBase* WeaponActor, USkeletalMesh* WeaponCharacterMesh) override;
 
-	///// <summary>
-	///// 부착되어있는 액터에 맞춘 애니메이션 몽타주를 재생하는 함수
-	///// </summary>
-	///// <param name="FirstPersonMontage">1인칭 시점의 애니메이션 몽타주</param>
-	///// <param name="ThirdPersonMontage">3인칭 시점의 애니메이션 몽타주</param>
-	//virtual void PlayAnimMontage_Implementation(UAnimMontage* FirstPersonMontage, UAnimMontage* ThirdPersonMontage) override;
+    /// <summary>
+    /// 장착되어있는 임의 무기를 해제하는 함수
+    /// </summary>
+    virtual void DeactivateWeapon_Implementation() override;
 
-	///// <summary>
-	///// 부착되어있는 액터의 정보를 HUD에 업데이트 하도록 호출하는 함수
-	///// </summary>
-	///// <param name="Actor"></param>
-	//virtual void UpdateHUDWidgetOnActor_Implementation(AActor* HoldActor) override;
+    /// <summary>
+    /// 부착되어있는 무기의 정보를 HUD에 업데이트 하는 함수
+    /// </summary>
+    /// <param name="Actor"></param>
+    virtual void UpdateHUDWidgetOnActor_Implementation(ALA_WeaponBase* HoldActor) override;
 
-	/// <summary>
-	/// 카메라가 바라보고 있는 지점의 좌표를 얻는 함수
-	/// </summary>
-	/// <returns>바라보고 있는 지점의 좌표</returns>
-	virtual FVector GetFocusLocation();
-
-	///// <summary>
-	///// 기존에 보유하고 있으면서 비활성화 되어있는 액터를 활성화하는 함수
-	///// 들고있는 액터 교체 시 사용됨
-	///// </summary>
-	///// <param name="HoldActor">활성화 시킬 액터</param>
-	//virtual void ActivateActor_Implementation(AActor* HoldActor) override;
-
-	///// <summary>
-	///// 기존에 보유하고 있으면서 활성화 되어있는 액터를 비활성화하는 함수
-	///// </summary>
-	///// <param name="HoldActor">비활성화 시킬 액터</param>
-	//virtual void DeactivateActor_Implementation(AActor* HoldActor) override;
+    /// <summary>
+    /// 카메라가 바라보고 있는 지점의 좌표를 얻는 함수
+    /// </summary>
+    /// <returns>바라보고 있는 지점의 좌표</returns>
+    virtual FVector GetFocusLocation_Implementation() override;
 
 #pragma endregion
 
@@ -203,6 +177,8 @@ protected:
 	
 	// 달리기 키 입력 시작 시 호출되는 함수
 	void SprintStartedAction();
+    // 이동 입력 중단 시 호출되는 함수
+    void MoveCompletedAction();
 	// 달리기 키 입력 중단 시 호출되는 함수
 	void SprintCompletedAction();
 
@@ -235,8 +211,27 @@ protected:
 	// (최대 속도 변경 + 카메라 시야각 변경)
 	void SetSprintState(bool bNewSprint);
 
+    /// <summary>
+    /// 캐릭터의 SkeletalMesh Component를 비활성화 처리하는 함수
+    /// </summary>
+    void HideCharacterMesh();
+
+#pragma region Legacy
+
+    /// <summary>
+    /// (Legacy) Don't Use
+    /// 장착된 무기에 맞춘 애니메이션 몽타주를 재생하는 함수
+    /// </summary>
+    /// <param name="Montage">재생하려는 애니메이션 몽타주</param>
+    virtual void PlayWeaponAnimMontage_Implementation(UAnimMontage* Montage) override;
+
+    // (Legacy) Don't Use
 	UFUNCTION(BlueprintCallable, Category = "4_Weapon")
 	void OnBeginShot();
+    // (Legacy) Don't Use
 	UFUNCTION(BlueprintCallable, Category = "4_Weapon")
 	void OnEndShot();
+
+#pragma endregion
+
 };
