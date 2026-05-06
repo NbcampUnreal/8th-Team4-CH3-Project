@@ -4,34 +4,30 @@
 #include "GameMode/LA_GameStateBase.h"
 
 ALA_GameStateBase::ALA_GameStateBase()
-	:
-	CurrentGameFlowState(ELA_GameFlowState::None),
+    :
+    CurrentGameFlowState(ELA_GameFlowState::None),
     CurrentMissionType(ELA_MissionType::None),
     CurrentPhaseIndex(-1),
     CurrentPhaseType(ELA_PhaseType::None),
-    CurrentKillCount(0),
-    RequiredKillCount(0)
+    CurrentProgressCount(0),
+    RequiredProgressCount(0),
+    bCurrentPhaseCompleted(false)
 {
-
 }
 
-//////////////////////////////
-// Game Flow State
-//////////////////////////////
+////////////////////////
+// 게임 흐름 / 미션 정보 
+////////////////////////
 
 void ALA_GameStateBase::SetGameFlowState(ELA_GameFlowState NewState)
 {
-	CurrentGameFlowState = NewState;
+    CurrentGameFlowState = NewState;
 }
 
 ELA_GameFlowState ALA_GameStateBase::GetGameFlowState() const
 {
-	return CurrentGameFlowState;
+    return CurrentGameFlowState;
 }
-
-//////////////////////////////
-// Mission
-//////////////////////////////
 
 void ALA_GameStateBase::SetMissionType(ELA_MissionType NewMissionType)
 {
@@ -43,32 +39,56 @@ ELA_MissionType ALA_GameStateBase::GetMissionType() const
     return CurrentMissionType;
 }
 
-//////////////////////////////
-// Phase
-//////////////////////////////
-void ALA_GameStateBase::SetCurrentPhase(int32 NewPhaseIndex, const FLA_PhaseData& PhaseData)
+////////////////////////
+// Phase / Objective 
+////////////////////////
+
+void ALA_GameStateBase::SetCurrentPhaseInfo(
+    int32 NewPhaseIndex,
+    ELA_PhaseType NewPhaseType,
+    const FText& NewObjectiveText,
+    int32 NewRequiredProgressCount
+)
 {
+    // GameLogic에서 전달 받은 정보 설정
     CurrentPhaseIndex = NewPhaseIndex;
-    CurrentPhaseType = PhaseData.PhaseType;
-    CurrentObjectiveText = PhaseData.ObjectiveText;
+    CurrentPhaseType = NewPhaseType;
+    CurrentObjectiveText = NewObjectiveText;
 
-    CurrentKillCount = 0;
-    RequiredKillCount = PhaseData.RequiredKillCount;
+    // Phase 갱신 시, 진행도 초기화
+    CurrentProgressCount = 0;
+    RequiredProgressCount = NewRequiredProgressCount;
+    bCurrentPhaseCompleted = false;
 }
 
-void ALA_GameStateBase::AddKillCount(int32 AddCount)
+void ALA_GameStateBase::AddObjectiveProgress(int32 AddCount)
 {
-    CurrentKillCount += AddCount;
+    if (AddCount <= 0)
+        return;
+
+    CurrentProgressCount += AddCount;
 }
 
-void ALA_GameStateBase::ResetKillCount()
+void ALA_GameStateBase::ResetObjectiveProgress()
 {
-    CurrentKillCount = 0;
+    CurrentProgressCount = 0;
 }
 
-bool ALA_GameStateBase::IsKillObjectiveCompleted() const
+void ALA_GameStateBase::SetCurrentPhaseCompleted(bool bCompleted)
 {
-    return CurrentKillCount >= RequiredKillCount;
+    bCurrentPhaseCompleted = bCompleted;
+}
+
+bool ALA_GameStateBase::IsCurrentPhaseCompleted() const
+{
+    return bCurrentPhaseCompleted;
+}
+
+bool ALA_GameStateBase::IsObjectiveCompleted() const
+{
+    // 목표 Objective 진행도가 0인 경우 true로 반환
+    // 그 외는 현재 진행도 >= 목표 진행도인 경우에만 true
+    return RequiredProgressCount <= 0 || CurrentProgressCount >= RequiredProgressCount;
 }
 
 int32 ALA_GameStateBase::GetCurrentPhaseIndex() const
@@ -81,12 +101,17 @@ ELA_PhaseType ALA_GameStateBase::GetCurrentPhaseType() const
     return CurrentPhaseType;
 }
 
-int32 ALA_GameStateBase::GetCurrentKillCount() const
+int32 ALA_GameStateBase::GetCurrentProgressCount() const
 {
-    return CurrentKillCount;
+    return CurrentProgressCount;
 }
 
-int32 ALA_GameStateBase::GetRequiredKillCount() const
+int32 ALA_GameStateBase::GetRequiredProgressCount() const
 {
-    return RequiredKillCount;
+    return RequiredProgressCount;
+}
+
+FText ALA_GameStateBase::GetCurrentObjectiveText() const
+{
+    return CurrentObjectiveText;
 }

@@ -120,6 +120,12 @@ float ULA_HealthComponent::TakeDamage(float RawDamageAmount, bool bIsIgnoreShiel
 	return 0;
 }
 
+void ULA_HealthComponent::Heal(float HealAmount)
+{
+    CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
+    OnHealthChanged.Broadcast(CurrentHealth);
+}
+
 void ULA_HealthComponent::Die()
 {
 	bIsDead = true;

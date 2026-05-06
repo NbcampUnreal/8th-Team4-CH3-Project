@@ -5,6 +5,7 @@
 #include "Character/Ally/LA_AllyAIController.h"
 #include "Character/LA_BaseCharacter.h"
 #include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "GameplayTagContainer.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BlackboardData.h"
@@ -24,6 +25,8 @@ ALA_AllyAIController::ALA_AllyAIController()
 
     NewPerception->ConfigureSense(*SightConfig);
     NewPerception->SetDominantSense(SightConfig->GetSenseImplementation());
+
+  
 }
 
 void ALA_AllyAIController::BeginPlay()
@@ -34,6 +37,9 @@ void ALA_AllyAIController::BeginPlay()
     {
         RunBehaviorTree(BehaviorTreeAsset);
     }
+
+    AActor* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+    GetBlackboardComponent()->SetValueAsObject(FName("PlayerActor"), Player);
 
     GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(
         this, &ALA_AllyAIController::OnTargetDetected
