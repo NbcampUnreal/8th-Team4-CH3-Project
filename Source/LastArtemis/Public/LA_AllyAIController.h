@@ -25,5 +25,8 @@ private:
 
     UFUNCTION(BlueprintCallable)
     void OnTargetDetected(AActor* Actor, FAIStimulus Stimulus);
-    
+
+public:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+    UBehaviorTree* BehaviorTreeAsset;
 };

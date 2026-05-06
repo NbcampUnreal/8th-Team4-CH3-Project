@@ -29,6 +29,11 @@ void ALA_AllyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
+    if (BehaviorTreeAsset)
+    {
+        RunBehaviorTree(BehaviorTreeAsset);
+    }
+
     GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(
         this, &ALA_AllyAIController::OnTargetDetected
     );
@@ -43,11 +48,10 @@ void ALA_AllyAIController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
             if (DetectedCharacter->CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")))) {
                 return;
             }
-
-
             GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), DetectedCharacter);
         }
     }
-
 }
+
+
 
