@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "LA_Holder.h"
 #include "LA_PlayerCharacter.generated.h"
 
 class UCameraComponent;
@@ -51,26 +52,20 @@ public:
 	// Called to bind functionality to input
 	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
+	virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& DesiredView) override;
+
 public:
 
 protected:
 #pragma region Components
 
-	// 1인칭 시점 캐릭터 메쉬 컴포넌트
+	// 캐릭터 기본 시야 카메라
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
-	TObjectPtr<USkeletalMeshComponent> FirstPersonMeshComponent;
+	TObjectPtr<UCameraComponent> Camera;
 
-	// 1인칭 시점을 보여주는 카메라
+	// 줌(조준) 시 사용되는 카메라
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
-	TObjectPtr<UCameraComponent> FirstPersonCameraComponent;
-
-	// 3인칭 시점 카메라가 붙어있는 SpringArm
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
-	TObjectPtr<USpringArmComponent> SpringArmComponent;
-
-	// 3인칭 시점을 보여주는 카메라
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
-	TObjectPtr<UCameraComponent> ThirdPersonCameraComponent;
+	TObjectPtr<UCameraComponent> AimCamera;
 
 #pragma endregion
 
@@ -101,11 +96,17 @@ protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
 	TObjectPtr<UInputAction> CrouchInputAction;
 
-	// Change ViewPoint
+	// Fire InputAction
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> ChangeViewpointInputAction;
+	TObjectPtr<UInputAction> FireInputAction;
+
+	// Zoom InputAction
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
+	TObjectPtr<UInputAction> AimingInputAction;
 
 #pragma endregion
+
+#pragma region General Settings
 
 	// 캐릭터의 현재 시점을 나타내는 변수
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "3_General Settings")
@@ -113,28 +114,83 @@ protected:
 
 	// 달리기 키 입력에 대한 처리 방식을 결정하는 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-	EMovementInputMode SprintInputMode;
+	EMovementInputMode SprintInputMode = EMovementInputMode::Toggle;
 
 	// 앉기 키 입력에 대한 처리 방식을 결정하는 변수
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-	EMovementInputMode CrouchInputMode;
+	EMovementInputMode CrouchInputMode = EMovementInputMode::Toggle;
 
 	// 캐릭터의 현재 달리기 상태를 판별하는 변수 (true == 달리는 중)
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "3_General Settings")
-	bool bIsSprint;
+	bool bIsSprint = false;
+
+	// 줌(조준) 키 입력에 대한 처리 방식을 결정하는 변수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+	EMovementInputMode AimInputMode = EMovementInputMode::Toggle;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Camera")
+	bool bIsAimed;
+
+#pragma endregion
+
+	// 발사 입력 상태를 나타내는 변수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+	bool bIsFired;
+
+	// 들고있는 무기에 대하여 연사가 가능한지를 나타내는 변수
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+	bool bIsAuto;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "4_Weapon Settings")
+	bool bIsReloading;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Test")
+	TObjectPtr<UAnimMontage> TestMontage;
 
 public:
-	// 1인칭 시점의 SkeletalMeshComponent를 반환하는 함수
-	UFUNCTION(BlueprintCallable, Category = "1_Components")
-	FORCEINLINE USkeletalMeshComponent* Get1PMesh() const { return FirstPersonMeshComponent; }
+#pragma region Derived From IHolder
 
-	// 3인칭 시점의 SkeletalMeshComponent를 반환하는 함수
-	UFUNCTION(BlueprintCallable, Category = "1_Components")
-	FORCEINLINE USkeletalMeshComponent* Get3PMesh() const { return GetMesh(); }
+	///// <summary>
+	///// 임의 액터를 장착(부착)하는 함수
+	///// </summary>
+	///// <param name="HoldActor">부착되는 액터</param>
+	///// <param name="FirstPersonMesh">1인칭 시점에서 부착되는 Mesh 컴포넌트</param>
+	///// <param name="ThirdPersonMesh">3인칭 시점에서 부착되는 Mesh 컴포넌트</param>
+	//virtual void AttachActorMeshes_Implementation(AActor* HoldActor, UMeshComponent* FirstPersonMesh, UMeshComponent* ThirdPersonMesh) override;
 
-	// 시점을 설정하는 함수
-	UFUNCTION(BlueprintCallable, Category = "Camera")
-	void SetCharacterViewPoint(ECharacterViewpoint newViewpoint);
+	///// <summary>
+	///// 부착되어있는 액터에 맞춘 애니메이션 몽타주를 재생하는 함수
+	///// </summary>
+	///// <param name="FirstPersonMontage">1인칭 시점의 애니메이션 몽타주</param>
+	///// <param name="ThirdPersonMontage">3인칭 시점의 애니메이션 몽타주</param>
+	//virtual void PlayAnimMontage_Implementation(UAnimMontage* FirstPersonMontage, UAnimMontage* ThirdPersonMontage) override;
+
+	///// <summary>
+	///// 부착되어있는 액터의 정보를 HUD에 업데이트 하도록 호출하는 함수
+	///// </summary>
+	///// <param name="Actor"></param>
+	//virtual void UpdateHUDWidgetOnActor_Implementation(AActor* HoldActor) override;
+
+	/// <summary>
+	/// 카메라가 바라보고 있는 지점의 좌표를 얻는 함수
+	/// </summary>
+	/// <returns>바라보고 있는 지점의 좌표</returns>
+	virtual FVector GetFocusLocation();
+
+	///// <summary>
+	///// 기존에 보유하고 있으면서 비활성화 되어있는 액터를 활성화하는 함수
+	///// 들고있는 액터 교체 시 사용됨
+	///// </summary>
+	///// <param name="HoldActor">활성화 시킬 액터</param>
+	//virtual void ActivateActor_Implementation(AActor* HoldActor) override;
+
+	///// <summary>
+	///// 기존에 보유하고 있으면서 활성화 되어있는 액터를 비활성화하는 함수
+	///// </summary>
+	///// <param name="HoldActor">비활성화 시킬 액터</param>
+	//virtual void DeactivateActor_Implementation(AActor* HoldActor) override;
+
+#pragma endregion
 
 protected:
 #pragma region InputAction BindingActions
@@ -145,9 +201,6 @@ protected:
 	// 카메라 회전에 대한 InputAction에 적용되는 함수
 	void LookAction(const FInputActionValue& value);
 	
-	// 시점 변경에 대한 InputAction에 적용되는 함수
-	void ChangeViewpointAction(const FInputActionValue& value);
-
 	// 달리기 키 입력 시작 시 호출되는 함수
 	void SprintStartedAction();
 	// 달리기 키 입력 중단 시 호출되는 함수
@@ -157,6 +210,14 @@ protected:
 	void CrouchStartedAction();
 	// 앉기 키 입력 중단 시 호출되는 함수
 	void CrouchCompletedAction();
+
+	// 조준 키 입력 시작 시 호출되는 함수
+	void AimingStartedAction();
+	// 조준 키 입력 종료 시 호출되는 함수
+	void AimingCompletedAction();
+
+	void FireStartedAction();
+	void FireCompletedAction();
 
 #pragma endregion
 
@@ -173,4 +234,9 @@ protected:
 	// 캐릭터의 걷기/달리기 상태를 변경하는 함수
 	// (최대 속도 변경 + 카메라 시야각 변경)
 	void SetSprintState(bool bNewSprint);
+
+	UFUNCTION(BlueprintCallable, Category = "4_Weapon")
+	void OnBeginShot();
+	UFUNCTION(BlueprintCallable, Category = "4_Weapon")
+	void OnEndShot();
 };
