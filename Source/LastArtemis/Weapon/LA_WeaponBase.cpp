@@ -15,7 +15,7 @@ ALA_WeaponBase::ALA_WeaponBase()
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(Root);
-    Camera->FieldOfView = 120.f;
+    Camera->FieldOfView = DefaultFOV;
     Camera->bUsePawnControlRotation = false;
 
     SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -36,6 +36,10 @@ ALA_WeaponBase::ALA_WeaponBase()
     SwaySpeed = 10.f;
     SwayReturnSpeed = 15.f;
 
+    bIsAiming = false;
+    AimFOV = 60.f;
+    AimInterpSpeed = 15.f;
+
     BaseDamage = 2.f;
 	FireRate = 0.1f;
     MaxRange = 500.f;
@@ -45,6 +49,24 @@ ALA_WeaponBase::ALA_WeaponBase()
     bCanFire = true;
 }
 
+void ALA_WeaponBase::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (Mesh->DoesSocketExist(TEXT("FrontSight")) && Mesh->DoesSocketExist(TEXT("RearSight")))
+    {
+        FVector Front = Mesh->GetSocketTransform(TEXT("FrontSight"), RTS_Component).GetLocation();
+        FVector Rear = Mesh->GetSocketTransform(TEXT("RearSight"), RTS_Component).GetLocation();
+
+        FVector SightDirection = (Front - Rear).GetSafeNormal();
+        FQuat DeltaRotation = FQuat::FindBetweenVectors(SightDirection, FVector::ForwardVector);
+        AimMeshRotation = DeltaRotation.Rotator();
+
+        FVector RotatedRear = AimMeshRotation.RotateVector(Rear);
+        AimMeshLocation = FVector(AimDistanceOffset, 0.f, 0.f) - RotatedRear;
+    }
+}
+
 void ALA_WeaponBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
@@ -52,6 +74,23 @@ void ALA_WeaponBase::Tick(float DeltaTime)
     CurrentSway = FMath::RInterpTo(CurrentSway, TargetSway, DeltaTime, SwaySpeed);
     SpringArm->SetRelativeRotation(CurrentSway);
     TargetSway = FMath::RInterpTo(TargetSway, FRotator::ZeroRotator, DeltaTime, SwayReturnSpeed);
+
+    // Sway
+    float TargetFOV = bIsAiming ? AimFOV : DefaultFOV;
+    float CurrentFOV = Camera->FieldOfView;
+    float NewFOV = FMath::FInterpTo(CurrentFOV, TargetFOV, DeltaTime, AimInterpSpeed);
+    Camera->SetFieldOfView(NewFOV);
+
+    // Aim
+    FVector TargetLocation = bIsAiming ? AimMeshLocation : DefaultMeshLocation;
+    FVector CurrentLocation = Mesh->GetRelativeLocation();
+    FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, AimInterpSpeed);
+    Mesh->SetRelativeLocation(NewLocation);
+
+    FRotator TargetRotation = bIsAiming ? AimMeshRotation : DefaultMeshRotation;
+    FRotator CurrentRotation = Mesh->GetRelativeRotation();
+    FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, AimInterpSpeed);
+    Mesh->SetRelativeRotation(NewRotation);
 }
 
 void ALA_WeaponBase::Look(FVector InputValue)

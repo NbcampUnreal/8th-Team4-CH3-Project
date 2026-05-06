@@ -13,6 +13,7 @@ public:
     ALA_WeaponBase();
 
 protected:
+    virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
     virtual void OnFire();
 
@@ -29,6 +30,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     virtual void Reload();
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    bool bIsAiming;
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USceneComponent* Root;
@@ -42,17 +46,41 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USkeletalMeshComponent* Mesh;
 
-    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
     float MaxSwayDegree;
 
-    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
     float SwayMultiplier;
 
-    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
     float SwaySpeed;
 
-    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
     float SwayReturnSpeed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    float DefaultFOV;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    float AimFOV;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    float AimDistanceOffset;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    FVector DefaultMeshLocation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    FRotator DefaultMeshRotation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    FVector AimMeshLocation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    FRotator AimMeshRotation;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    float AimInterpSpeed;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
     float BaseDamage;
