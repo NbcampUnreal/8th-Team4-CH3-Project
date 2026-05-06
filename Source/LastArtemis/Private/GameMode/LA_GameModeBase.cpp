@@ -1,11 +1,11 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LA_GameModeBase.h"
+#include "GameMode/LA_GameModeBase.h"
 #include "LastArtemis\Character\LA_PlayerCharacter.h"
-#include "LA_DefaultPlayerController.h"
-#include "LA_GameStateBase.h"
-#include "LA_GameType.h"
+#include "Character/LA_DefaultPlayerController.h"
+#include "GameMode/LA_GameStateBase.h"
+#include "UI/LA_GameType.h"
 #include "Kismet/GameplayStatics.h"
 
 ALA_GameModeBase::ALA_GameModeBase()

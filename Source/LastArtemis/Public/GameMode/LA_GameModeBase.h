@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "LA_GameType.h"
-#include "LA_GameStateBase.h"
+#include "UI/LA_GameType.h"
+#include "GameMode/LA_GameStateBase.h"
 #include "LA_GameModeBase.generated.h"
 
 

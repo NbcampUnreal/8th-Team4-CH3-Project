@@ -1,7 +1,5 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "LA_DefaultPlayerController.h"
+﻿
+#include "Character/LA_DefaultPlayerController.h"
 #include "EnhancedInputSubsystems.h"
 
 void ALA_DefaultPlayerController::BeginPlay()

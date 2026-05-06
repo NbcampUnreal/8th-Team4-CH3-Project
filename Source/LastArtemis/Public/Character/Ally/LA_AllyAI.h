@@ -1,14 +1,14 @@
 ﻿#pragma once
 
 #include "CoreMinimal.h"
-#include "LA_BaseCharacter.h"
+#include "Character/LA_BaseCharacter.h"
 #include "LA_AllyAI.generated.h"
 
 UCLASS()
 class LASTARTEMIS_API ALA_AllyAI : public ALA_BaseCharacter
 {
 	GENERATED_BODY()
-	
+
 public:
 
     ALA_AllyAI();

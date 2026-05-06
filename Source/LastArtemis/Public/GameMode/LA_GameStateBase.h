@@ -4,11 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
-#include "LA_GameType.h"
+#include "UI/LA_GameType.h"
 #include "LA_GameStateBase.generated.h"
 
 /**
- * 
+ *
  */
 UCLASS()
 class LASTARTEMIS_API ALA_GameStateBase : public AGameStateBase

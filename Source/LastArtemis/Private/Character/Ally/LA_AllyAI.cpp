@@ -1,7 +1,5 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "LA_AllyAI.h"
+#include "Character/Ally/LA_AllyAI.h"
 
 ALA_AllyAI::ALA_AllyAI()
 {
@@ -10,7 +8,7 @@ ALA_AllyAI::ALA_AllyAI()
 
 void ALA_AllyAI::Attack()
 {
-	
+
 }
 
 void ALA_AllyAI::Heal()
