@@ -7,15 +7,15 @@
 #include "GameFramework/CharacterMovementComponent.h"	// UCharacterMovementComponent
 #include "EnhancedInputSubsystems.h"
 #include "EnhancedInputComponent.h"		// UEnhancedInputComponent, FInputActionValue
-#include "LA_DefaultPlayerController.h"		// ALS_DefaultPlayerController
-#include "LA_HealthComponent.h"
+#include "Character/LA_DefaultPlayerController.h"		// ALS_DefaultPlayerController
+#include "Character/Player/Component/LA_HealthComponent.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
-	
+
 	Camera = CreateDefaultSubobject<UCameraComponent>(FName("Camera"));
 	Camera->SetupAttachment(RootComponent);
 	Camera->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
@@ -43,7 +43,7 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 void ALA_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	// InputMappingContext 적용
 	if (Controller != nullptr)
 	{
@@ -188,7 +188,7 @@ void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& DesiredV
 //			GetMesh()->SetSkeletalMesh(SkeletalMesh1P);
 //		}
 //	}
-//	
+//
 //	// 캐릭터의 AnimInstance 교체
 //}
 //
@@ -228,7 +228,7 @@ FVector ALA_PlayerCharacter::GetFocusLocation()
 }
 
 //void ALA_PlayerCharacter::ActivateActor_Implementation(AActor* HoldActor)
-//{ 
+//{
 //	// 캐릭터의 Mesh 교체
 //
 //	// 캐릭터 Mesh의 AnimInstance 교체
@@ -287,7 +287,7 @@ void ALA_PlayerCharacter::SprintStartedAction()
 	{
 		return;
 	}
-	
+
 	// 현재 걷기 상태에서 키 입력 시 달리기
 	// 현재 달리기 상태에서 키 입력 시 걷기
 	if (SprintInputMode == EMovementInputMode::Toggle)
@@ -337,7 +337,7 @@ void ALA_PlayerCharacter::CrouchStartedAction()
 		UnCrouch();
 		return;
 	}
-	
+
 	// 앉을 수 있는지 확인
 	if (CanCrouch() == true)
 	{
@@ -419,7 +419,7 @@ float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEv
 	if (ULA_HealthComponent* HealthComponent = FindComponentByClass<ULA_HealthComponent>())
 	{
 		float ActualDamage = HealthComponent->TakeDamage(Damage, false);
-		
+
 		return ActualDamage;
 	}
 	return Damage;
@@ -469,7 +469,7 @@ void ALA_PlayerCharacter::OnBeginShot()
 	{
 		return;
 	}
-	
+
 	bIsReloading = true;
 	FVector startLocation = GetMesh()->GetSocketLocation(FName("Muzzle"));
 	FVector endLocation = GetFocusLocation();

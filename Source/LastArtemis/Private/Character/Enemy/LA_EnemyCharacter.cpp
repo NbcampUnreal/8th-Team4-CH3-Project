@@ -1,6 +1,5 @@
-﻿#include "LA_EnemyCharacter.h"
-
-#include "AI/LA_EnemyController.h"
+﻿#include "Character/Enemy/LA_EnemyCharacter.h"
+#include "Character/Enemy/EnemyAI/LA_EnemyController.h"
 #include "Animation/AnimMontage.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
