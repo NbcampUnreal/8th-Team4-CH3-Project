@@ -1,4 +1,4 @@
-#include "LA_GameInstance.h"
+#include "GameMode/LA_GameInstance.h"
 
 ULA_GameInstance::ULA_GameInstance()
 	:
@@ -12,7 +12,7 @@ ULA_GameInstance::ULA_GameInstance()
 }
 
 ////////////////////////////////////////////////////////////////////////
-/// º¸»ó °ü·Ã ·ÎÁ÷
+/// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 ////////////////////////////////////////////////////////////////////////
 
 void ULA_GameInstance::AddReward(int32 ExpReward, int32 GoldReward, int32 ScoreReward)
@@ -44,7 +44,7 @@ void ULA_GameInstance::LevelUp()
 {
 	++PlayerLevel;
 
-	// ÇÃ·¹ÀÌ¾î ½ºÅÈ Áõ°¡
+	// ï¿½Ã·ï¿½ï¿½Ì¾ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
 	{
 
 	}

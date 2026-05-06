@@ -1,4 +1,4 @@
-﻿#include "AI/LA_EnemyController.h"
+﻿#include "Character/Enemy/EnemyAI/LA_EnemyController.h"
 
 #include "GameplayTagAssetInterface.h"
 #include "GameplayTagContainer.h"
@@ -6,7 +6,9 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "Kismet/GameplayStatics.h"
 #include "Perception/AIPerceptionComponent.h"
-#include "LA_BaseCharacter.h"
+#include "Character/LA_BaseCharacter.h"
+
+class ALA_BaseCharacter;
 
 ALA_EnemyController::ALA_EnemyController()
 {

@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LA_GameStateBase.h"
+#include "GameMode/LA_GameStateBase.h"
 
 ALA_GameStateBase::ALA_GameStateBase()
 	:
@@ -12,7 +12,7 @@ ALA_GameStateBase::ALA_GameStateBase()
     CurrentKillCount(0),
     RequiredKillCount(0)
 {
-	
+
 }
 
 //////////////////////////////

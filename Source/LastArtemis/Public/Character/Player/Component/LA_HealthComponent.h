@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "LA_BaseCharacter.h"
+#include "Character/LA_BaseCharacter.h"
 #include "LA_HealthComponent.generated.h"
 
 //DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedDelegate, float, NewHealth);
@@ -16,7 +16,7 @@ class LASTARTEMIS_API ULA_HealthComponent : public UActorComponent
 {
 	GENERATED_BODY()
 
-public:	
+public:
 	// Sets default values for this component's properties
 	ULA_HealthComponent();
 
@@ -24,7 +24,7 @@ protected:
 	// Called when the game starts
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
@@ -96,6 +96,6 @@ public:
 	/// <returns>실제로 적용된 데미지</returns>
 	UFUNCTION(BlueprintCallable)
 	float TakeDamage(float RawDamageAmount, bool bIsIgnoreShield = false);
-	
+
 	void Die();
 };

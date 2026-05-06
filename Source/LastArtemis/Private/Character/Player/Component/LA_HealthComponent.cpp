@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LA_HealthComponent.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
 #include "Components/CapsuleComponent.h"
 
 // Sets default values for this component's properties
@@ -12,7 +12,7 @@ ULA_HealthComponent::ULA_HealthComponent()
 	PrimaryComponentTick.bCanEverTick = true;
 
 	// ...
-	
+
 	// 초기 체력은 100으로 설정
 	MaxHealth = 100.0f;
 	CurrentHealth = MaxHealth;
@@ -34,7 +34,7 @@ void ULA_HealthComponent::BeginPlay()
 	Super::BeginPlay();
 
 	// ...
-	
+
 }
 
 

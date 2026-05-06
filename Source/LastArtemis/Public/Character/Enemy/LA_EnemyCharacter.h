@@ -3,7 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
-#include "LA_BaseCharacter.h"
+#include "Character/LA_BaseCharacter.h"
 #include "LA_EnemyCharacter.generated.h"
 
 UCLASS()

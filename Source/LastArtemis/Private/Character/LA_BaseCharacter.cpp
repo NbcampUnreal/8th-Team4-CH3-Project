@@ -1,4 +1,4 @@
-﻿#include "LA_BaseCharacter.h"
+﻿#include "Character/LA_BaseCharacter.h"
 #include "Components/CapsuleComponent.h"
 
 ALA_BaseCharacter::ALA_BaseCharacter()
@@ -7,7 +7,7 @@ ALA_BaseCharacter::ALA_BaseCharacter()
 
 	MaxHealth = 100.0f;
 	CurrentHealth = MaxHealth;
-	
+
 	MaxShield = 50.0f;
 	CurrentShield = MaxShield;
 
@@ -20,28 +20,28 @@ ALA_BaseCharacter::ALA_BaseCharacter()
 void ALA_BaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	/*
 	if (DefaultWeaponClass)
 	{
 		EquipWeapon(DefaultWeaponClass);
 	}*/
-	
+
 }
 
 
 void ALA_BaseCharacter::TakeDamageCustom(float DamageAmount)
 {
 	if (bIsDead) return;
-	
+
 	float FinalDamage = FMath::Max(DamageAmount - Defense, 0.0f);
-	
+
 	if (CurrentShield > 0.0f)
 	{
 		float DamageToShield = FMath::Min(FinalDamage, CurrentShield);
 		CurrentShield -= DamageToShield;
 		FinalDamage -= DamageToShield;
-		
+
 		if (OnShieldChanged.IsBound())
 		{
 			OnShieldChanged.Broadcast(CurrentShield);
@@ -51,13 +51,13 @@ void ALA_BaseCharacter::TakeDamageCustom(float DamageAmount)
 	if (FinalDamage > 0.0f)
 	{
 		CurrentHealth = FMath::Clamp(CurrentHealth - FinalDamage, 0.0f, MaxHealth);
-		
+
 		if (OnHealthChanged.IsBound())
 		{
 			OnHealthChanged.Broadcast(CurrentHealth);
 		}
 	}
-	
+
 	if (CurrentHealth <= 0.0f)
 	{
 		Die();
