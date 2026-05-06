@@ -6,9 +6,8 @@
 #include "GameFramework/CharacterMovementComponent.h"	// UCharacterMovementComponent
 #include "EnhancedInputSubsystems.h"    // UInputMappingContext, UInputAction
 #include "EnhancedInputComponent.h"		// UEnhancedInputComponent, FInputActionValue
-#include "LA_DefaultPlayerController.h"		// ALA_DefaultPlayerController
-#include "LA_HealthComponent.h"
-#include "LastArtemis/Weapon/LA_WeaponBase.h"   // ALA_WeaponBase
+#include "Character/LA_DefaultPlayerController.h"		// ALS_DefaultPlayerController
+#include "Character/Player/Component/LA_HealthComponent.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -39,7 +38,7 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 void ALA_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	
+
 	// InputMappingContext 적용
 	if (Controller != nullptr)
 	{
@@ -314,7 +313,7 @@ void ALA_PlayerCharacter::SprintStartedAction()
 	{
 		return;
 	}
-	
+
 	// 현재 걷기 상태에서 키 입력 시 달리기
 	// 현재 달리기 상태에서 키 입력 시 걷기
 	if (SprintInputMode == EMovementInputMode::Toggle)
@@ -382,7 +381,7 @@ void ALA_PlayerCharacter::CrouchStartedAction()
 		UnCrouch();
 		return;
 	}
-	
+
 	// 앉을 수 있는지 확인
 	if (CanCrouch() == true)
 	{
@@ -477,7 +476,7 @@ float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEv
 	if (ULA_HealthComponent* HealthComponent = FindComponentByClass<ULA_HealthComponent>())
 	{
 		float ActualDamage = HealthComponent->TakeDamage(Damage, false);
-		
+
 		return ActualDamage;
 	}
     UE_LOG(LogTemp, Warning, TEXT("No Health Component or Member Variables"));
