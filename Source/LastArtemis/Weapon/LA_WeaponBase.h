@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
@@ -7,48 +7,75 @@
 UCLASS()
 class LASTARTEMIS_API ALA_WeaponBase : public AActor
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	ALA_WeaponBase();
+    ALA_WeaponBase();
 
 protected:
-	virtual void BeginPlay() override;
-
-	virtual void Fire();
+    virtual void Tick(float DeltaTime) override;
+    virtual void OnFire();
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
-	virtual void StartFire();
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    void Look(FVector InputValue);
 
-	UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
-	virtual void StopFire();
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    virtual void StartFire();
 
-	UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
-	virtual void Reload();
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    virtual void StopFire();
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    virtual void Reload();
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	USceneComponent* Root;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    USceneComponent* Root;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-	USkeletalMeshComponent* Mesh;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    class UCameraComponent* Camera;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-	float BaseDamage;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    class USpringArmComponent* SpringArm;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-	float FireRate;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    USkeletalMeshComponent* Mesh;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-	float MaxRange;
+    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    float MaxSwayDegree;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-	int32 PelletCount;
+    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    float SwayMultiplier;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-	float SpreadAngle;
+    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    float SwaySpeed;
 
-	FTimerHandle FireTimerHandle;
-	bool bCanFire;
+    UPROPERTY(EditAnywhere, Category = "Weapon|Sway")
+    float SwayReturnSpeed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float BaseDamage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float FireRate;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float MaxRange;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    int32 PelletCount;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float SpreadAngle;
+
+private:
+    float CameraPitch;
+    float CameraYaw;
+
+    FRotator TargetSway;
+    FRotator CurrentSway;
+
+    FTimerHandle FireTimerHandle;
+    bool bCanFire;
 };
