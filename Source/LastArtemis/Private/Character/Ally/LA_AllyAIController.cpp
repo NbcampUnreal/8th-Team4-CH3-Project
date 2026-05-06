@@ -1,8 +1,9 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LA_AllyAIController.h"
-#include "LA_BaseCharacter.h"
+
+#include "Character/Ally/LA_AllyAIController.h"
+#include "Character/LA_BaseCharacter.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "GameplayTagContainer.h"
 #include "BehaviorTree/BlackboardComponent.h"
