@@ -33,9 +33,16 @@ void ALA_AllyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
+    UE_LOG(LogTemp, Warning, TEXT("AllyAIController BeginPlay!"));
+
     if (BehaviorTreeAsset)
     {
+        UE_LOG(LogTemp, Warning, TEXT("BehaviorTree Running!"));
         RunBehaviorTree(BehaviorTreeAsset);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("BehaviorTree Asset is NULL!"));
     }
 
     AActor* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
