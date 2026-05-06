@@ -97,5 +97,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	float TakeDamage(float RawDamageAmount, bool bIsIgnoreShield = false);
 
+    UFUNCTION(BlueprintCallable)
+    void Heal(float HealAmount);
+    
+    UFUNCTION(BlueprintCallable)
+    float GetHealthPercent() const
+    {
+        if (MaxHealth <= 0.0f) return 0.0f;
+        return CurrentHealth / MaxHealth;
+    }
+    
 	void Die();
 };
