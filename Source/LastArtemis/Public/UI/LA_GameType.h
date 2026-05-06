@@ -19,13 +19,13 @@ enum class ELA_GameFlowState : uint8
 	GameClear,
 };
 
-// 현재 퀘스트 타입
+// 현재 미션 타입
 UENUM(BlueprintType)
 enum class ELA_MissionType : uint8
 {
     None,
-    Invasion,    // 침입 퀘스트
-    Guard,      // 호위 퀘스트
+    Invasion,    // 침투 미션
+    Guard,      // 호위 미션, 아직 미구현
 };
 
 // 현재 Phase 타입
@@ -39,8 +39,21 @@ enum class ELA_PhaseType : uint8
 };
 
 
+// 침투 미션의 임무 목록
+UENUM(BlueprintType)
+enum class ELA_InvasionObjectiveType : uint8
+{
+    None,
+
+    DisableTurret,          // 자동 포탑 무력화
+    ControlPassage,         // 핵심 연결 통로 제어
+    BreakDefenseSystem,     // 방어 시스템 돌파
+    KillBoss                // 보스 처치
+};
+
+// 침투 미션 데이터 구조체
 USTRUCT(BlueprintType)
-struct FLA_PhaseData
+struct FLA_InvasionPhaseData
 {
     GENERATED_BODY()
 
@@ -50,14 +63,13 @@ struct FLA_PhaseData
 
     // 이번 Phase 상황 및 목표
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
+    ELA_InvasionObjectiveType ObjectiveType;
+
+    // 현재 Phase 상황 및 목표 텍스트
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
     FText ObjectiveText;
 
-    // 스폰 몬스터 수
+    // 목표 킬 수
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
-    int32 SpawnCount;
-
-    // 필요한 킬 수
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    int32 RequiredKillCount;
-
+    int32 RequiredProgressCount = 0;
 };

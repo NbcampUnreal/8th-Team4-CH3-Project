@@ -16,61 +16,98 @@ class LASTARTEMIS_API ALA_GameStateBase : public AGameStateBase
 	GENERATED_BODY()
 
 public:
-	ALA_GameStateBase();
+    ALA_GameStateBase();
 
-	// game flow state
-	UFUNCTION(BlueprintCallable, Category = "Game State")
-	void SetGameFlowState(ELA_GameFlowState NewState);
-	UFUNCTION(BlueprintPure, Category = "Game State")
-	ELA_GameFlowState GetGameFlowState() const;
+    ////////////////////////
+    /// 게임 흐름 제어
+    ////////////////////////
+    
+    // 게임 흐름 설정
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void SetGameFlowState(ELA_GameFlowState NewState);
+    // 현재 게임 흐름 상태 반환
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    ELA_GameFlowState GetGameFlowState() const;
 
-    // 미션
+    ////////////////////////
+    /// 미션 정보
+    ////////////////////////
+    
+    // 진행할 미션 설정
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void SetMissionType(ELA_MissionType NewMissionType);
-    UFUNCTION(BlueprintPure, Category = "Mission")
+    // 현재 미션 종류 반환(Invasion, Guard 등)
+    UFUNCTION(BlueprintCallable, Category = "Mission")
     ELA_MissionType GetMissionType() const;
 
-    // Phase
-    UFUNCTION(BlueprintCallable, Category = "Phase")
-    void SetCurrentPhase(int32 NewPhaseIndex, const FLA_PhaseData& PhaseData);
+    ////////////////////////
+    /// Phase / Objective
+    ////////////////////////
 
-    UFUNCTION(BlueprintCallable, Category = "Phase")
-    void AddKillCount(int32 AddCount = 1);
+    // 새로운 Phase가 시작될 때마다 Objective 갱신
+    void SetCurrentPhaseInfo(
+        int32 NewPhaseIndex,            // 현재 Phase의 번호
+        ELA_PhaseType NewPhaseType,     // Phase 타입
+        const FText& NewObjectiveText,  // UI에 출력될 Objective
+        int32 NewRequiredProgressCount  // 목표 Objective 진행도
+    );
 
-    UFUNCTION(BlueprintCallable, Category = "Phase")
-    void ResetKillCount();
-
-    UFUNCTION(BlueprintPure, Category = "Phase")
-    bool IsKillObjectiveCompleted() const;
-
-    UFUNCTION(BlueprintPure, Category = "Phase")
+    // 현재 Phase Index 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Phase")
     int32 GetCurrentPhaseIndex() const;
-
-    UFUNCTION(BlueprintPure, Category = "Phase")
+    // 현재 Phase 타입 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Phase")
     ELA_PhaseType GetCurrentPhaseType() const;
+    // Phase 완료 여부 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Phase")
+    bool IsCurrentPhaseCompleted() const;
+    // 현재 Phase의 Objective 완료 여부 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Objective")
+    bool IsObjectiveCompleted() const;
 
-    UFUNCTION(BlueprintPure, Category = "Phase")
-    int32 GetCurrentKillCount() const;
+    // 현재 Objective 진행도 증가
+    void AddObjectiveProgress(int32 AddCount);
+    // 현재 Objective 진행도 초기화
+    void ResetObjectiveProgress();
+    // Phase 완료 여부 설정
+    void SetCurrentPhaseCompleted(bool bCompleted);
 
-    UFUNCTION(BlueprintPure, Category = "Phase")
-    int32 GetRequiredKillCount() const;
+    // 현재 Objective 진행도 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Objective")
+    int32 GetCurrentProgressCount() const;
+    // 목표 Objective 진행도 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Objective")
+    int32 GetRequiredProgressCount() const;
+    // 진행중인 Objective 반환
+    UFUNCTION(BlueprintPure, Category = "Mission|Objective")
+    FText GetCurrentObjectiveText() const;
 
 protected:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Game State")
-	ELA_GameFlowState CurrentGameFlowState;
+    // 현재 Game Flow State(Main Menu, Playing, Paused 등)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Flow")
+    ELA_GameFlowState CurrentGameFlowState;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mission")
+    // 현재 플레이 중인 미션(Invasion, Guard 등)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission")
     ELA_MissionType CurrentMissionType;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    ELA_PhaseType CurrentPhaseType;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
+    // Phase 완료 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Mission|Phase")
+    bool bCurrentPhaseCompleted;
+    // 현재 진행 중인 미션의 Phase 번호
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission|Phase")
     int32 CurrentPhaseIndex;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    FText CurrentObjectiveText;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    int32 CurrentKillCount;
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    int32 RequiredKillCount;
+    // 현재 Phase 타입(Rest, Combat, Boss 등)
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission|Phase")
+    ELA_PhaseType CurrentPhaseType;
 
+    // 현재 Phase의 Objective
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission|Objective")
+    FText CurrentObjectiveText;
+    // 현재 Objective의 진행도
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission|Objective")
+    int32 CurrentProgressCount;
+    // 목표 Objective의 진행도
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission|Objective")
+    int32 RequiredProgressCount;
 };
