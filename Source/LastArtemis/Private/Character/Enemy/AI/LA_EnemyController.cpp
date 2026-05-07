@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Perception/AIPerceptionComponent.h"
 #include "Character/LA_BaseCharacter.h"
+#include "Character/Enemy/LA_EnemyCharacter.h"
 
 class ALA_BaseCharacter;
 
@@ -140,7 +141,11 @@ void ALA_EnemyController::AttackPlayer()
 		TargetCharacter->TakeDamageCustom(10.0f);
 	}
 
-	// 공격 몽타주 재생 함수 등을 여기에 추가 가능합니다.
+    ALA_EnemyCharacter* Enemy = Cast<ALA_EnemyCharacter>(GetPawn());
+    if (Enemy)
+    {
+       Enemy->PlayAttackMontage();
+    }
 
 	// 쿨다운 타이머 설정
 	GetWorld()->GetTimerManager().SetTimer(

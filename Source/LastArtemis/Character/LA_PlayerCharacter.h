@@ -4,6 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
+#include "GameplayTagContainer.h"
+#include "GameplayTagAssetInterface.h"
 #include "LA_Holder.h"
 #include "LA_PlayerCharacter.generated.h"
 
@@ -64,7 +66,9 @@ public:
 #pragma endregion
 
 protected:
-#pragma region Components
+    // 캐릭터 태그
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
+    FGameplayTagContainer CharacterTags;
 
 	// 캐릭터 테스트 용도 카메라 사용 여부
 	UPROPERTY(EditAnywhere, Category = "0_Debug", meta = (AllowPrivateAccess = true))
@@ -74,42 +78,7 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "0_Debug", meta = (AllowPrivateAccess = true))
 	TObjectPtr<UCameraComponent> TestCamera;
 
-#pragma endregion
-
-#pragma region Input
-
-	// InputMappingContext
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputMappingContext> MappingContext;
-
-	// Move (W, A, S, D)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> MoveInputAction;
-
-	// Jump (Space)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> JumpInputAction;
-
-	// Look (Mouse XY Axis)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> LookInputAction;
-	
-	// Sprint InputAction (Shift);
-	// Triggers 옵션에서 Chorded Action을 추가하여 MoveInputAction이 활성화된 상태에서만 동작하도록 설정
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> SprintInputAction;
-
-	// Crouch InputAction (Control)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> CrouchInputAction;
-
-	// Fire InputAction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> FireInputAction;
-
-	// Zoom InputAction
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "2_Input")
-	TObjectPtr<UInputAction> AimInputAction;
+#pragma region Components
 
 #pragma endregion
 
@@ -119,13 +88,25 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "3_General Settings")
 	bool bIsSprint = false;
 
-    // 현재 조준(줌) 상태인지 판별하는 변수 (true == 조준 상태)
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-	bool bIsAimed = false;
+    // 걷기 속도
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float WalkSpeed = 300;
+
+    // 달리기 이동 속도
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float SprintSpeed = 750;
+
+    // 앉은 상태의 이동 속도
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float CrouchSpeed = 150;
 
 #pragma endregion
 
 #pragma region Weapons Settings
+
+    // 초기에 사용하는 무기
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
+    TSubclassOf<ALA_WeaponBase> initialWeaponClass;
 
     // 보유하고 있는 무기의 목록을 저장하는 배열
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
@@ -138,6 +119,13 @@ protected:
 #pragma endregion
 
 public:
+    // 화면에 보여지는 시점의 카메라를 반환하는 함수
+    UFUNCTION(BlueprintCallable, Category = "La_PlayerCharacter")
+    UCameraComponent* GetCameraComponent() const;
+
+    UFUNCTION(BlueprintCallable, Category = "La_PlayerCharacter")
+    FORCEINLINE void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const { TagContainer.AppendTags(CharacterTags); }
+
 #pragma region Derived From IHolder
 
     /// <summary>
@@ -166,6 +154,19 @@ public:
 
 #pragma endregion
 
+#pragma region Skill
+
+    // 점멸 (순간이동)
+    void Blink();
+
+    // 무기 공격력 강화
+    void EnhanceWeaponDamage(const float Duration);
+
+    // 이동 속도 증가
+    void EnhanceMovementSpeed(const float Duration);
+
+#pragma endregion
+
 protected:
 #pragma region InputAction BindingActions
 
@@ -187,13 +188,17 @@ protected:
 	// 앉기 키 입력 중단 시 호출되는 함수
 	void CrouchCompletedAction();
 
+    // 공격 키 입력 시작 시 호출되는 함수
+	void FireStartedAction();
+    // 공격 키 입력 종료 시 호출되는 함수
+	void FireCompletedAction();
+
 	// 조준 키 입력 시작 시 호출되는 함수
 	void AimingStartedAction();
 	// 조준 키 입력 종료 시 호출되는 함수
 	void AimingCompletedAction();
 
-	void FireStartedAction();
-	void FireCompletedAction();
+    void ReloadStartedAction();
 
 #pragma endregion
 

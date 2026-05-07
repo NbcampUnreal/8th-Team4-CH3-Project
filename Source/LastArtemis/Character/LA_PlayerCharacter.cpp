@@ -6,8 +6,9 @@
 #include "GameFramework/CharacterMovementComponent.h"	// UCharacterMovementComponent
 #include "EnhancedInputSubsystems.h"    // UInputMappingContext, UInputAction
 #include "EnhancedInputComponent.h"		// UEnhancedInputComponent, FInputActionValue
-#include "Character/LA_DefaultPlayerController.h"		// ALS_DefaultPlayerController
-#include "Character/Player/Component/LA_HealthComponent.h"
+#include "Character/LA_DefaultPlayerController.h"		// ALA_DefaultPlayerController
+#include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
+#include "LastArtemis/Weapon/LA_WeaponBase.h"       // ALA_WeaponBase
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -16,7 +17,7 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 	PrimaryActorTick.bCanEverTick = true;
 
     // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
-    GetCharacterMovement()->MaxWalkSpeed = 300;
+    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 
     // 테스트 용도 카메라 활성화
     bDebugCamera = true;
@@ -32,6 +33,13 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 
     // 캐릭터의 기본 Mesh 비활성화
     HideCharacterMesh();
+
+    // GameplayTag 추가
+    FGameplayTag PlayerTag = FGameplayTag::RequestGameplayTag(FName("Team.Ally"));
+    if (PlayerTag.IsValid())
+    {
+        CharacterTags.AddTag(PlayerTag);
+    }
 }
 
 // Called when the game starts or when spawned
@@ -39,26 +47,16 @@ void ALA_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
-	// InputMappingContext 적용
-	if (Controller != nullptr)
-	{
-		if (APlayerController* playerController = Cast<APlayerController>(Controller))
-		{
-			if (ULocalPlayer* localPlayer = playerController->GetLocalPlayer())
-			{
-				if (UEnhancedInputLocalPlayerSubsystem* subSystem = localPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>())
-				{
-					if (MappingContext != nullptr)
-					{
-						subSystem->AddMappingContext(MappingContext, 0);
-					}
-				}
-			}
-		}
-	}
-
     // 캐릭터의 기본 USkeletalMeshComponent 숨기기
     HideCharacterMesh();
+
+    // 기본 무기 획득
+    if (IsValid(initialWeaponClass) == true)
+    {
+        // 장착중인 무기 교체
+        ALA_WeaponBase* Weapon = GetWorld()->SpawnActor<ALA_WeaponBase>(initialWeaponClass, GetActorLocation(), GetActorRotation());
+        ILA_Holder::Execute_ActivateWeapon(this, Weapon, nullptr);
+    }
 }
 
 // Called every frame
@@ -78,97 +76,75 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 {
 	Super::SetupPlayerInputComponent(PlayerInputComponent);
 
-#pragma region Ver Custom PlayerController
-
-	//// 특정 플레이어 컨트롤러로 기존 플레이어 컨트롤러 변환
-	//if (ALA_DefaultPlayerController* playerController = CastChecked<ALA_DefaultPlayerController>(Controller))
-	//{
-	//	// 플레이어의 입력 컴포넌트를 향상된 입력 컴포넌트로 변환
-	//	if (UEnhancedInputComponent* enhancedInputComponent = CastChecked<UEnhancedInputComponent>(PlayerInputComponent))
-	//	{
-	//		// 작성한 플레이어 컨트롤러에서 설정한 InputAction 에셋에 함수 연결
-
-	//		// move
-	//		if (playerController->MoveInputAction != nullptr)
-	//		{
-	//			enhancedInputComponent->BindAction(playerController->MoveInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::MoveAction);
-	//		}
-	//		// jump
-	//		if (playerController->JumpInputAction != nullptr)
-	//		{
-	//			enhancedInputComponent->BindAction(playerController->JumpInputAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-	//			enhancedInputComponent->BindAction(playerController->JumpInputAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-	//		}
-	//		// look
-	//		if (playerController->LookInputAction != nullptr)
-	//		{
-	//			enhancedInputComponent->BindAction(playerController->LookInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::LookAction);
-	//		}
-	//	}
-	//}
-
-#pragma endregion
-
-	// 플레이어의 입력 컴포넌트를 향상된 입력 컴포넌트로 변환
-	if (UEnhancedInputComponent* enhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
+	// 플레이어 컨트롤러 변환
+	if (ALA_DefaultPlayerController* LA_Controller = Cast<ALA_DefaultPlayerController>(Controller))
 	{
-		// move
-		if (MoveInputAction != nullptr)
+		// 플레이어의 입력 컴포넌트를 향상된 입력 컴포넌트로 변환
+		if (UEnhancedInputComponent* enhancedInputComponent = Cast<UEnhancedInputComponent>(PlayerInputComponent))
 		{
-			enhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::MoveAction);
-			enhancedInputComponent->BindAction(MoveInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::MoveCompletedAction);
-		}
-		// jump
-		if (JumpInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Started, this, &ACharacter::Jump);
-			enhancedInputComponent->BindAction(JumpInputAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
-		}
-		// look
-		if (LookInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(LookInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::LookAction);
-		}
-		// sprint
-		if (SprintInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(SprintInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SprintStartedAction);
-			enhancedInputComponent->BindAction(SprintInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::SprintCompletedAction);
-		}
-		// crouch
-		if (CrouchInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(CrouchInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CrouchStartedAction);
-			enhancedInputComponent->BindAction(CrouchInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CrouchCompletedAction);
-		}
-        // Fire
-		if (FireInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(FireInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::FireStartedAction);
-			enhancedInputComponent->BindAction(FireInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::FireCompletedAction);
-		}
-        // Aim
-		if (AimInputAction != nullptr)
-		{
-			enhancedInputComponent->BindAction(AimInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::AimingStartedAction);
-			enhancedInputComponent->BindAction(AimInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::AimingCompletedAction);
+			// move
+			if (LA_Controller->MoveInputAction != nullptr)
+			{
+				enhancedInputComponent->BindAction(LA_Controller->MoveInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::MoveAction);
+				enhancedInputComponent->BindAction(LA_Controller->MoveInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::MoveCompletedAction);
+			}
+			// jump
+			if (LA_Controller->JumpInputAction != nullptr)
+			{
+				enhancedInputComponent->BindAction(LA_Controller->JumpInputAction, ETriggerEvent::Started, this, &ACharacter::Jump);
+				enhancedInputComponent->BindAction(LA_Controller->JumpInputAction, ETriggerEvent::Completed, this, &ACharacter::StopJumping);
+			}
+			// look
+			if (LA_Controller->LookInputAction != nullptr)
+			{
+				enhancedInputComponent->BindAction(LA_Controller->LookInputAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::LookAction);
+			}
+            // sprint
+            if (LA_Controller->SprintInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->SprintInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SprintStartedAction);
+                enhancedInputComponent->BindAction(LA_Controller->SprintInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::SprintCompletedAction);
+            }
+            // crouch
+            if (LA_Controller->CrouchInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->CrouchInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CrouchStartedAction);
+                enhancedInputComponent->BindAction(LA_Controller->CrouchInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CrouchCompletedAction);
+            }
+            // fire
+            if (LA_Controller->FireInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->FireInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::FireStartedAction);
+                enhancedInputComponent->BindAction(LA_Controller->FireInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::FireCompletedAction);
+            }
+            // aim
+            if (LA_Controller->AimInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->AimInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::AimingStartedAction);
+                enhancedInputComponent->BindAction(LA_Controller->AimInputAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::AimingCompletedAction);
+            }
+            // reload
+            if (LA_Controller->ReloadInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->ReloadInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::ReloadStartedAction);
+            }
 		}
 	}
+
 }
 
 void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult)
 {
     Super::CalcCamera(DeltaTime, OutResult);
 
-    // 장착중인 무기가 존재하지 않으면 테스트 카메라의 View 사용
-    if (EquipedWeapon == nullptr)
-    {
-        return TestCamera->GetCameraView(DeltaTime, OutResult);
-    }
+    UCameraComponent* Camera = GetCameraComponent();
 
-    // 장착중인 무기의 카메라 컴포넌트 사용
+    return Camera->GetCameraView(DeltaTime, OutResult);
+}
 
-    return;
+UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
+{
+    return EquipedWeapon == nullptr ? TestCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
 }
 
 #pragma region Derived From ILA_Holder
@@ -188,26 +164,27 @@ void ALA_PlayerCharacter::ActivateWeapon_Implementation(ALA_WeaponBase* WeaponAc
         return;
     }
 
+    // 무기 할당 전 기존 무기 해제
+    ILA_Holder::Execute_DeactivateWeapon(this);
+
+    // 장착중인 무기 교체
+    EquipedWeapon = WeaponActor;
+
     // 보유한 무기 목록에서 동일한 무기 검색
     if (WeaponsContainer.Contains(WeaponActor) == true)
     {
-        // 장착중인 무기 교체
-        EquipedWeapon = WeaponActor;
-
         // 무기가 보이도록 설정
         EquipedWeapon->SetActorHiddenInGame(false);
+        return;
     }
+    // 새로운 무기
     else
-    {
+    {   // 무기 저장
         WeaponsContainer.Add(WeaponActor);
+
+        // 무기 액터 부착
+        WeaponActor->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
     }
-
-    // 무기 할당 전 기존 무기 해제
-    DeactivateWeapon();
-
-    // 무기 액터 부착
-    WeaponActor->AttachToActor(this, FAttachmentTransformRules::KeepRelativeTransform);
-
     return;
 }
 
@@ -232,22 +209,12 @@ void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(ALA_WeaponBase* 
 
 FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
 {
+    UCameraComponent* Camera = GetCameraComponent();
 
     // LineTrace 실행
     FHitResult HitResult;
-    FVector StartLocation = TestCamera->GetComponentLocation();
-    FVector Direction = TestCamera->GetForwardVector();
-    if (EquipedWeapon != nullptr)
-    {
-        StartLocation = EquipedWeapon->GetActorLocation();
-        Direction = EquipedWeapon->GetActorForwardVector();
-    }
-    else
-    {
-        // 장착중인 무기가 존재하지 않으면 오류 메시지 출력
-        UE_LOG(LogTemp, Warning, TEXT("Try to get focus Location with invalid Weapon"));
-        return FVector::ZeroVector;
-    }
+    FVector StartLocation = Camera->GetComponentLocation();
+    FVector Direction = Camera->GetForwardVector();
     FVector EndLocation = StartLocation + 10000 * Direction;	// 100 m 검사
     FCollisionQueryParams queryParams;
     queryParams.AddIgnoredActor(this);
@@ -259,6 +226,78 @@ FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
         return HitResult.ImpactPoint;
     }
     return HitResult.TraceEnd;
+}
+
+#pragma endregion
+
+#pragma region Skill
+
+void ALA_PlayerCharacter::Blink()
+{
+    // 카메라 얻기
+    UCameraComponent* Camera = GetCameraComponent();
+
+    // 바라보는 지점을 향하여 LineTrace 실행
+    FHitResult HitResult;
+    FVector StartLocation = Camera->GetComponentLocation();
+    FVector Direction = Camera->GetForwardVector();
+    FVector EndLocation = StartLocation + 1000 * Direction;     // 10m
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(EquipedWeapon);
+
+    // LineTrace 검사
+    bool bIsHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+
+    // 순간이동 예상 위치 얻기
+    FVector BlinkLocation = (bIsHit && HitResult.bBlockingHit == true) ? HitResult.ImpactPoint : EndLocation;
+
+    // 안전한 텔레포트 지점 계산
+    GetWorld()->FindTeleportSpot(this, BlinkLocation, GetActorRotation());
+
+    // 순간이동 실행
+    TeleportTo(BlinkLocation, GetActorRotation());
+}
+
+void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
+{
+    //// 장비한 무기의 공격력 증가
+    //EquipedWeapon
+    FTimerDelegate Delegator = FTimerDelegate::CreateLambda([=]()
+        {
+            //// 장비한 무기의 공격력 감소
+            //EquipedWeapon->
+        });
+
+    FTimerHandle SkillTimer;
+    GetWorldTimerManager().SetTimer(SkillTimer, Delegator, Duration, false);
+}
+
+void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
+{
+    // 이동 속도 증가
+    WalkSpeed *= 2;
+    SprintSpeed *= 2;
+    CrouchSpeed *= 2;
+
+    // 이동 속도 적용
+    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
+    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed);
+
+    FTimerDelegate Delegator = FTimerDelegate::CreateLambda([&]()
+        {
+            // 이동 속도 감소
+            WalkSpeed *= 0.5;
+            SprintSpeed *= 0.5;
+            CrouchSpeed *= 0.5;
+
+            GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
+            GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed);
+        });
+
+    // 이동 속도 감소 예약
+    FTimerHandle SkillTimer;
+    GetWorldTimerManager().SetTimer(SkillTimer, Delegator, Duration, false);
 }
 
 #pragma endregion
@@ -277,11 +316,15 @@ void ALA_PlayerCharacter::MoveAction(const FInputActionValue& value)
 	FVector InputVector = value.Get<FVector>();
 	if (InputVector.IsNearlyZero() == false)
 	{
+        // 뷰포트 담당 카메라 얻기
+        UCameraComponent* Camera = GetCameraComponent();
+
 		// 컨트롤러의 회전값 얻기
-		FRotator ControlRotation = GetControlRotation();
+		//FRotator ControlRotation = GetControlRotation();
+		FRotator CameraRotation = Camera->GetComponentRotation();
 
 		// 컨트롤러 회전을 기준으로 방향 조정
-		FVector Direction = InputVector.RotateAngleAxis(ControlRotation.Yaw, FVector::UpVector);
+		FVector Direction = InputVector.RotateAngleAxis(CameraRotation.Yaw, FVector::UpVector);
 
 		// 이동 입력 대입
 		AddMovementInput(Direction);
@@ -304,6 +347,11 @@ void ALA_PlayerCharacter::LookAction(const FInputActionValue& value)
 		// Yaw, Pitch 회전값 적용
 		AddControllerYawInput(InputVector.X);
 		AddControllerPitchInput(InputVector.Y);
+
+        if (EquipedWeapon != nullptr)
+        {
+            EquipedWeapon->Look(InputVector);
+        }
 	}
 }
 
@@ -412,41 +460,6 @@ void ALA_PlayerCharacter::CrouchCompletedAction()
 	}
 }
 
-void ALA_PlayerCharacter::AimingStartedAction()
-{
-	if (Controller == nullptr)
-	{
-		return;
-	}
-
-	// 토글 옵션이면서 조준 상태인 경우
-	if (CrouchInputMode == EMovementInputMode::Toggle)
-	{
-		// 조준 상태 반전
-		bIsAimed = !bIsAimed;
-		return;
-	}
-
-	// 조준 상태로 설정
-	bIsAimed = true;
-}
-
-void ALA_PlayerCharacter::AimingCompletedAction()
-{
-	if (Controller == nullptr)
-	{
-		return;
-	}
-
-	// Hold 옵션이면서 앉아있는 상태의 경우
-	if (CrouchInputMode == EMovementInputMode::Hold && bIsAimed == true)
-	{
-		// 비조준 상태로 설정
-		bIsAimed = false;
-		return;
-	}
-}
-
 void ALA_PlayerCharacter::FireStartedAction()
 {
     if (Controller == nullptr || EquipedWeapon == nullptr)
@@ -469,10 +482,61 @@ void ALA_PlayerCharacter::FireCompletedAction()
     EquipedWeapon->StopFire();
 }
 
+void ALA_PlayerCharacter::AimingStartedAction()
+{
+    if (Controller == nullptr || EquipedWeapon == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid Controller or Weapon to start Aiming"));
+        return;
+    }
+
+	// 토글 옵션이면서 조준 상태인 경우
+	if (AimInputMode == EMovementInputMode::Toggle)
+	{
+		// 조준 상태 반전
+        EquipedWeapon->bIsAiming = !EquipedWeapon->bIsAiming;
+		return;
+	}
+
+	// 조준 상태로 설정
+    EquipedWeapon->bIsAiming = true;
+}
+
+void ALA_PlayerCharacter::AimingCompletedAction()
+{
+    if (Controller == nullptr || EquipedWeapon == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid Controller or Weapon to stop Aiming"));
+        return;
+    }
+
+	// Hold 옵션이면서 조준 상태의 경우
+	if (AimInputMode == EMovementInputMode::Hold && EquipedWeapon->bIsAiming == true)
+	{
+		// 비조준 상태로 설정
+        EquipedWeapon->bIsAiming = false;
+		return;
+	}
+}
+
+void ALA_PlayerCharacter::ReloadStartedAction()
+{
+    if (Controller == nullptr || EquipedWeapon == nullptr)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid Controller or Weapon to Reload"));
+        return;
+    }
+
+    // 재장전 실행
+    EquipedWeapon->Reload();
+}
+
 #pragma endregion
 
 float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
+    Damage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
+
 	if (ULA_HealthComponent* HealthComponent = FindComponentByClass<ULA_HealthComponent>())
 	{
 		float ActualDamage = HealthComponent->TakeDamage(Damage, false);
@@ -498,20 +562,8 @@ void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
         UnCrouch();
     }
 
-    // 달리기 상태로 변경
-    if (bIsSprint == true)
-    {
-        // 이동 속도 변경 (27 km/s)
-        GetCharacterMovement()->MaxWalkSpeed = 750;
-        return;
-    }
-    // 걷기 상태로 변경
-    else
-    {
-        // 이동 속도 변경 (10.8 km/s)
-        GetCharacterMovement()->MaxWalkSpeed = 300;
-        return;
-    }
+    // 이동 속도 변경
+    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint ? SprintSpeed : WalkSpeed);
 }
 
 void ALA_PlayerCharacter::HideCharacterMesh()
@@ -532,7 +584,7 @@ void ALA_PlayerCharacter::HideCharacterMesh()
         // Overlap Event 방지
         CharacterMesh->SetGenerateOverlapEvents(false);
 
-        // 컴포턴트 업데이트 막기
+        // 컴포턴트 업데이트 방지
         CharacterMesh->SetComponentTickEnabled(false);
     }
 }

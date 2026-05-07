@@ -4,8 +4,9 @@
 #include "Perception/AIPerceptionComponent.h"
 #include "Perception/AISenseConfig_Sight.h"
 #include "Kismet/GameplayStatics.h"
-#include "Character/Enemy/Boss/LA_Pojectile.h"
+#include "Character/Enemy/Boss/LA_BossProjectile.h"
 #include "Character/Enemy/Boss/LA_BossCharacter.h"
+#include "GameFramework/ProjectileMovementComponent.h"
 
 ALA_BossController::ALA_BossController()
 {
@@ -91,13 +92,14 @@ void ALA_BossController::RotateToTarget()
 
 void ALA_BossController::ExecutePhasePattern()
 {
-    if (!TargetPlayer) return;
+    if (!TargetPlayer || bIsAttacking) return;
 
     ALA_BossCharacter* BossCharacter = Cast<ALA_BossCharacter>(GetPawn());
     if (BossCharacter)
     {
         // 보스의 현재 페이즈 확인
         EBossPhase CurrentPhase = BossCharacter->GetCurrentPhase();
+        float RandomValue = FMath::FRandRange(0.0f, 100.0f);
 
         switch (CurrentPhase)
         {
@@ -106,12 +108,24 @@ void ALA_BossController::ExecutePhasePattern()
             break;
 
         case EBossPhase::Phase2:
-            ShootFanPattern();
+            if (RandomValue <= 50.0f) ShootBasic3Shot();
+            else ShootFanPattern();
             break;
 
         case EBossPhase::Phase3:
-            // 3페이즈: 광폭화 패턴 (예: 부채꼴 패턴을 더 빠르게 반복)
-            ShootFanPattern();
+            if (RandomValue <= 40.0f)
+            {
+                ShootFanPattern();
+            }
+            else if (RandomValue <= 80.0f)
+            {
+                ShootBomb();
+            }
+            else
+            {
+                ShootFanPattern();
+                ShootBomb();
+            }
             break;
 
         default:
@@ -123,18 +137,27 @@ void ALA_BossController::ExecutePhasePattern()
 
 void ALA_BossController::ShootBasic3Shot()
 {
-    if (bIsAttacking) return;
-    bIsAttacking = true;
+    ALA_BossCharacter* Boss = Cast<ALA_BossCharacter>(GetPawn());
+    if (Boss)
+    {
+        // 보스가 손을 뻗는 모션 재생
+        Boss->PlayAttackMontage();
 
-    CurrentShotsFired = 0;
+        // 이후 탄환 스폰 로직 실행
+        if (bIsAttacking) return;
+        bIsAttacking = true;
 
-    GetWorld()->GetTimerManager().SetTimer(
-        MultiShotTimerHandle,
-        this,
-        &ALA_BossController::ShootSingleShot,
-        BasicShotInterval,
-        true // 반복
-    );
+        CurrentShotsFired = 0;
+
+        GetWorld()->GetTimerManager().SetTimer(
+            MultiShotTimerHandle,
+            this,
+            &ALA_BossController::ShootSingleShot,
+            BasicShotInterval,
+            true // 반복
+        );
+    }
+
 }
 
 void ALA_BossController::ShootSingleShot()
@@ -212,4 +235,35 @@ void ALA_BossController::ShootFanPattern()
         2.0f,
         false
     );
+}
+
+void ALA_BossController::ShootBomb()
+{
+    if (!GetPawn() || !TargetPlayer) return;
+
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = GetPawn();
+
+    FVector StartLocation = GetPawn()->GetActorLocation() + GetPawn()->GetActorForwardVector() * 100.0f;
+    FVector TargetLocation = TargetPlayer->GetActorLocation();
+
+    // 폭탄 스폰
+    ALA_Projectile* Bomb = GetWorld()->SpawnActor<ALA_Projectile>(BombClass, StartLocation, FRotator::ZeroRotator, SpawnParams);
+
+    if (Bomb)
+    {
+        //  팁: 타겟 방향으로 포물선을 그리며 던지기 위해 속도 벡터 계산
+        FVector LaunchVelocity;
+        UGameplayStatics::SuggestProjectileVelocity_CustomArc(
+            this,
+            LaunchVelocity,
+            StartLocation,
+            TargetLocation,
+            GetWorld()->GetGravityZ(),
+            0.5f // 호의 높이 (0.5면 적당한 포물선)
+        );
+
+        Cast<UProjectileMovementComponent>(Bomb->GetComponentByClass(UProjectileMovementComponent::StaticClass()))
+            ->Velocity = LaunchVelocity;
+    }
 }

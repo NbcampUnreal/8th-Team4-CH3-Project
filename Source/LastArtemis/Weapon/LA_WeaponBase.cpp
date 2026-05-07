@@ -2,16 +2,17 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
 #include "Engine/World.h"
-#include "DrawDebugHelpers.h"
-#include "TimerManager.h"
-#include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/DamageType.h"
+#include "GameFramework/Character.h"
+#include "GameFramework/CharacterMovementComponent.h"
 
 ALA_WeaponBase::ALA_WeaponBase()
 {
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
 
-	Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
-	RootComponent = Root;
+    Root = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+    RootComponent = Root;
 
     Camera = CreateDefaultSubobject<UCameraComponent>(TEXT("Camera"));
     Camera->SetupAttachment(Root);
@@ -23,8 +24,8 @@ ALA_WeaponBase::ALA_WeaponBase()
     SpringArm->TargetArmLength = 0.f;
     SpringArm->bUsePawnControlRotation = false;
 
-	Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
-	Mesh->SetupAttachment(SpringArm);
+    Mesh = CreateDefaultSubobject<USkeletalMeshComponent>(TEXT("Mesh"));
+    Mesh->SetupAttachment(SpringArm);
 
     CameraPitch = 0.f;
     CameraYaw = 0.f;
@@ -41,10 +42,15 @@ ALA_WeaponBase::ALA_WeaponBase()
     AimInterpSpeed = 15.f;
 
     BaseDamage = 20.f;
-	FireRate = 0.1f;
+    FireRate = 0.1f;
     MaxRange = 5000.f;
-	PelletCount = 1.f;
-    SpreadAngle = 0.f;
+    PelletCount = 1;
+
+    DefaultSpreadAngle = 2.f;
+    MaxSpreadAngle = 8.f;
+    MinSpreadAngle = 0.5f;
+    SpreadIncrement = 0.5f;
+    CurrentSpreadAngle = 0.f;
 
     CurrentState = EWeaponState::Idle;
 }
@@ -94,12 +100,18 @@ void ALA_WeaponBase::Tick(float DeltaTime)
     FRotator CurrentRotation = Mesh->GetRelativeRotation();
     FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, AimInterpSpeed);
     Mesh->SetRelativeRotation(NewRotation);
+
+    // Spread Angle Recovery
+    if (CurrentSpreadAngle > 0.f)
+    {
+        CurrentSpreadAngle = FMath::FInterpTo(CurrentSpreadAngle, 0.f, DeltaTime, 1.f / FireRate);
+    }
 }
 
 void ALA_WeaponBase::Look(FVector InputValue)
 {
     CameraYaw += InputValue.X;
-    CameraPitch = FMath::Clamp(CameraPitch + InputValue.Y, -89.f, 89.f);
+    CameraPitch = FMath::Clamp(CameraPitch - InputValue.Y, -89.f, 89.f);
     Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
 
     // 마우스 이동 반대 방향으로 무기가 움직이는 Sway 방향 설정
@@ -132,7 +144,7 @@ void ALA_WeaponBase::StartFire()
 
 void ALA_WeaponBase::StopFire()
 {
-	GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
+    GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
 }
 
 void ALA_WeaponBase::Reload()
@@ -149,6 +161,27 @@ void ALA_WeaponBase::Reload()
     }
 }
 
+float ALA_WeaponBase::GetDynamicSpreadAngle() const
+{
+    float DynamicSpreadAngle = DefaultSpreadAngle;
+
+    if (bIsAiming)
+    {
+        DynamicSpreadAngle *= 0.5f; // 조준 시 절반 감소
+    }
+
+    if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
+    {
+        float CurrentSpeed = OwnerCharacter->GetVelocity().Size2D();
+        float MaxSpeed = OwnerCharacter->GetCharacterMovement()->MaxWalkSpeed;
+        float SpeedRatio = CurrentSpeed / MaxSpeed;
+        DynamicSpreadAngle += (SpeedRatio * 2.f); // 이동 시 최대 2배 증가
+    }
+
+    DynamicSpreadAngle += CurrentSpreadAngle; // 누적 합
+    return FMath::Clamp(DynamicSpreadAngle, MinSpreadAngle, MaxSpreadAngle);
+}
+
 bool ALA_WeaponBase::CanFire() const
 {
     return CurrentState == EWeaponState::Idle && !GetWorld()->GetTimerManager().IsTimerActive(FireTimerHandle);
@@ -156,34 +189,45 @@ bool ALA_WeaponBase::CanFire() const
 
 void ALA_WeaponBase::Fire()
 {
-    APawn* OwnerPawn = Cast<APawn>(GetOwner());
-    if (!OwnerPawn) return;
+    // 카메라 기준 타겟 위치 계산
+    FVector StartLocation = Mesh->GetSocketLocation(TEXT("Muzzle"));
+    FVector TargetLocation = Camera->GetComponentLocation() + (Camera->GetForwardVector() * MaxRange);
+    FVector FireDirection = (TargetLocation - StartLocation).GetSafeNormal();
 
-    FVector Start = GetActorLocation();
-    FVector Direction = OwnerPawn->GetControlRotation().Vector();
+    APawn* OwnerPawn = Cast<APawn>(GetOwner());
+    AController* OwnerController = OwnerPawn ? OwnerPawn->GetController() : nullptr;
 
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
-    Params.AddIgnoredActor(OwnerPawn);
+    if (OwnerPawn) Params.AddIgnoredActor(OwnerPawn);
+
+    float SpreadAngle = GetDynamicSpreadAngle();
 
     for (int32 i = 0; i < PelletCount; ++i)
     {
-        FVector RandomizedDir = FMath::VRandCone(Direction, FMath::DegreesToRadians(SpreadAngle));
-        FVector End = Start + (RandomizedDir * MaxRange);
+        FVector RandomizedDirection = FMath::VRandCone(FireDirection, FMath::DegreesToRadians(SpreadAngle));
+        FVector EndLocation = StartLocation + (RandomizedDirection * MaxRange);
 
-        FHitResult Hit;
-        bool bHit = GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Visibility, Params);
+        FHitResult HitResult;
+        bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, Params);
 
         if (bHit)
         {
-            DrawDebugLine(GetWorld(), Start, Hit.ImpactPoint, FColor::Green, false, 2.f, 0, 1.f);
-            DrawDebugPoint(GetWorld(), Hit.ImpactPoint, 10.f, FColor::Green, false, 2.f);
+            if (AActor* HitActor = HitResult.GetActor())
+            {
+                UGameplayStatics::ApplyPointDamage(HitActor, BaseDamage, RandomizedDirection, HitResult, OwnerController, this, UDamageType::StaticClass());
+            }
+            DrawDebugLine(GetWorld(), StartLocation, HitResult.ImpactPoint, FColor::Red, false, 2.f, 0, 1.f);
+            DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 10.f, FColor::Red, false, 3.f);
         }
         else
         {
-            DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f, 0, 1.f);
+            DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Green, false, 2.f, 0, 1.f);
         }
     }
+
+    // 발사 후 반동에 의한 탄착 범위 증가
+    CurrentSpreadAngle = FMath::Clamp(CurrentSpreadAngle + SpreadIncrement, 0.f, MaxSpreadAngle);
 }
 
 void ALA_WeaponBase::ResetState()

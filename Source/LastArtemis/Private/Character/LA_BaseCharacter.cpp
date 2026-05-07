@@ -78,6 +78,50 @@ void ALA_BaseCharacter::Die()
 		OnDeath.Broadcast();
 	}
 }
+
+void ALA_BaseCharacter::IncreaseContamination(float Amount)
+{
+    Contamination = FMath::Clamp(Contamination + Amount, 0.0f, MaxContamination);
+
+    if (Contamination >= MaxContamination)
+    {
+        // 오염도가 최대치일 때의 페널티 (예: 지속 데미지 등)를 여기에 구현
+    }
+}
+
+void ALA_BaseCharacter::PlayAttackMontage()
+{
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && AttackMontage)
+    {
+        // 몽타주 재생 (재생 속도 1.0f)
+        AnimInstance->Montage_Play(AttackMontage, 1.0f);
+    }
+}
+
+void ALA_BaseCharacter::ReduceShieldOnly(float Amount)
+{
+    if (CurrentShield > 0.0f)
+    {
+        CurrentShield = FMath::Max(CurrentShield - Amount, 0.0f);
+    }
+}
+
+void ALA_BaseCharacter::UpdateTeamTag(FGameplayTag NewTeamTag)
+{
+
+    FGameplayTag ParentTeamTag = FGameplayTag::RequestGameplayTag(FName("Team"));
+
+    // 현재 태그들 중 "Team" 하위 태그들만 따로 추출
+    FGameplayTagContainer OldTeamTags = TeamTags.Filter(FGameplayTagContainer(ParentTeamTag));
+
+    // 2. 찾아낸 기존 팀 태그들을 모두 제거
+    TeamTags.RemoveTags(OldTeamTags);
+
+    // 3. 새로운 팀 태그 추가
+    TeamTags.AddTag(NewTeamTag);
+}
+
 /*
 void ALA_BaseCharacter::EquipWeapon(TSubclassOf<ALA_Weapon> WeaponClass)
 {
