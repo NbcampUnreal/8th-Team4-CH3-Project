@@ -24,10 +24,10 @@ protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
+    virtual float GetDynamicSpreadAngle() const;
     virtual bool CanFire() const;
     virtual void Fire();
-
-    void ResetState();
+    virtual void ResetState();
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
@@ -115,16 +115,26 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
     int32 PelletCount;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float SpreadAngle;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
+    float DefaultSpreadAngle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
+    float MaxSpreadAngle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
+    float MinSpreadAngle;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
+    float SpreadIncrement;
 
 public:
     UFUNCTION(BlueprintPure, Category = "Weapon|Components")
-    class UCameraComponent* GetFirstPersonCamera() const { return Camera; };
+    class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
 
 private:
     float CameraPitch;
     float CameraYaw;
+    float CurrentSpreadAngle;
 
     FRotator TargetSway;
     FRotator CurrentSway;
