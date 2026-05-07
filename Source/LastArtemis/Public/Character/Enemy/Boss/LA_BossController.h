@@ -25,6 +25,9 @@ protected:
     virtual void BeginPlay() override;
     virtual void OnPossess(APawn* InPawn) override;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Combat")
+    TSubclassOf<class ALA_Projectile> BombClass;
+
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
     UAIPerceptionComponent* BossPerceptionComponent;
 
@@ -61,10 +64,20 @@ protected:
     UFUNCTION()
     void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
 
+    UFUNCTION()
     void RotateToTarget();
+
+    UFUNCTION()
     void ExecutePhasePattern();
+
+    UFUNCTION()
     void ShootBasic3Shot();
+
+    UFUNCTION()
     void ShootFanPattern();
+
+    UFUNCTION()
+    void ShootBomb();
 
     FTimerHandle AttackTimerHandle;
     bool bIsAttacking;

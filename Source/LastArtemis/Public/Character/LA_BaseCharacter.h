@@ -17,6 +17,15 @@ class LASTARTEMIS_API ALA_BaseCharacter : public ACharacter
 protected:
     virtual void BeginPlay() override;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+    float Contamination;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+    float MaxContamination;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status | Tags")
+    FGameplayTagContainer TeamTags;
+
 public:
     ALA_BaseCharacter();
 
@@ -70,7 +79,23 @@ public:
     UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnDeathDelegate OnDeath;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    class UAnimMontage* AttackMontage;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
     FGameplayTagContainer CharacterTags;
+
+    // 오염도 증가 함수
+    void IncreaseContamination(float Amount);
+
+    void PlayAttackMontage();
+
+    // 쉴드만 깎는 특수 데미지 함수
+    void ReduceShieldOnly(float Amount);
+
+    FORCEINLINE float GetCurrentShield() const { return CurrentShield; }
+
+    virtual void UpdateTeamTag(FGameplayTag NewTeamTag);
+
 
 };

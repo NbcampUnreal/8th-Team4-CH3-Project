@@ -15,7 +15,7 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void OnPossess(APawn* InPawn) override;
 	virtual void Tick(float DeltaTime) override;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Perception", meta = (ClampMin = "0.0"))
 	float SightRadius;
 
@@ -24,7 +24,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Perception", meta = (ClampMin = "0.0"))
 	float PeripheralVisionAngleDegrees;
-	
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	class UAIPerceptionComponent* EnemyPerceptionComponent;
 
@@ -41,24 +41,24 @@ protected:
 	// 공격 범위
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	float AttackRange;
-	
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
 	float AttackDelay;
 
 	FTimerHandle AttackTimerHandle;
-    
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
 	bool bIsAttacking;
-	
+
 public:
 	ALA_EnemyController();
-	
+
 	UFUNCTION(BlueprintCallable, Category = "AI")
 	void ChasePlayer();
 
 	UFUNCTION(BlueprintCallable, Category = "AI")
 	void AttackPlayer();
-	
+
 	UFUNCTION()
 	void ResetAttackState();
 };
