@@ -40,19 +40,20 @@ ALA_WeaponBase::ALA_WeaponBase()
     AimFOV = 60.f;
     AimInterpSpeed = 15.f;
 
-    BaseDamage = 2.f;
+    BaseDamage = 20.f;
 	FireRate = 0.1f;
-    MaxRange = 500.f;
+    MaxRange = 5000.f;
 	PelletCount = 1.f;
     SpreadAngle = 0.f;
 
-    bCanFire = true;
+    CurrentState = EWeaponState::Idle;
 }
 
 void ALA_WeaponBase::BeginPlay()
 {
     Super::BeginPlay();
 
+    // 조준선 정렬 역연산, 소켓 위치를 이용하여 조준선이 카메라의 정중앙을 향하도록 AimMeshLocation과 AimMeshRotation 계산
     if (Mesh->DoesSocketExist(TEXT("FrontSight")) && Mesh->DoesSocketExist(TEXT("RearSight")))
     {
         FVector Front = Mesh->GetSocketTransform(TEXT("FrontSight"), RTS_Component).GetLocation();
@@ -71,22 +72,24 @@ void ALA_WeaponBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    // Sway
     CurrentSway = FMath::RInterpTo(CurrentSway, TargetSway, DeltaTime, SwaySpeed);
     SpringArm->SetRelativeRotation(CurrentSway);
     TargetSway = FMath::RInterpTo(TargetSway, FRotator::ZeroRotator, DeltaTime, SwayReturnSpeed);
 
-    // Sway
+    // Aim - FOV
     float TargetFOV = bIsAiming ? AimFOV : DefaultFOV;
     float CurrentFOV = Camera->FieldOfView;
     float NewFOV = FMath::FInterpTo(CurrentFOV, TargetFOV, DeltaTime, AimInterpSpeed);
     Camera->SetFieldOfView(NewFOV);
 
-    // Aim
+    // Aim - Location
     FVector TargetLocation = bIsAiming ? AimMeshLocation : DefaultMeshLocation;
     FVector CurrentLocation = Mesh->GetRelativeLocation();
     FVector NewLocation = FMath::VInterpTo(CurrentLocation, TargetLocation, DeltaTime, AimInterpSpeed);
     Mesh->SetRelativeLocation(NewLocation);
 
+    // Aim - Rotation
     FRotator TargetRotation = bIsAiming ? AimMeshRotation : DefaultMeshRotation;
     FRotator CurrentRotation = Mesh->GetRelativeRotation();
     FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, AimInterpSpeed);
@@ -99,6 +102,7 @@ void ALA_WeaponBase::Look(FVector InputValue)
     CameraPitch = FMath::Clamp(CameraPitch + InputValue.Y, -89.f, 89.f);
     Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
 
+    // 마우스 이동 반대 방향으로 무기가 움직이는 Sway 방향 설정
     float PitchOffset = FMath::Clamp(InputValue.Y * SwayMultiplier, -MaxSwayDegree, MaxSwayDegree);
     float YawOffset = FMath::Clamp(-InputValue.X * SwayMultiplier, -MaxSwayDegree, MaxSwayDegree);
     TargetSway = FRotator(PitchOffset, YawOffset, 0.f);
@@ -106,27 +110,51 @@ void ALA_WeaponBase::Look(FVector InputValue)
 
 void ALA_WeaponBase::StartFire()
 {
-	if (!bCanFire) return;
+    if (!CanFire()) return;
 
-	bCanFire = false;
-	FTimerDelegate ResetFire;
-	ResetFire.BindLambda([this](){ bCanFire = true; });
+    FTimerDelegate FireDelegate;
+    FireDelegate.BindLambda([this]()
+    {
+        CurrentState = EWeaponState::Firing;
 
-    OnFire();
-	GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, ResetFire, FireRate, false);
+        if (FiringMontage && Mesh->GetAnimInstance())
+        {
+            Mesh->GetAnimInstance()->Montage_Play(FiringMontage);
+        }
+
+        Fire();
+        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, FireRate, false);
+    });
+
+    FireDelegate.ExecuteIfBound();
+    GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, FireDelegate, FireRate, true);
 }
 
 void ALA_WeaponBase::StopFire()
 {
 	GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
-	bCanFire = true;
 }
 
 void ALA_WeaponBase::Reload()
 {
+    if (CurrentState != EWeaponState::Idle) return;
+
+    CurrentState = EWeaponState::Reloading;
+    bIsAiming = false; // 장전 시 조준 강제 해제
+
+    if (ReloadMontage && Mesh->GetAnimInstance())
+    {
+        float Duration = Mesh->GetAnimInstance()->Montage_Play(ReloadMontage);
+        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, Duration, false);
+    }
 }
 
-void ALA_WeaponBase::OnFire()
+bool ALA_WeaponBase::CanFire() const
+{
+    return CurrentState == EWeaponState::Idle && !GetWorld()->GetTimerManager().IsTimerActive(FireTimerHandle);
+}
+
+void ALA_WeaponBase::Fire()
 {
     APawn* OwnerPawn = Cast<APawn>(GetOwner());
     if (!OwnerPawn) return;
@@ -156,4 +184,9 @@ void ALA_WeaponBase::OnFire()
             DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 2.f, 0, 1.f);
         }
     }
+}
+
+void ALA_WeaponBase::ResetState()
+{
+    CurrentState = EWeaponState::Idle;
 }
