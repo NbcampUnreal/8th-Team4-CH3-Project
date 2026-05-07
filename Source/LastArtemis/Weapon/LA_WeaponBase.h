@@ -4,6 +4,14 @@
 #include "GameFramework/Actor.h"
 #include "LA_WeaponBase.generated.h"
 
+UENUM(BlueprintType)
+enum class EWeaponState : uint8
+{
+    Idle,
+    Firing,
+    Reloading
+};
+
 UCLASS()
 class LASTARTEMIS_API ALA_WeaponBase : public AActor
 {
@@ -15,7 +23,11 @@ public:
 protected:
     virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
-    virtual void OnFire();
+
+    virtual bool CanFire() const;
+    virtual void Fire();
+
+    void ResetState();
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
@@ -34,17 +46,26 @@ public:
     bool bIsAiming;
 
 protected:
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     USceneComponent* Root;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     class UCameraComponent* Camera;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     class USpringArmComponent* SpringArm;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     USkeletalMeshComponent* Mesh;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
+    EWeaponState CurrentState;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Animation")
+    UAnimMontage* FiringMontage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Animation")
+    UAnimMontage* ReloadMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
     float MaxSwayDegree;
@@ -97,6 +118,10 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
     float SpreadAngle;
 
+public:
+    UFUNCTION(BlueprintPure, Category = "Weapon|Components")
+    class UCameraComponent* GetFirstPersonCamera() const { return Camera; };
+
 private:
     float CameraPitch;
     float CameraYaw;
@@ -105,5 +130,5 @@ private:
     FRotator CurrentSway;
 
     FTimerHandle FireTimerHandle;
-    bool bCanFire;
+    FTimerHandle StateTimerHandle;
 };
