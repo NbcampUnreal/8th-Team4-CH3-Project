@@ -111,7 +111,7 @@ void ALA_WeaponBase::Tick(float DeltaTime)
 void ALA_WeaponBase::Look(FVector InputValue)
 {
     CameraYaw += InputValue.X;
-    CameraPitch = FMath::Clamp(CameraPitch + InputValue.Y, -89.f, 89.f);
+    CameraPitch = FMath::Clamp(CameraPitch - InputValue.Y, -89.f, 89.f);
     Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
 
     // 마우스 이동 반대 방향으로 무기가 움직이는 Sway 방향 설정
