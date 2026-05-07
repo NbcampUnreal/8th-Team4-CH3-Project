@@ -86,13 +86,11 @@ void ALA_BossCharacter::CheckPhaseTransition()
     if (HealthPercent <= 0.33f && CurrentPhase != EBossPhase::Phase3)
     {
         CurrentPhase = EBossPhase::Phase3;
-        // TODO: 3페이즈 광폭화 로직 연동
     }
     // 66% 이하 진입 시 페이즈 2로 전환
     else if (HealthPercent <= 0.66f && CurrentPhase == EBossPhase::Phase1)
     {
         CurrentPhase = EBossPhase::Phase2;
-        // TODO: 2페이즈 패턴 변경 로직 연동
     }
 }
 
