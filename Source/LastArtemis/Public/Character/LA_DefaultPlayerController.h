@@ -39,9 +39,26 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
 	TObjectPtr<UInputAction> LookInputAction;
 
-	// Change ViewPoint
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
-	TObjectPtr<UInputAction> ChangeViewpointInputAction;
+    // Sprint InputAction (Shift);
+    // Triggers 옵션에서 Chorded Action을 추가하여 MoveInputAction이 활성화된 상태에서만 동작하도록 설정
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> SprintInputAction;
+
+    // Crouch InputAction (Control)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> CrouchInputAction;
+
+    // Fire InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> FireInputAction;
+
+    // Zoom InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> AimInputAction;
+
+    // Reload InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> ReloadInputAction;
 
 #pragma endregion
 
