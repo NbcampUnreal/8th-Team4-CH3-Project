@@ -8,7 +8,7 @@
 #include "LA_InvasionMissionDataAsset.generated.h"
 
 
-UCLASS()
+UCLASS(BlueprintType)
 class LASTARTEMIS_API ULA_InvasionMissionDataAsset : public ULA_MissionDataAsset
 {
 	GENERATED_BODY()
