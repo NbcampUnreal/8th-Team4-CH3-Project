@@ -18,6 +18,12 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
     FText MissionName;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission", meta = (MultiLine = true))
+    FText MissionDescription;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
+    FName LevelName;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
     ELA_MissionType MissionType = ELA_MissionType::None;
 
