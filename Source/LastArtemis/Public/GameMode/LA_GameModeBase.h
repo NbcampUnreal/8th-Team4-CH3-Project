@@ -73,6 +73,6 @@ protected:
     TObjectPtr<ULA_MissionDataAsset> MissionDataAsset;
 
     // 게임 시작 시 할당된 MissionDataAsset을 기반으로 Mission Logic 진행
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mission")
     TObjectPtr<ULA_MissionLogic> CurrentMissionLogic;
 };

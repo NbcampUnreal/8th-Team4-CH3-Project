@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -6,44 +6,77 @@
 #include "Engine/GameInstance.h"
 #include "LA_GameInstance.generated.h"
 
+class ULA_MissionDataAsset;
 
-UCLASS()
+UCLASS(Blueprintable)
 class LASTARTEMIS_API ULA_GameInstance : public UGameInstance
 {
 	GENERATED_BODY()
 
-protected:
+public:
 	ULA_GameInstance();
 
 public:
-	// ÇÃ·¹ÀÌ¾î ÇöÀç ·¹º§
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Data")
-	int32 PlayerLevel;
-	// ÇöÀç °æÇèÄ¡
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Data")
-	int32 CurrentExp;
-	// ·¹º§ ¾÷¿¡ ÇÊ¿äÇÑ °æÇèÄ¡
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Data")
-	int32 ExpToNextLevel;
-	// ÇöÀç °ñµå
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Data")
-	int32 TotalGold;
-	// ¸ó½ºÅÍ Ã³Ä¡ Á¡¼ö
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Player Data")
-	int32 TotalScore;
+    ////////////////////////////////////////////////////////////////////////
+    /// ë³´ìƒ ë¡œì§ í•¨ìˆ˜
+    ////////////////////////////////////////////////////////////////////////
 
-	// ¸ó½ºÅÍ Ã³Ä¡ ½Ã º¸»ó Ãß°¡
-	UFUNCTION(BlueprintCallable)
-	void AddReward(int32 ExpReward, int32 GoldReward, int32 ScoreReward);
-	// °ÔÀÓ µ¥ÀÌÅÍ ÃÊ±âÈ­
+    UFUNCTION(BlueprintCallable, Category = "Reward")
+    void AddReward(int32 GoldReward, int32 ScoreReward);
+	// ê²Œì„ ë°ì´í„° ì´ˆê¸°í™”
 	UFUNCTION(BlueprintCallable)
 	void ResetPlayerData();
 
+    ////////////////////////////////////////////////////////////////////////
+    /// ë¯¸ì…˜ ë¡œì§ í•¨ìˆ˜
+    ////////////////////////////////////////////////////////////////////////
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void SetSelectedMission(ULA_MissionDataAsset* InMissionData);
+    UFUNCTION(BlueprintPure, Category = "Mission")
+    ULA_MissionDataAsset* GetSelectedMission() const;
+
+    ////////////////////////////////////////////////////////////////////////
+    /// ì„¸ì´ë¸Œ ë¡œì§ í•¨ìˆ˜
+    ////////////////////////////////////////////////////////////////////////
+
+    UFUNCTION(BlueprintCallable, Category = "Save")
+    void SaveCheckPointLocation(FVector SaveLocation, FRotator SaveRotation);
+
+    // ê²Œì„ ë°ì´í„° ì €ì¥
+    UFUNCTION(BlueprintCallable, Category = "Save")
+    void SaveGameData();
+
+    // ê²Œì„ ë°ì´í„° ë¶ˆëŸ¬ì˜¤ê¸°
+    UFUNCTION(BlueprintCallable, Category = "Save")
+    void LoadGameData();
+
+
 protected:
-	////////////////////
-	// °æÇèÄ¡ °ü·Ã ·ÎÁ÷
-	////////////////////
-	void AddExp(int32 ExpAmount);	// °æÇèÄ¡ Áõ°¡
-	void CheckLevelUp();			// ·¹º§¾÷ Ã¼Å©
-	void LevelUp();					// ·¹º§ ¾÷
+    // í˜„ì¬ ê³¨ë“œ
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reward")
+    int32 TotalGold;
+    // ëª¬ìŠ¤í„° ì²˜ì¹˜ ì ìˆ˜
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reward")
+    int32 TotalScore;
+
+
+    // ì„ íƒëœ ë¯¸ì…˜ Data Asset
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
+    ULA_MissionDataAsset* SelectedMissionDataAsset;
+
+
+    // ìµœê·¼ ë°©ë¬¸í•œ Rest Stageì˜ Phase Index
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    int32 SavedPhaseIndex;
+
+    // Check Pointì™€ ìƒí˜¸ ì‘ìš©í•œ ìœ„ì¹˜
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    FVector SavedPlayerLocation;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    FRotator SavedPlayerRotation;
+
+    // ê¸°ë³¸ ìŠ¬ë¡¯ ì´ë¦„
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Save Data")
+    FString SaveSlotName;
 };

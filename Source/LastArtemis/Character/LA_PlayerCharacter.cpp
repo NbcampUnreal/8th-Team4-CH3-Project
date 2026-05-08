@@ -53,9 +53,14 @@ void ALA_PlayerCharacter::BeginPlay()
     // 기본 무기 획득
     if (IsValid(initialWeaponClass) == true)
     {
-        // 장착중인 무기 교체
-        ALA_WeaponBase* Weapon = GetWorld()->SpawnActor<ALA_WeaponBase>(initialWeaponClass, GetActorLocation(), GetActorRotation());
-        ILA_Holder::Execute_ActivateWeapon(this, Weapon, nullptr);
+        // 초기 무기 획득
+        ILA_Holder::Execute_AddWeaponToPawn(this, initialWeaponClass);
+
+        if (WeaponClassNameIndexer.IsEmpty() == false)
+        {
+            // 0번 인덱스의 무기 장착
+            SwapWeapon(0);
+        }
     }
 }
 
@@ -128,6 +133,31 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->ReloadInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::ReloadStartedAction);
             }
+            // skill A (Blink)
+            if (LA_Controller->SkillAInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->SkillAInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::Blink);
+            }
+            // skill B (Enhance Speed)
+            if (LA_Controller->SkillBInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->SkillBInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::EnhanceMovementSpeed, 5.f);
+            }
+            // Weapon QuickSlot 1
+            if (LA_Controller->WeaponSlot1InputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->WeaponSlot1InputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SwapWeapon, 0);
+            }
+            // Weapon QuickSlot 2
+            if (LA_Controller->WeaponSlot2InputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->WeaponSlot2InputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SwapWeapon, 1);
+            }
+            // Weapon QuickSlot 3
+            if (LA_Controller->WeaponSlot3InputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->WeaponSlot3InputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SwapWeapon, 2);
+            }
 		}
 	}
 
@@ -149,62 +179,99 @@ UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
 
 #pragma region Derived From ILA_Holder
 
-void ALA_PlayerCharacter::ActivateWeapon_Implementation(ALA_WeaponBase* WeaponActor, USkeletalMesh* WeaponCharacterMesh)
+void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(TSubclassOf<ALA_WeaponBase> WeaponClass)
 {
-    // 장착하려는 무기와 중복되는 인덱스 찾기
-    int32 DuplicatedIndex = WeaponsContainer.IndexOfByPredicate([&](const AActor* Element)
-        {
-            return Element == WeaponActor;
-        });
+    if (IsValid(WeaponClass) == false)
+    {
+        return;
+    }
 
-    // 현재 장착중인 무기와 중복되는 경우
-    if (EquipedWeapon == WeaponActor)
+    // 획득한 무기 클래스의 고유 값 얻기
+    FName CLS_UID = WeaponClass->GetFName();
+
+    // 중복 무기 획득 검사
+    if (OwnedWeapons.Contains(CLS_UID) == true)
+    {
+        ALA_WeaponBase* Weapon = OwnedWeapons[CLS_UID];
+
+        // 무기의 총알 채워넣기
+        //Weapon->
+        return;
+    }
+    else
+    {
+        // 무기 인스턴스 생성
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Owner = this;   // 소유자 설정
+        SpawnParams.Instigator = this;
+        ALA_WeaponBase* Weapon = GetWorld()->SpawnActor<ALA_WeaponBase>(WeaponClass, GetActorTransform(), SpawnParams);
+
+        // 보유한 무기 목록에 추가
+        OwnedWeapons.Add({ CLS_UID, Weapon });
+        WeaponClassNameIndexer.Add(CLS_UID);
+
+        // 캐릭터에 무기 부착
+        Weapon->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+        Weapon->SetActorRelativeLocation(FVector(0, 0, BaseEyeHeight));
+
+        // 획득한 무기 비활성화 처리
+        ILA_Holder::Execute_DeactivateWeapon(this, Weapon);
+    }
+}
+
+void ALA_PlayerCharacter::ActivateWeapon_Implementation(ALA_WeaponBase* Weapon)
+{
+    if (IsValid(Weapon) == false)
+    {
+        return;
+    }
+
+    FString DebugMessage = FString::Printf(TEXT("무기(%s) 장착"), *Weapon->GetName());
+    GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Orange, DebugMessage);
+
+    // 현재 장착 중인 무기를 활성화하는 경우
+    if (Weapon == EquipedWeapon)
     {
         // 함수 조기 종료
         return;
     }
 
-    // 무기 할당 전 기존 무기 해제
-    ILA_Holder::Execute_DeactivateWeapon(this);
-
-    // 장착중인 무기 교체
-    EquipedWeapon = WeaponActor;
-
-    // 보유한 무기 목록에서 동일한 무기 검색
-    if (WeaponsContainer.Contains(WeaponActor) == true)
+    // 다른 무기 활성화 시 현재 무기 비활성화
+    if (EquipedWeapon != nullptr)
     {
-        // 무기가 보이도록 설정
-        EquipedWeapon->SetActorHiddenInGame(false);
-        return;
+        ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
     }
-    // 새로운 무기
-    else
-    {   // 무기 저장
-        WeaponsContainer.Add(WeaponActor);
 
-        // 무기 액터 부착
-        WeaponActor->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-    }
+    // 선택 무기 활성화
+    Weapon->SetActorHiddenInGame(false);
+
+    // 장착 무기 교체
+    EquipedWeapon = Weapon;
     return;
 }
 
-void ALA_PlayerCharacter::DeactivateWeapon_Implementation()
+void ALA_PlayerCharacter::DeactivateWeapon_Implementation(ALA_WeaponBase* Weapon)
 {
-    if (EquipedWeapon == nullptr)
+    if (Weapon == nullptr)
     {
         return;
     }
 
-    // 총을 발사중인 경우 발사 중지
-    EquipedWeapon->StopFire();
+    // 무기 조준 상태 해제 및 발사 중지
+    Weapon->bIsAiming = false;
+    Weapon->StopFire();
 
-    // 장착중인 무기 숨기기
-    EquipedWeapon->SetActorHiddenInGame(true);
+    // 무기 숨기기
+    Weapon->SetActorHiddenInGame(true);
+
+    // 무기의 Collision 비활성화
+    Weapon->SetActorEnableCollision(false);
     return;
 }
 
 void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(ALA_WeaponBase* HoldActor)
 {
+    GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, TEXT("LA_PlayerCharacter -> UpdateHUDWidgetOnActor 함수 호출됨"));
 }
 
 FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
@@ -261,6 +328,13 @@ void ALA_PlayerCharacter::Blink()
 
 void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
 {
+    GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Orange, TEXT("LA_PlayerCharacter -> EnhanceWeaponDamage 함수 호출됨"));
+
+    if (EquipedWeapon == nullptr)
+    {
+        return;
+    }
+
     //// 장비한 무기의 공격력 증가
     //EquipedWeapon
     FTimerDelegate Delegator = FTimerDelegate::CreateLambda([=]()
@@ -301,6 +375,29 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 }
 
 #pragma endregion
+
+void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
+{
+    // 인덱스 유효성 확인
+    if (WeaponClassNameIndexer.IsValidIndex(WeaponIndex) == false)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid Index (Out Of Range). No Weapon on %d Index Slot"), WeaponIndex);
+        return;
+    }
+
+    // 선택한 무기 클래스의 이름 얻기
+    FName WeaponClassName = WeaponClassNameIndexer[WeaponIndex];
+
+    // 해당 클래스의 무기를 보유하고 있는지 확인
+    if (OwnedWeapons.Contains(WeaponClassName) == true)
+    {
+        // 교체하려는 무기 얻기
+        ALA_WeaponBase* NewWeapon = OwnedWeapons[WeaponClassName];
+
+        // 선택된 무기 장착
+        ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
+    }
+}
 
 #pragma region Input Action
 
@@ -588,40 +685,3 @@ void ALA_PlayerCharacter::HideCharacterMesh()
         CharacterMesh->SetComponentTickEnabled(false);
     }
 }
-
-#pragma region Legacy
-
-void ALA_PlayerCharacter::PlayWeaponAnimMontage_Implementation(UAnimMontage* Montage)
-{
-}
-
-void ALA_PlayerCharacter::OnBeginShot()
-{
-	//// 사격 입력이 들어오지 않고있거나 장전 중일 때 사격 불가
-	//if (bIsFired == false || bIsReloading == true)
-	//{
-	//	return;
-	//}
-	//
-	//bIsReloading = true;
-	//FVector startLocation = GetMesh()->GetSocketLocation(FName("Muzzle"));
-	//FVector endLocation = GetFocusLocation();
-	//DrawDebugLine(GetWorld(), startLocation, endLocation, FColor::Red, false, 3.f, 0, 1);
-
-	//PlayAnimMontage(TestMontage, 1, FName("Defualt"));
-}
-
-void ALA_PlayerCharacter::OnEndShot()
-{
- //   // 장전 완료 상태로 변경
-	//bIsReloading = false;
-
- //   // 연사가 가능한 경우 현재 발사 키가 입력중인지 확인
-	//if (bIsAuto == true && bIsFired == true)
-	//{
- //       // 총알 발사 함수 실행
-	//	OnBeginShot();
-	//}
-}
-
-#pragma endregion
