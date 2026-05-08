@@ -3,7 +3,7 @@
 
 #include "GameMode/LA_CheckPointActor.h"
 #include "GameMode/LA_GameInstance.h"
-#include "LastArtemis/Character/LA_PlayerCharacter.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
