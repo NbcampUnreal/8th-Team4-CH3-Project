@@ -60,6 +60,26 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
     TObjectPtr<UInputAction> ReloadInputAction;
 
+    // Skill A InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> SkillAInputAction;
+
+    // Skill B InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> SkillBInputAction;
+
+    // No.1 Weapon QuickSlot InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> WeaponSlot1InputAction;
+
+    // No.2 Weapon QuickSlot InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> WeaponSlot2InputAction;
+
+    // No.3 Weapon QuickSlot InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> WeaponSlot3InputAction;
+
 #pragma endregion
 
 };

@@ -108,9 +108,14 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
     TSubclassOf<ALA_WeaponBase> initialWeaponClass;
 
-    // 보유하고 있는 무기의 목록을 저장하는 배열
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TArray<ALA_WeaponBase*> WeaponsContainer;
+    // 무기 퀵슬롯 (1, 2, 3)에 해당하는 무기 클래스의 이름들을 관리하는 번호
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    TArray<FName> WeaponClassNameIndexer;
+
+    // 보유한 무기 목록
+    // { UClass::GetFName, ALA_WeaponBase* }
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    TMap<FName, ALA_WeaponBase*> OwnedWeapons;
 
     // 현재 장착중인 무기를 저장하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
@@ -120,25 +125,32 @@ protected:
 
 public:
     // 화면에 보여지는 시점의 카메라를 반환하는 함수
-    UFUNCTION(BlueprintCallable, Category = "La_PlayerCharacter")
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     UCameraComponent* GetCameraComponent() const;
 
-    UFUNCTION(BlueprintCallable, Category = "La_PlayerCharacter")
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     FORCEINLINE void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const { TagContainer.AppendTags(CharacterTags); }
 
 #pragma region Derived From IHolder
 
     /// <summary>
-    /// 임의 무기를 장착(부착)하는 함수
+    /// 보유한 무기 목록에 임의 무기를 획득(추가)하는 함수
+    /// 중복된 무기 획득 시 총알 보충
     /// </summary>
-    /// <param name="WeaponActor">무기 액터</param>
-    /// <param name="WeaponCharacterMesh">무기를 장착한 캐릭터의 SkeletalMesh</param>
-    virtual void ActivateWeapon_Implementation(ALA_WeaponBase* WeaponActor, USkeletalMesh* WeaponCharacterMesh) override;
+    /// <param name="WeaponClass">무기의 클래스</param>
+    virtual void AddWeaponToPawn_Implementation(TSubclassOf<ALA_WeaponBase> WeaponClass) override;
 
     /// <summary>
-    /// 장착되어있는 임의 무기를 해제하는 함수
+    /// 임의 무기를 장착(부착)하는 함수
     /// </summary>
-    virtual void DeactivateWeapon_Implementation() override;
+    /// <param name="Weapon">무기 액터</param>
+    virtual void ActivateWeapon_Implementation(ALA_WeaponBase* Weapon) override;
+
+    /// <summary>
+    /// 임의 무기를 장착 해제 또는 비활성화 하는 함수
+    /// </summary>
+    /// <param name="Weapon">무기 액터</param>
+    virtual void DeactivateWeapon_Implementation(ALA_WeaponBase* Weapon) override;
 
     /// <summary>
     /// 부착되어있는 무기의 정보를 HUD에 업데이트 하는 함수
@@ -166,6 +178,10 @@ public:
     void EnhanceMovementSpeed(const float Duration);
 
 #pragma endregion
+
+    // 보유하고 있는 다른 무기로 교체하는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    void SwapWeapon(int32 WeaponIndex);
 
 protected:
 #pragma region InputAction BindingActions
@@ -198,6 +214,7 @@ protected:
 	// 조준 키 입력 종료 시 호출되는 함수
 	void AimingCompletedAction();
 
+    // 재장전 키 입력 시작 시 호출되는 함수
     void ReloadStartedAction();
 
 #pragma endregion
@@ -220,23 +237,5 @@ protected:
     /// 캐릭터의 SkeletalMesh Component를 비활성화 처리하는 함수
     /// </summary>
     void HideCharacterMesh();
-
-#pragma region Legacy
-
-    /// <summary>
-    /// (Legacy) Don't Use
-    /// 장착된 무기에 맞춘 애니메이션 몽타주를 재생하는 함수
-    /// </summary>
-    /// <param name="Montage">재생하려는 애니메이션 몽타주</param>
-    virtual void PlayWeaponAnimMontage_Implementation(UAnimMontage* Montage) override;
-
-    // (Legacy) Don't Use
-	UFUNCTION(BlueprintCallable, Category = "4_Weapon")
-	void OnBeginShot();
-    // (Legacy) Don't Use
-	UFUNCTION(BlueprintCallable, Category = "4_Weapon")
-	void OnEndShot();
-
-#pragma endregion
 
 };

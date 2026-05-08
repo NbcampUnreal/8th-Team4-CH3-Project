@@ -10,7 +10,7 @@
 /**
  *
  */
-UCLASS()
+UCLASS(Blueprintable)
 class LASTARTEMIS_API ALA_GameStateBase : public AGameStateBase
 {
 	GENERATED_BODY()

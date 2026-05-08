@@ -9,16 +9,15 @@
 
 EBTNodeResult::Type ULA_BTTask_Heal::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
-    AActor* Player = Cast<AActor>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(FName("PlayerActor")));
-
-    if (Player)
+    if (AActor* Player = Cast<AActor>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(FName("PlayerActor"))))
     {
-        ULA_HealthComponent* HealthComponent = Player->FindComponentByClass<ULA_HealthComponent>();
-        if (HealthComponent)
+        if (ULA_HealthComponent* HealthComponent = Player->FindComponentByClass<ULA_HealthComponent>())
         {
             HealthComponent->Heal(HealAmount);
+            UE_LOG(LogTemp, Warning, TEXT("Heal Succeeded"));
             return EBTNodeResult::Succeeded;
         }
     }
+    
     return EBTNodeResult::Failed;
 }
