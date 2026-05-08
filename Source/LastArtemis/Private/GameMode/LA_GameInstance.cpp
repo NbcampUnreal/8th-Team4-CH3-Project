@@ -1,61 +1,61 @@
-#include "GameMode/LA_GameInstance.h"
+﻿#include "GameMode/LA_GameInstance.h"
 
 ULA_GameInstance::ULA_GameInstance()
-	:
-	PlayerLevel(1),
-	CurrentExp(0),
-	ExpToNextLevel(100),
-	TotalGold(0),
-	TotalScore(0)
-{
+    :
+    TotalGold(0),
+    TotalScore(0),
+    SelectedMissionDataAsset(nullptr),
 
+    SavedPhaseIndex(-1),
+    SavedPlayerLocation(FVector::ZeroVector),
+    SavedPlayerRotation(FRotator::ZeroRotator)
+{
+    SaveSlotName = TEXT("DefaultSaveSlot");
 }
 
 ////////////////////////////////////////////////////////////////////////
-/// ���� ���� ����
+/// 보상 로직
 ////////////////////////////////////////////////////////////////////////
 
-void ULA_GameInstance::AddReward(int32 ExpReward, int32 GoldReward, int32 ScoreReward)
+void ULA_GameInstance::AddReward(int32 GoldReward, int32 ScoreReward)
 {
-	AddExp(ExpReward);
 	TotalGold += GoldReward;
 	TotalScore += ScoreReward;
 }
 
-void ULA_GameInstance::AddExp(int32 ExpAmount)
-{
-	if (ExpAmount <= 0)
-		return;
-
-	CurrentExp += ExpAmount;
-	CheckLevelUp();
-}
-
-void ULA_GameInstance::CheckLevelUp()
-{
-	while (CurrentExp >= ExpToNextLevel)
-	{
-		CurrentExp -= ExpToNextLevel;
-		LevelUp();
-	}
-}
-
-void ULA_GameInstance::LevelUp()
-{
-	++PlayerLevel;
-
-	// �÷��̾� ���� ����
-	{
-
-	}
-}
 
 void ULA_GameInstance::ResetPlayerData()
 {
-	PlayerLevel = 1;
-	CurrentExp = 0;
-	ExpToNextLevel = 0;
 	TotalGold = 0;
+    TotalScore = 0;
+}
+
+////////////////////////////////////////////////////////////////////////
+/// 미션 로직
+////////////////////////////////////////////////////////////////////////
+
+void ULA_GameInstance::SetSelectedMission(ULA_MissionDataAsset* InMissionData)
+{
+    SelectedMissionDataAsset = InMissionData;
+}
+
+ULA_MissionDataAsset* ULA_GameInstance::GetSelectedMission() const
+{
+    return SelectedMissionDataAsset;
+}
+
+void ULA_GameInstance::SaveCheckPointLocation(FVector SaveLocation, FRotator SaveRotation)
+{
+    SavedPlayerLocation = SaveLocation;
+    SavedPlayerRotation = SaveRotation;
+}
+
+void ULA_GameInstance::SaveGameData()
+{
+}
+
+void ULA_GameInstance::LoadGameData()
+{
 }
 
 
