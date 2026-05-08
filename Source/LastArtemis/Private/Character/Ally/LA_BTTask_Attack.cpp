@@ -51,7 +51,17 @@ EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& Owner
             
             HitTarget->TakeDamageCustom(AttackPower);
             GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("Enemy Health : % f / % f"), HitTarget->CurrentHealth, HitTarget->MaxHealth));
-            
+
+            if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
+            {
+                if (HitTarget->bIsDead)
+                {
+                    Blackboard->ClearValue(GetSelectedBlackboardKey());
+                }
+                
+            }
+
+
             return EBTNodeResult::Succeeded;
 
         }
@@ -61,6 +71,9 @@ EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& Owner
                 HitResult.GetActor() ? *HitResult.GetActor()->GetName() : TEXT("None"));
         }
     }
+
+    
+
 
     UE_LOG(LogTemp, Warning, TEXT("Failed"));
     return EBTNodeResult::Failed;
