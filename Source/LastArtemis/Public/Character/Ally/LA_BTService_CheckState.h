@@ -16,6 +16,8 @@ class LASTARTEMIS_API ULA_BTService_CheckState : public UBTService_BlackboardBas
 
 public:
     ULA_BTService_CheckState();
+
     void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds);
+
     
 };
