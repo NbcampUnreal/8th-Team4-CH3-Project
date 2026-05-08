@@ -26,26 +26,26 @@ class LASTARTEMIS_API ILA_Holder
 
 	// Add interface functions to this class. This is the class that will be inherited to implement this interface.
 public:
+    /// <summary>
+    /// 보유한 무기 목록에 임의 무기를 획득(추가)하는 함수
+    /// </summary>
+    /// <param name="WeaponClass">무기의 클래스</param>
+    UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
+    void AddWeaponToPawn(TSubclassOf<ALA_WeaponBase> WeaponClass);
+
 	/// <summary>
 	/// 임의 무기를 장착(부착)하는 함수
 	/// </summary>
-	/// <param name="WeaponActor">무기 액터</param>
-	/// <param name="WeaponCharacterMesh">무기를 장착한 캐릭터의 SkeletalMesh</param>
+	/// <param name="Weapon">무기 액터</param>
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-	void ActivateWeapon(ALA_WeaponBase* WeaponActor, USkeletalMesh* WeaponCharacterMesh);
+	void ActivateWeapon(ALA_WeaponBase* Weapon);
 
 	/// <summary>
 	/// 장착되어있는 임의 무기를 해제하는 함수
 	/// </summary>
+	/// <param name="Weapon">무기 액터</param>
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-	void DeactivateWeapon();
-
-	/// <summary>
-	/// 장착된 무기에 맞춘 애니메이션 몽타주를 재생하는 함수
-	/// </summary>
-	/// <param name="Montage">재생하려는 애니메이션 몽타주</param>
-	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-	void PlayWeaponAnimMontage(UAnimMontage* Montage);
+	void DeactivateWeapon(ALA_WeaponBase* Weapon);
 
 	/// <summary>
 	/// 부착되어있는 무기의 정보를 HUD에 업데이트 하는 함수

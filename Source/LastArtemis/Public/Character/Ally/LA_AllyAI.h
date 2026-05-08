@@ -26,4 +26,8 @@ public:
 	void Heal();
 	UFUNCTION(BlueprintCallable)
 	void Decontaminate();
+
+    /*virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;*/
+
+    virtual void TakeDamageCustom(float DamageAmount) override;
 };

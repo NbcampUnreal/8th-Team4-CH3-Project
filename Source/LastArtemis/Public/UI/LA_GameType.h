@@ -59,11 +59,11 @@ struct FLA_InvasionPhaseData
 
     // 현재 Phase
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    ELA_PhaseType PhaseType;
+    ELA_PhaseType PhaseType = ELA_PhaseType::None;
 
     // 이번 Phase 상황 및 목표
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
-    ELA_InvasionObjectiveType ObjectiveType;
+    ELA_InvasionObjectiveType ObjectiveType = ELA_InvasionObjectiveType::None;
 
     // 현재 Phase 상황 및 목표 텍스트
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Phase")
