@@ -5,6 +5,7 @@
 #include "GameMode/LA_GameStateBase.h"
 #include "GameMode/LA_MissionDataAsset.h"
 #include "GameMode/LA_MissionLogic.h"
+#include "GameMode/LA_GameInstance.h"
 #include "LastArtemis/Character/LA_PlayerCharacter.h"
 #include "Character/LA_DefaultPlayerController.h"
 #include "Kismet/GameplayStatics.h"
@@ -33,6 +34,7 @@
 
 ALA_GameModeBase::ALA_GameModeBase()
     :
+    MissionDataAsset(nullptr),
     CurrentMissionLogic(nullptr)
 {
     DefaultPawnClass = ALA_PlayerCharacter::StaticClass();
@@ -50,7 +52,23 @@ void ALA_GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 게임 시작 시 Main Menu로 세팅
+    ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
+
+    // Game Instance에서 Mission 선택
+    if (LA_GameInstance && LA_GameInstance->GetSelectedMission())
+    {
+        MissionDataAsset = LA_GameInstance->GetSelectedMission();
+
+        if (ALA_GameStateBase* LA_GameState = GetLAGameState())
+        {
+            LA_GameState->SetGameFlowState(ELA_GameFlowState::Playing);
+        }
+
+        UGameplayStatics::SetGamePaused(GetWorld(), false);
+        StartMission();
+        return;
+    }
+
     if (ALA_GameStateBase* LA_GameState = GetLAGameState())
     {
         LA_GameState->SetGameFlowState(ELA_GameFlowState::MainMenu);
