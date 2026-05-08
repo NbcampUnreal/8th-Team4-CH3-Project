@@ -6,7 +6,7 @@
 #include "GameFramework/Character.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
-#include "LA_Holder.h"
+#include "LastArtemis/Character/LA_Holder.h"
 #include "LA_PlayerCharacter.generated.h"
 
 class UCameraComponent;
@@ -79,6 +79,8 @@ protected:
 	TObjectPtr<UCameraComponent> TestCamera;
 
 #pragma region Components
+
+    TObjectPtr<class ULA_HealthComponent> HealthComponent;
 
 #pragma endregion
 
@@ -182,6 +184,10 @@ public:
     // 보유하고 있는 다른 무기로 교체하는 함수
     UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     void SwapWeapon(int32 WeaponIndex);
+
+    // 대량의 체력을 회복하는 함수 (999999)
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    void HealCharacter();
 
 protected:
 #pragma region InputAction BindingActions

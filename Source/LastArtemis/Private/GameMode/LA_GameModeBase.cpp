@@ -6,7 +6,7 @@
 #include "GameMode/LA_MissionDataAsset.h"
 #include "GameMode/LA_MissionLogic.h"
 #include "GameMode/LA_GameInstance.h"
-#include "LastArtemis/Character/LA_PlayerCharacter.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/LA_DefaultPlayerController.h"
 #include "Kismet/GameplayStatics.h"
 
