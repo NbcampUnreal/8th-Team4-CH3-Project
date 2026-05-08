@@ -3,6 +3,7 @@
 #include "Camera/CameraComponent.h"
 #include "Curves/CurveVector.h"
 #include "Engine/World.h"
+#include "LastArtemis/Character/LA_Holder.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
 #include "GameFramework/Character.h"
@@ -153,28 +154,6 @@ void ALA_WeaponBase::StartFire()
     GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &ALA_WeaponBase::Fire, FireRate, true);
 }
 
-void ALA_WeaponBase::Fire()
-{
-    if (CurrentMagazineAmmo <= 0)
-    {
-        StopFire();
-        return;
-    }
-
-    CurrentState = EWeaponState::Firing;
-
-    if (FiringMontage && Mesh->GetAnimInstance())
-    {
-        Mesh->GetAnimInstance()->Montage_Play(FiringMontage);
-    }
-
-    // 총알 소모
-    CurrentMagazineAmmo--;
-
-    HitScan();
-    GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, FireRate, false);
-}
-
 void ALA_WeaponBase::StopFire()
 {
     GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
@@ -192,16 +171,6 @@ void ALA_WeaponBase::Reload()
         float Duration = Mesh->GetAnimInstance()->Montage_Play(ReloadMontage);
         GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::UpdateAmmo, Duration, false);
     }
-}
-
-void ALA_WeaponBase::UpdateAmmo()
-{
-    int32 AmmoNeeded = MaxMagazineSize - CurrentMagazineAmmo;
-    int32 AmmoToReload = FMath::Min(AmmoNeeded, CurrentSpareAmmo);
-
-    CurrentMagazineAmmo += AmmoToReload;
-    CurrentSpareAmmo -= AmmoToReload;
-    CurrentState = EWeaponState::Idle;
 }
 
 float ALA_WeaponBase::GetDynamicSpreadAngle() const
@@ -230,15 +199,37 @@ bool ALA_WeaponBase::CanFire() const
     return CurrentState == EWeaponState::Idle && CurrentMagazineAmmo > 0;
 }
 
+void ALA_WeaponBase::Fire()
+{
+    if (CurrentMagazineAmmo <= 0)
+    {
+        StopFire();
+        return;
+    }
+
+    CurrentState = EWeaponState::Firing;
+
+    if (FiringMontage && Mesh->GetAnimInstance())
+    {
+        Mesh->GetAnimInstance()->Montage_Play(FiringMontage);
+    }
+
+    // 총알 소모
+    CurrentMagazineAmmo--;
+
+    HitScan();
+    GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, FireRate, false);
+}
+
 void ALA_WeaponBase::HitScan()
 {
     // 카메라 기준 타겟 위치 계산
-    FVector StartLocation = Mesh->GetSocketLocation(TEXT("Muzzle"));
-    FVector TargetLocation = Camera->GetComponentLocation() + (Camera->GetForwardVector() * MaxRange);
-    FVector FireDirection = (TargetLocation - StartLocation).GetSafeNormal();
-
     APawn* OwnerPawn = Cast<APawn>(GetOwner());
     AController* OwnerController = OwnerPawn ? OwnerPawn->GetController() : nullptr;
+
+    FVector StartLocation = Mesh->GetSocketLocation(TEXT("Muzzle"));
+    FVector TargetLocation = ILA_Holder::Execute_GetFocusLocation(OwnerPawn);
+    FVector FireDirection = (TargetLocation - StartLocation).GetSafeNormal();
 
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
@@ -274,6 +265,16 @@ void ALA_WeaponBase::HitScan()
 
     // 발사 후 반동에 의한 탄착 범위 증가
     CurrentSpreadAngle = FMath::Clamp(CurrentSpreadAngle + SpreadIncrement, 0.f, MaxSpreadAngle);
+}
+
+void ALA_WeaponBase::UpdateAmmo()
+{
+    int32 AmmoNeeded = MaxMagazineSize - CurrentMagazineAmmo;
+    int32 AmmoToReload = FMath::Min(AmmoNeeded, CurrentSpareAmmo);
+
+    CurrentMagazineAmmo += AmmoToReload;
+    CurrentSpareAmmo -= AmmoToReload;
+    CurrentState = EWeaponState::Idle;
 }
 
 void ALA_WeaponBase::ApplyRecoil()

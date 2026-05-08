@@ -145,10 +145,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
     int32 MaxMagazineSize;
 
-public:
-    UFUNCTION(BlueprintPure, Category = "Weapon|Components")
-    class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
-
 private:
     float CameraPitch;
     float CameraYaw;
@@ -167,4 +163,9 @@ private:
     FTimerHandle FireTimerHandle;
     FTimerHandle StateTimerHandle;
     FTimerHandle RecoilResetTimerHandle;
+
+public:
+    UFUNCTION(BlueprintPure, Category = "Weapon|Components")
+    class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
+
 };
