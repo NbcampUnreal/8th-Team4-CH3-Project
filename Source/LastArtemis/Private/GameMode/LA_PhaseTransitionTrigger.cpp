@@ -4,7 +4,7 @@
 #include "GameMode/LA_PhaseTransitionTrigger.h"
 #include "GameMode/LA_GameModeBase.h"
 #include "GameMode/LA_GameStateBase.h"
-#include "LastArtemis/Character/LA_PlayerCharacter.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 
 #include "Components/BoxComponent.h"
 #include "GameFramework/Character.h"

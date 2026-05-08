@@ -25,8 +25,14 @@ protected:
     virtual void Tick(float DeltaTime) override;
 
     virtual float GetDynamicSpreadAngle() const;
+
     virtual bool CanFire() const;
     virtual void Fire();
+    virtual void HitScan();
+    virtual void UpdateAmmo();
+
+    virtual void ApplyRecoil();
+    virtual void ResetRecoil();
     virtual void ResetState();
 
 public:
@@ -103,18 +109,6 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
     float AimInterpSpeed;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float BaseDamage;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float FireRate;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float MaxRange;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    int32 PelletCount;
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
     float DefaultSpreadAngle;
 
@@ -127,18 +121,51 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
     float SpreadIncrement;
 
-public:
-    UFUNCTION(BlueprintPure, Category = "Weapon|Components")
-    class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Recoil")
+    class UCurveVector* RecoilCurve;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Recoil")
+    float RecoilSpeed;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Recoil")
+    float RecoilResetTime;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float BaseDamage;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float FireRate;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    float MaxRange;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    int32 PelletCount;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
+    int32 MaxMagazineSize;
 
 private:
     float CameraPitch;
     float CameraYaw;
     float CurrentSpreadAngle;
 
+    int32 CurrentMagazineAmmo;
+    int32 CurrentSpareAmmo;
+
     FRotator TargetSway;
     FRotator CurrentSway;
 
+    int32 CurrentShotCount;
+    FRotator TargetRecoil;
+    FRotator CurrentRecoil;
+
     FTimerHandle FireTimerHandle;
     FTimerHandle StateTimerHandle;
+    FTimerHandle RecoilResetTimerHandle;
+
+public:
+    UFUNCTION(BlueprintPure, Category = "Weapon|Components")
+    class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
+
 };
