@@ -33,23 +33,41 @@ void ALA_AllyAIController::BeginPlay()
 {
 	Super::BeginPlay();
 
+    UE_LOG(LogTemp, Warning, TEXT("AllyAIController BeginPlay!"));
+
     if (BehaviorTreeAsset)
     {
+        UE_LOG(LogTemp, Warning, TEXT("BehaviorTree Running!"));
         RunBehaviorTree(BehaviorTreeAsset);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("BehaviorTree Asset is NULL!"));
     }
 
     AActor* Player = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
-    GetBlackboardComponent()->SetValueAsObject(FName("PlayerActor"), Player);
+    if (GetBlackboardComponent())
+    {
+        GetBlackboardComponent()->SetValueAsObject(FName("PlayerActor"), Player);
+       
+    }
 
-    GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(
-        this, &ALA_AllyAIController::OnTargetDetected
-    );
+    if (GetPerceptionComponent())
+    {
+        GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(
+            this, &ALA_AllyAIController::OnTargetDetected
+        );
+    }
 }
 
 void ALA_AllyAIController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
 {
+    UE_LOG(LogTemp, Warning, TEXT("OnTargetDetected Called!"));
+
+
     if (Stimulus.WasSuccessfullySensed())
     {
+
         if (ALA_BaseCharacter* DetectedCharacter = Cast<ALA_BaseCharacter>(Actor))
         {
             if (DetectedCharacter->CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")))) {
