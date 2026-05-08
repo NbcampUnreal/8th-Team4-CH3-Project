@@ -1,6 +1,7 @@
 ﻿#include "LA_WeaponBase.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Camera/CameraComponent.h"
+#include "Curves/CurveVector.h"
 #include "Engine/World.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
@@ -41,16 +42,26 @@ ALA_WeaponBase::ALA_WeaponBase()
     AimFOV = 60.f;
     AimInterpSpeed = 15.f;
 
-    BaseDamage = 20.f;
-    FireRate = 0.1f;
-    MaxRange = 5000.f;
-    PelletCount = 1;
-
     DefaultSpreadAngle = 2.f;
     MaxSpreadAngle = 8.f;
     MinSpreadAngle = 0.5f;
     SpreadIncrement = 0.5f;
     CurrentSpreadAngle = 0.f;
+
+    CurrentShotCount = 0;
+    RecoilResetTime = 0.5f;
+    RecoilSpeed = 20.0f;
+    TargetRecoil = FRotator::ZeroRotator;
+    CurrentRecoil = FRotator::ZeroRotator;
+
+    BaseDamage = 20.f;
+    FireRate = 0.1f;
+    MaxRange = 5000.f;
+    PelletCount = 1;
+    MaxMagazineSize = 30;
+
+    CurrentMagazineAmmo = MaxMagazineSize;
+    CurrentSpareAmmo = 120;
 
     CurrentState = EWeaponState::Idle;
 }
@@ -106,6 +117,20 @@ void ALA_WeaponBase::Tick(float DeltaTime)
     {
         CurrentSpreadAngle = FMath::FInterpTo(CurrentSpreadAngle, 0.f, DeltaTime, 1.f / FireRate);
     }
+
+    // Recoil
+    if (TargetRecoil != CurrentRecoil)
+    {
+        // 현재 프레임에서 이동해야 할 반동량 계산
+        FRotator NextRecoil = FMath::RInterpTo(CurrentRecoil, TargetRecoil, DeltaTime, RecoilSpeed);
+        FRotator RecoilDeltaThisFrame = NextRecoil - CurrentRecoil;
+        CurrentRecoil = NextRecoil;
+
+        // 계산된 프레임당 반동량을 실제 카메라 회전값에 추가
+        CameraPitch = FMath::Clamp(CameraPitch + RecoilDeltaThisFrame.Pitch, -89.f, 89.f);
+        CameraYaw += RecoilDeltaThisFrame.Yaw;
+        Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
+    }
 }
 
 void ALA_WeaponBase::Look(FVector InputValue)
@@ -124,22 +149,30 @@ void ALA_WeaponBase::StartFire()
 {
     if (!CanFire()) return;
 
-    FTimerDelegate FireDelegate;
-    FireDelegate.BindLambda([this]()
+    Fire();
+    GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &ALA_WeaponBase::Fire, FireRate, true);
+}
+
+void ALA_WeaponBase::Fire()
+{
+    if (CurrentMagazineAmmo <= 0)
     {
-        CurrentState = EWeaponState::Firing;
+        StopFire();
+        return;
+    }
 
-        if (FiringMontage && Mesh->GetAnimInstance())
-        {
-            Mesh->GetAnimInstance()->Montage_Play(FiringMontage);
-        }
+    CurrentState = EWeaponState::Firing;
 
-        Fire();
-        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, FireRate, false);
-    });
+    if (FiringMontage && Mesh->GetAnimInstance())
+    {
+        Mesh->GetAnimInstance()->Montage_Play(FiringMontage);
+    }
 
-    FireDelegate.ExecuteIfBound();
-    GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, FireDelegate, FireRate, true);
+    // 총알 소모
+    CurrentMagazineAmmo--;
+
+    HitScan();
+    GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, FireRate, false);
 }
 
 void ALA_WeaponBase::StopFire()
@@ -149,7 +182,7 @@ void ALA_WeaponBase::StopFire()
 
 void ALA_WeaponBase::Reload()
 {
-    if (CurrentState != EWeaponState::Idle) return;
+    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == MaxMagazineSize || CurrentSpareAmmo <= 0) return;
 
     CurrentState = EWeaponState::Reloading;
     bIsAiming = false; // 장전 시 조준 강제 해제
@@ -157,8 +190,18 @@ void ALA_WeaponBase::Reload()
     if (ReloadMontage && Mesh->GetAnimInstance())
     {
         float Duration = Mesh->GetAnimInstance()->Montage_Play(ReloadMontage);
-        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, Duration, false);
+        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::UpdateAmmo, Duration, false);
     }
+}
+
+void ALA_WeaponBase::UpdateAmmo()
+{
+    int32 AmmoNeeded = MaxMagazineSize - CurrentMagazineAmmo;
+    int32 AmmoToReload = FMath::Min(AmmoNeeded, CurrentSpareAmmo);
+
+    CurrentMagazineAmmo += AmmoToReload;
+    CurrentSpareAmmo -= AmmoToReload;
+    CurrentState = EWeaponState::Idle;
 }
 
 float ALA_WeaponBase::GetDynamicSpreadAngle() const
@@ -184,10 +227,10 @@ float ALA_WeaponBase::GetDynamicSpreadAngle() const
 
 bool ALA_WeaponBase::CanFire() const
 {
-    return CurrentState == EWeaponState::Idle && !GetWorld()->GetTimerManager().IsTimerActive(FireTimerHandle);
+    return CurrentState == EWeaponState::Idle && CurrentMagazineAmmo > 0;
 }
 
-void ALA_WeaponBase::Fire()
+void ALA_WeaponBase::HitScan()
 {
     // 카메라 기준 타겟 위치 계산
     FVector StartLocation = Mesh->GetSocketLocation(TEXT("Muzzle"));
@@ -226,8 +269,31 @@ void ALA_WeaponBase::Fire()
         }
     }
 
+    // 발사 후 반동 적용
+    ApplyRecoil();
+
     // 발사 후 반동에 의한 탄착 범위 증가
     CurrentSpreadAngle = FMath::Clamp(CurrentSpreadAngle + SpreadIncrement, 0.f, MaxSpreadAngle);
+}
+
+void ALA_WeaponBase::ApplyRecoil()
+{
+    if (RecoilCurve)
+    {
+        FVector RecoilDelta = RecoilCurve->GetVectorValue(static_cast<float>(CurrentShotCount));
+        TargetRecoil.Pitch += RecoilDelta.Y;
+        TargetRecoil.Yaw += RecoilDelta.X;
+    }
+
+    CurrentShotCount++;
+    GetWorld()->GetTimerManager().SetTimer(RecoilResetTimerHandle, this, &ALA_WeaponBase::ResetRecoil, RecoilResetTime, false);
+}
+
+void ALA_WeaponBase::ResetRecoil()
+{
+    CurrentShotCount = 0;
+    TargetRecoil = FRotator::ZeroRotator;
+    CurrentRecoil = FRotator::ZeroRotator;
 }
 
 void ALA_WeaponBase::ResetState()
