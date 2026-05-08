@@ -1,7 +1,7 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "LA_PlayerCharacter.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 #include "Camera/CameraComponent.h"		// UCameraComponent
 #include "GameFramework/CharacterMovementComponent.h"	// UCharacterMovementComponent
 #include "EnhancedInputSubsystems.h"    // UInputMappingContext, UInputAction
@@ -9,12 +9,15 @@
 #include "Character/LA_DefaultPlayerController.h"		// ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"       // ALA_WeaponBase
+#include "Character/Player/Component/LA_HealthComponent.h"  // ULA_HealthComponent
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
 {
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+    HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
 
     // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
@@ -192,6 +195,7 @@ void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(TSubclassOf<ALA_WeaponB
     // 중복 무기 획득 검사
     if (OwnedWeapons.Contains(CLS_UID) == true)
     {
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("이미 소유하고 있는 무기입니다. - %s"), *CLS_UID.ToString()));
         ALA_WeaponBase* Weapon = OwnedWeapons[CLS_UID];
 
         // 무기의 총알 채워넣기
@@ -396,6 +400,16 @@ void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
 
         // 선택된 무기 장착
         ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
+    }
+}
+
+void ALA_PlayerCharacter::HealCharacter()
+{
+    // 체력 컴포넌트 확인
+    if (HealthComponent != nullptr)
+    {
+        // 체력 회복
+        HealthComponent->Heal(999999.f);
     }
 }
 
@@ -634,12 +648,12 @@ float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEv
 {
     Damage = Super::TakeDamage(Damage, DamageEvent, EventInstigator, DamageCauser);
 
-	if (ULA_HealthComponent* HealthComponent = FindComponentByClass<ULA_HealthComponent>())
-	{
-		float ActualDamage = HealthComponent->TakeDamage(Damage, false);
+    if (HealthComponent != nullptr)
+    {
+        float ActualDamage = HealthComponent->TakeDamage(Damage, false);
 
-		return ActualDamage;
-	}
+        return ActualDamage;
+    }
     UE_LOG(LogTemp, Warning, TEXT("No Health Component or Member Variables"));
 	return Damage;
 }
