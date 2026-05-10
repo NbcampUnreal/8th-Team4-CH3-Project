@@ -12,6 +12,8 @@ enum class EWeaponState : uint8
     Reloading
 };
 
+
+
 UCLASS()
 class LASTARTEMIS_API ALA_WeaponBase : public AActor
 {
@@ -50,6 +52,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
     bool bIsAiming;
+
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
@@ -167,5 +170,8 @@ private:
 public:
     UFUNCTION(BlueprintPure, Category = "Weapon|Components")
     class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
+
+    int32 GetCurrentMagazineAmmo() { return CurrentMagazineAmmo; }
+    int32 GetMaxMagazineSize() { return MaxMagazineSize; }
 
 };

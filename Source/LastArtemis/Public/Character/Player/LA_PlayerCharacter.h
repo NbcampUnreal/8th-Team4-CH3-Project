@@ -22,6 +22,8 @@ enum class EMovementInputMode : uint8
 	Toggle, Hold
 };
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
+
 /*
 * (Apex Legend) 스타일의 달리기 지정
 */
@@ -47,6 +49,8 @@ public:
 
     // Get Actors Viewport
     virtual void CalcCamera(float DeltaTime, FMinimalViewInfo& OutResult) override;
+
+    FOnAmmoChangedSignature OnAmmoChangedSignature;
 
 public:
 #pragma region General Settings
@@ -133,7 +137,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     FORCEINLINE void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const { TagContainer.AppendTags(CharacterTags); }
 
+
 #pragma region Derived From IHolder
+
+    ALA_WeaponBase* GetEquipedWeapon() { return EquipedWeapon; }
 
     /// <summary>
     /// 보유한 무기 목록에 임의 무기를 획득(추가)하는 함수

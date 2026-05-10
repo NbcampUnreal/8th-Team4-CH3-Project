@@ -4,12 +4,11 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
-#include "Character/LA_BaseCharacter.h"
 #include "LA_HealthComponent.generated.h"
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedDelegate, float, NewHealth);
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShieldChangedDelegate, float, NewShield);
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedDelegate, float, float);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShieldChangedDelegate, float, float);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LASTARTEMIS_API ULA_HealthComponent : public UActorComponent
@@ -32,11 +31,9 @@ public:
 #pragma region Events
 
 	// 체력 변화 이벤트
-	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnHealthChangedDelegate OnHealthChanged;
 
 	// 실드량 변화 이벤트
-	UPROPERTY(BlueprintAssignable, Category = "Events")
 	FOnShieldChangedDelegate OnShieldChanged;
 
 	// 캐릭터 사망 이벤트
@@ -106,6 +103,30 @@ public:
         if (MaxHealth <= 0.0f) return 0.0f;
         return CurrentHealth / MaxHealth;
     }
+
+    UFUNCTION(BlueprintCallable)
+    float GetCurrentHealth() const
+    {
+        return CurrentHealth;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    float GetMaxHealth() const
+    {
+        return MaxHealth;
+    }
+    UFUNCTION(BlueprintCallable)
+    float GetCurrentShield() const
+    {
+        return CurrentShield;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    float GetMaxShield() const
+    {
+        return MaxShield;
+    }
+
     
 	void Die();
 };

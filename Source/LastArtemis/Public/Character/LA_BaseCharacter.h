@@ -5,9 +5,9 @@
 #include "GameplayTagContainer.h"
 #include "LA_BaseCharacter.generated.h"
 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedDelegate, float, NewHealth);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShieldChangedDelegate, float, NewShield);
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedDelegate, float, NewHealth);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShieldChangedDelegate, float, NewShield);
+//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
 
 UCLASS()
 class LASTARTEMIS_API ALA_BaseCharacter : public ACharacter
@@ -70,14 +70,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Stats")
     virtual float GetAttackPower() const; */
 
-    UPROPERTY(BlueprintAssignable, Category = "Events")
-    FOnHealthChangedDelegate OnHealthChanged;
+    //UPROPERTY(BlueprintAssignable, Category = "Events")
+    //FOnHealthChangedDelegate OnHealthChanged;
 
-    UPROPERTY(BlueprintAssignable, Category = "Events")
-    FOnShieldChangedDelegate OnShieldChanged;
+    //UPROPERTY(BlueprintAssignable, Category = "Events")
+    //FOnShieldChangedDelegate OnShieldChanged;
 
-    UPROPERTY(BlueprintAssignable, Category = "Events")
-    FOnDeathDelegate OnDeath;
+    //UPROPERTY(BlueprintAssignable, Category = "Events")
+    //FOnDeathDelegate OnDeath;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     class UAnimMontage* AttackMontage;
