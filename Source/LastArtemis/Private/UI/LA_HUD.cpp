@@ -1,0 +1,49 @@
+﻿// Fill out your copyright notice in the Description page of Project Settings.
+
+
+#include "UI/LA_HUD.h"
+#include "Kismet/GameplayStatics.h"
+#include "GameFramework/Character.h"
+#include "../Weapon/LA_WeaponBase.h"
+#include "Character/Player/LA_PlayerCharacter.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
+
+void ULA_HUD::NativeConstruct()
+{
+    Super::NativeConstruct();
+
+    BindHealth();
+    BindAmmo();
+}
+
+void ULA_HUD::BindHealth()
+{
+    // OnHealthChanged에 UpdateHP 함수 바인딩
+    ACharacter* PlayerCharacter =
+        UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+
+    ULA_HealthComponent* HealthComp = PlayerCharacter->FindComponentByClass<ULA_HealthComponent>();
+
+    if (HealthComp)
+    {
+        HealthComp->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateHP);
+        HealthComp->OnShieldChanged.AddUObject(this, &ULA_HUD::UpdateShield);
+
+        // 바인딩 직후 한번 실행해줌
+        UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+        UpdateShield(HealthComp->GetCurrentShield(), HealthComp->GetMaxShield());
+        UE_LOG(LogTemp, Log, TEXT("HUD: Binding & Initial Update Success!"));
+    }
+}
+
+void ULA_HUD::BindAmmo()
+{
+    ALA_PlayerCharacter* PlayerCharacter =
+        Cast<ALA_PlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    if (PlayerCharacter)
+    {
+        // 캐릭터의 델리게이트 구독
+        PlayerCharacter->OnAmmoChangedSignature.AddUObject(this, &ULA_HUD::UpdateAmmo);
+    }
+}
