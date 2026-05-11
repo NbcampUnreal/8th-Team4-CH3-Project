@@ -14,7 +14,7 @@ class LASTARTEMIS_API ALA_EnemyCharacter : public ALA_BaseCharacter, public IGam
 public:
 	ALA_EnemyCharacter();
 
-	virtual void TakeDamageCustom(float DamageAmount) override;
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 	virtual void Die() override;
 
     virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;

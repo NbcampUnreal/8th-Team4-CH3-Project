@@ -6,7 +6,7 @@
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
 	AIControllerClass = ALA_EnemyController::StaticClass();
-	AutoPossessAI = EAutoPossessAI::Spawned;
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -31,18 +31,19 @@ void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContaine
     TagContainer.AppendTags(GameplayTags);
 }
 
-void ALA_EnemyCharacter::TakeDamageCustom(float DamageAmount)
+float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+    class AController* EventInstigator, AActor* DamageCauser)
 {
+    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-	if (bIsDead) return;
+    if (bIsDead) return 0.0f;
 
-	Super::TakeDamageCustom(DamageAmount);
+    if (ActualDamage > 0.0f && HitMontage)
+    {
+        PlayAnimMontage(HitMontage);
+    }
 
-	// 피격 애니메이션 재생
-	if (HitMontage)
-	{
-		PlayAnimMontage(HitMontage);
-	}
+    return ActualDamage;
 }
 
 void ALA_EnemyCharacter::Die()
