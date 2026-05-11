@@ -30,6 +30,8 @@ public:
     // Phase 완료 처리
     virtual void CompleteCurrentPhase();
 
+    virtual void HandleEnemyKilled(AActor* DeadEnemy);
+
 protected:
     UPROPERTY()
     TObjectPtr<ALA_GameModeBase> GameMode;

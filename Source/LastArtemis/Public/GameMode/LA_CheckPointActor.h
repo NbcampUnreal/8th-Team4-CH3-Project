@@ -62,8 +62,11 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     bool bPlayerInRange;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    bool bIntreactiveSavePoint;
+
     // 현재 범위 안에 있는 플레이어
-    UPROPERTY()
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     APawn* OverlappingPlayerPawn;
 
 };

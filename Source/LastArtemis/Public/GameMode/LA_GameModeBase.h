@@ -32,6 +32,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void StartNewGame();
 
+    // 게임 불러오기
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void LoadSavedGame();
+
     // 일시 정지 (UI로 조작 가능)
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void PauseGame();
@@ -66,6 +70,9 @@ public:
     // 다음 Phase 진행
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void AdvanceToNextPhase();
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void NotifyEnemyKilled(AActor* DeadEnemy);
 
 protected:
     // Mission Data Asset 할당

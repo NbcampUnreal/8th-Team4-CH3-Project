@@ -3,6 +3,7 @@
 
 #include "GameMode/LA_CheckPointActor.h"
 #include "GameMode/LA_GameInstance.h"
+#include "GameMode/LA_GameStateBase.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
@@ -32,6 +33,8 @@ ALA_CheckPointActor::ALA_CheckPointActor()
 
     bPlayerInRange = false;
     OverlappingPlayerPawn = nullptr;
+
+    bIntreactiveSavePoint = false;
 }
 
 // Called when the game starts or when spawned
@@ -78,8 +81,9 @@ void ALA_CheckPointActor::OnInteractionBeginOverlap(
 
     // 상호 작용 가능 UI 표시
     {
-
         // F 입력 시 정비
+        bIntreactiveSavePoint = true;
+        InteractCheckPoint(LA_PlayerCharacter);
     }
 }
 
@@ -102,7 +106,7 @@ void ALA_CheckPointActor::OnInteractionEndOverlap(
 
     // 상호 작용 가능 UI 숨김
     {
-
+        bIntreactiveSavePoint = false;
     }
 }
 
@@ -110,6 +114,9 @@ void ALA_CheckPointActor::OnInteractionEndOverlap(
 // -> 위치 세이브 포인트로 사용
 void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
 {
+    if (!bIntreactiveSavePoint)
+        return;
+
     if (!InteractingPawn)
         return;
 
@@ -119,11 +126,20 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
     if (!LA_GameInstance)
         return;
-    
 
-    FVector SaveLocation = InteractingPawn->GetActorLocation();
-    FRotator SaveRotation = InteractingPawn->GetActorRotation();
+    ALA_GameStateBase* LA_GameState = GetWorld()->GetGameState<ALA_GameStateBase>();
+    if (!LA_GameState || LA_GameState->GetCurrentPhaseType() != ELA_PhaseType::Rest)
+        return;
 
-    // 위치 저장 함수, GameInstance에서 구현
-    LA_GameInstance->SaveCheckPointLocation(SaveLocation, SaveRotation);
+    const int32 CurrentPhaseIndex = LA_GameState->GetCurrentPhaseIndex();
+    const FVector SaveLocation = InteractingPawn->GetActorLocation();
+    const FRotator SaveRotation = InteractingPawn->GetActorRotation();
+
+    LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation);
+    LA_GameInstance->SaveGameData();
+
+    UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s"),
+        CurrentPhaseIndex,
+        *SaveLocation.ToString()
+    );
 }

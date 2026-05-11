@@ -13,7 +13,7 @@
 // Sets default values
 ALA_PhaseTransitionTrigger::ALA_PhaseTransitionTrigger()
     :
-    TirggerBoxExtent(FVector(100.0f, 100.0f, 100.0f))
+    TriggerBoxExtent(FVector(100.0f, 100.0f, 100.0f))
 {
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
@@ -30,7 +30,7 @@ ALA_PhaseTransitionTrigger::ALA_PhaseTransitionTrigger()
     TriggerBox->SetCollisionResponseToAllChannels(ECR_Ignore);          
     TriggerBox->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
-    TriggerBox->SetBoxExtent(TirggerBoxExtent);
+    TriggerBox->SetBoxExtent(TriggerBoxExtent);
 }
 
 // Called when the game starts or when spawned
