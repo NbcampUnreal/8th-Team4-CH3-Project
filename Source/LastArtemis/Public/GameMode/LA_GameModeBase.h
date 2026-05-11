@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "UI/LA_GameType.h"
 #include "LA_GameModeBase.generated.h"
 
 class ALA_GameStateBase;
