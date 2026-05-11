@@ -22,4 +22,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Invasion")
     TArray<FLA_InvasionPhaseData> PhaseList;
 
+    virtual void GetPhaseInfo_Implementation(int32 PhaseIndex, FText& OutDescription, int32& OutMaxCount) const override;
+
 };
