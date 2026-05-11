@@ -2,14 +2,14 @@
 
 
 #include "Character/Player/LA_PlayerCharacter.h"
-#include "Camera/CameraComponent.h"		// UCameraComponent
-#include "GameFramework/CharacterMovementComponent.h"	// UCharacterMovementComponent
-#include "EnhancedInputSubsystems.h"    // UInputMappingContext, UInputAction
-#include "EnhancedInputComponent.h"		// UEnhancedInputComponent, FInputActionValue
-#include "Character/LA_DefaultPlayerController.h"		// ALA_DefaultPlayerController
+#include "GameFramework/CharacterMovementComponent.h"	        // UCharacterMovementComponent
+#include "GameFramework/SpringArmComponent.h"                   // USpringArmComponent
+#include "Components/CapsuleComponent.h"                        // UCapsuleComponent
+#include "Camera/CameraComponent.h"		                        // UCameraComponent
+#include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
+#include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
-#include "LastArtemis/Weapon/LA_WeaponBase.h"       // ALA_WeaponBase
-#include "Character/Player/Component/LA_HealthComponent.h"  // ULA_HealthComponent
+#include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -17,22 +17,24 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+    // 체력 관련 컴포넌트 부착
     HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
 
     // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 
-    // 테스트 용도 카메라 활성화
-    bDebugCamera = true;
+    // SpringArm 컴포넌트 생성
+    SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(FName("CameraBoom"));
+    SpringArmComponent->SetupAttachment(RootComponent);
+    SpringArmComponent->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
+    SpringArmComponent->TargetArmLength = 0;
 
-    // 테스트 용도 카메라 생성
-	TestCamera = CreateDefaultSubobject<UCameraComponent>(FName("TestCamera"));
-	TestCamera->SetupAttachment(RootComponent);
-	TestCamera->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
+    // 사망 시점 카메라 생성
+	DeathCamera = CreateDefaultSubobject<UCameraComponent>(FName("DeathCamera"));
+	DeathCamera->SetupAttachment(SpringArmComponent);
 
 	// Rotation setting
 	bUseControllerRotationYaw = true;
-	TestCamera->bUsePawnControlRotation = true;
 
     // 캐릭터의 기본 Mesh 비활성화
     HideCharacterMesh();
@@ -72,11 +74,7 @@ void ALA_PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-    // 테스트 카메라 사용 여부에 따른 카메라 컴포넌트 제어
-    if (TestCamera->IsActive() != bDebugCamera)
-    {
-        bDebugCamera == true ? TestCamera->Deactivate() : TestCamera->Activate();
-    }
+    DeathCameraTimeline.TickTimeline(DeltaTime);
 }
 
 // Called to bind functionality to input
@@ -177,7 +175,7 @@ void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResul
 
 UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
 {
-    return EquipedWeapon == nullptr ? TestCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
+    return EquipedWeapon == nullptr ? DeathCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
 }
 
 #pragma region Derived From ILA_Holder
@@ -424,6 +422,40 @@ void ALA_PlayerCharacter::HealCharacter()
         // 체력 회복
         HealthComponent->Heal(999999.f);
     }
+}
+
+void ALA_PlayerCharacter::OnPlayerDeath()
+{
+    // 사용자의 임의 카메라 회전 방지
+    bUseControllerRotationYaw = false;
+
+    // 캐릭터의 Collision 비활성화
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+
+    // 장착된 무기 해제
+    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
+    EquipedWeapon = nullptr;
+
+    // 캐릭터의 기본 SkeletalMeshComponent 설정
+    USkeletalMeshComponent* CharacterMesh = GetMesh();
+    CharacterMesh->SetOwnerNoSee(false);
+    CharacterMesh->SetCollisionProfileName(FName("Ragdoll"));
+    CharacterMesh->SetSimulatePhysics(true);
+
+    // Timeline에서 호출될 함수 설정
+    FOnTimelineFloat TargetArmLengthCallback;
+    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));
+
+    FOnTimelineVector CameraBoomRotationEulerCallback;
+    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation"));
+
+    // 타임라인 커브 추가
+    DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
+    DeathCameraTimeline.AddInterpVector(CameraBoomRotationEulerCurve, CameraBoomRotationEulerCallback);
+
+    // 타임라인 재생
+    DeathCameraTimeline.SetTimelineLength(DeathCameraDuration);
+    DeathCameraTimeline.PlayFromStart();
 }
 
 #pragma region Input Action
@@ -694,13 +726,14 @@ void ALA_PlayerCharacter::HideCharacterMesh()
 {
     if (USkeletalMeshComponent* CharacterMesh = GetMesh())
     {
-        // Mesh 삭제
-        CharacterMesh->SetSkeletalMesh(nullptr);
+        //// Mesh 삭제
+        //CharacterMesh->SetSkeletalMesh(nullptr);
 
-        // 렌더링되지 않도록 설정
-        CharacterMesh->SetVisibility(false, true);
-        CharacterMesh->SetHiddenInGame(true, true);
-        CharacterMesh->SetCastShadow(false);
+        //// 렌더링되지 않도록 설정
+        //CharacterMesh->SetVisibility(false, true);
+        //CharacterMesh->SetHiddenInGame(true, true);
+        //CharacterMesh->SetCastShadow(false);
+        CharacterMesh->SetOwnerNoSee(true);
 
         // Collision 제거
         CharacterMesh->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
@@ -708,7 +741,17 @@ void ALA_PlayerCharacter::HideCharacterMesh()
         // Overlap Event 방지
         CharacterMesh->SetGenerateOverlapEvents(false);
 
-        // 컴포턴트 업데이트 방지
-        CharacterMesh->SetComponentTickEnabled(false);
+        //// 컴포턴트 업데이트 방지
+        //CharacterMesh->SetComponentTickEnabled(false);
     }
+}
+
+void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
+{
+    SpringArmComponent->TargetArmLength = Value;
+}
+
+void ALA_PlayerCharacter::UpdateCameraBoomRotation(FVector Value)
+{
+    SpringArmComponent->SetWorldRotation(FRotator::MakeFromEuler(Value));
 }
