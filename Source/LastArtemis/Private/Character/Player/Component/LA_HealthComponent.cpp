@@ -25,6 +25,8 @@ ULA_HealthComponent::ULA_HealthComponent()
 	// 기본 공격력 및 방어력 설정
 	AttackPower = 10.0f;
 	Defense = 5.0f;
+
+
 }
 
 
@@ -83,7 +85,7 @@ float ULA_HealthComponent::TakeDamage(float RawDamageAmount, bool bIsIgnoreShiel
 			if (OnShieldChanged.IsBound())
 			{
 				// 변경 후 실드량을 매개변수로 이벤트 실행
-				OnShieldChanged.Broadcast(CurrentShield);
+				OnShieldChanged.Broadcast(CurrentShield, MaxShield);
 			}
 		}
 
@@ -103,7 +105,7 @@ float ULA_HealthComponent::TakeDamage(float RawDamageAmount, bool bIsIgnoreShiel
 			if (OnHealthChanged.IsBound())
 			{
 				// 변경 후 체력을 매개변수로 이벤트 실행
-				OnHealthChanged.Broadcast(CurrentHealth);
+				OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 			}
 
 			// 현재 체력 확인
@@ -123,7 +125,7 @@ float ULA_HealthComponent::TakeDamage(float RawDamageAmount, bool bIsIgnoreShiel
 void ULA_HealthComponent::Heal(float HealAmount)
 {
     CurrentHealth = FMath::Clamp(CurrentHealth + HealAmount, 0.f, MaxHealth);
-    OnHealthChanged.Broadcast(CurrentHealth);
+    OnHealthChanged.Broadcast(CurrentHealth, MaxHealth);
 }
 
 void ULA_HealthComponent::Die()

@@ -251,6 +251,9 @@ void ALA_PlayerCharacter::ActivateWeapon_Implementation(ALA_WeaponBase* Weapon)
 
     // 장착 무기 교체
     EquipedWeapon = Weapon;
+
+    ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
+
     return;
 }
 
@@ -275,7 +278,16 @@ void ALA_PlayerCharacter::DeactivateWeapon_Implementation(ALA_WeaponBase* Weapon
 
 void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(ALA_WeaponBase* HoldActor)
 {
-    GEngine->AddOnScreenDebugMessage(-1, 0.f, FColor::Orange, TEXT("LA_PlayerCharacter -> UpdateHUDWidgetOnActor 함수 호출됨"));
+    // HoldActor가 nullptr일 경우를 대비해 안전하게 EquipedWeapon을 사용
+    ALA_WeaponBase* TargetWeapon = HoldActor ? HoldActor : EquipedWeapon;
+
+    if (TargetWeapon)
+    {
+        OnAmmoChangedSignature.Broadcast(
+            TargetWeapon->GetCurrentMagazineAmmo(),
+            TargetWeapon->GetMaxMagazineSize()
+        );
+    }
 }
 
 FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
@@ -400,6 +412,7 @@ void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
 
         // 선택된 무기 장착
         ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
+
     }
 }
 

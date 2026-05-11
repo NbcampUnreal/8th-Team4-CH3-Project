@@ -7,6 +7,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/DamageType.h"
 #include "GameFramework/Character.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 ALA_WeaponBase::ALA_WeaponBase()
@@ -217,6 +218,12 @@ void ALA_WeaponBase::Fire()
     // 총알 소모
     CurrentMagazineAmmo--;
 
+    // UI 갱신
+    if (GetOwner() && GetOwner()->Implements<ULA_Holder>())
+    {
+        ILA_Holder::Execute_UpdateHUDWidgetOnActor(GetOwner(), this);
+    }
+
     HitScan();
     GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, FireRate, false);
 }
@@ -275,6 +282,12 @@ void ALA_WeaponBase::UpdateAmmo()
     CurrentMagazineAmmo += AmmoToReload;
     CurrentSpareAmmo -= AmmoToReload;
     CurrentState = EWeaponState::Idle;
+
+    // UI 갱신
+    if (GetOwner() && GetOwner()->Implements<ULA_Holder>())
+    {
+        ILA_Holder::Execute_UpdateHUDWidgetOnActor(GetOwner(), this);
+    }
 }
 
 void ALA_WeaponBase::ApplyRecoil()

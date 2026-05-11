@@ -42,20 +42,20 @@ void ALA_BaseCharacter::TakeDamageCustom(float DamageAmount)
 		CurrentShield -= DamageToShield;
 		FinalDamage -= DamageToShield;
 
-		if (OnShieldChanged.IsBound())
-		{
-			OnShieldChanged.Broadcast(CurrentShield);
-		}
+		//if (OnShieldChanged.IsBound())
+		//{
+		//	OnShieldChanged.Broadcast(CurrentShield);
+		//}
 	}
 
 	if (FinalDamage > 0.0f)
 	{
 		CurrentHealth = FMath::Clamp(CurrentHealth - FinalDamage, 0.0f, MaxHealth);
 
-		if (OnHealthChanged.IsBound())
-		{
-			OnHealthChanged.Broadcast(CurrentHealth);
-		}
+		//if (OnHealthChanged.IsBound())
+		//{
+		//	OnHealthChanged.Broadcast(CurrentHealth);
+		//}
 	}
 
 	if (CurrentHealth <= 0.0f)
@@ -73,10 +73,10 @@ void ALA_BaseCharacter::Die()
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
-	if (OnDeath.IsBound())
-	{
-		OnDeath.Broadcast();
-	}
+	//if (OnDeath.IsBound())
+	//{
+	//	OnDeath.Broadcast();
+	//}
 }
 
 void ALA_BaseCharacter::IncreaseContamination(float Amount)
