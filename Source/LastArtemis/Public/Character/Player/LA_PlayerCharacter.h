@@ -133,22 +133,23 @@ protected:
 
 #pragma endregion
 
-#pragma region Death Camera
+#pragma region Death Event
 
     // 캐릭터 사망 시 시간에 따른 SpringArm의 TargetArmLength 값을 설정하는 커브 에셋
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_DeathCamera")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_Death Event")
     TObjectPtr<UCurveFloat> TargetArmLengthCurve;
 
     // 캐릭터 사망 시 시간에 따른 SpringArm의 Rotation 값을 설정하는 커브 에셋
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_DeathCamera")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_Death Event")
     TObjectPtr<UCurveVector> CameraBoomRotationEulerCurve;
 
+    // 사망 이벤트 재생 시간
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_Death Event")
+    float DeathCameraDuration;
+
+    UPROPERTY()
     // 캐릭터 사망 시 재생되는 Timeline
     FTimeline DeathCameraTimeline;
-
-    // 사망 이벤트 재생 시간
-    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_DeathCamera")
-    float DeathCameraDuration;
 
 #pragma endregion
 
@@ -163,6 +164,10 @@ public:
     // 장착하고 있는 무기를 반환하는 함수
     UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     FORCEINLINE ALA_WeaponBase* GetEquipedWeapon() { return EquipedWeapon; }
+
+    // 플레이어의 바라보는 방향으로 수행한 LineTrace 검사 결과를 반환하는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    FHitResult LineTraceForward(float distance);
 
 #pragma region Derived From IHolder
 
@@ -257,6 +262,9 @@ protected:
 
     // 재장전 키 입력 시작 시 호출되는 함수
     void ReloadStartedAction();
+
+    // 상호작용 키 입력 시작 시 호출되는 함수
+    void InteractStartedAction();
 
 #pragma endregion
 

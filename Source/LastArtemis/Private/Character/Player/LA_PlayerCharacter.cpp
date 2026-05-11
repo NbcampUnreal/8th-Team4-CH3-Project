@@ -10,6 +10,7 @@
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
+#include "Object/LA_Interactable.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -67,6 +68,8 @@ void ALA_PlayerCharacter::BeginPlay()
             SwapWeapon(0);
         }
     }
+
+    HealthComponent->OnDeath.AddDynamic(this, &ALA_PlayerCharacter::OnPlayerDeath);
 }
 
 // Called every frame
@@ -159,6 +162,11 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->WeaponSlot3InputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SwapWeapon, 2);
             }
+            // Interact
+            if (LA_Controller->InteractInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->InteractInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InteractStartedAction);
+            }
 		}
 	}
 
@@ -176,6 +184,24 @@ void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResul
 UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
 {
     return EquipedWeapon == nullptr ? DeathCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
+}
+
+FHitResult ALA_PlayerCharacter::LineTraceForward(float distance)
+{
+    UCameraComponent* Camera = GetCameraComponent();
+
+    // LineTrace 실행
+    FHitResult HitResult;
+    FVector StartLocation = Camera->GetComponentLocation();
+    FVector Direction = Camera->GetForwardVector();
+    FVector EndLocation = StartLocation + distance * Direction;	// 100 m 검사
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(EquipedWeapon);
+
+    GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+
+    return HitResult;
 }
 
 #pragma region Derived From ILA_Holder
@@ -290,17 +316,7 @@ void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(ALA_WeaponBase* 
 
 FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
 {
-    UCameraComponent* Camera = GetCameraComponent();
-
-    // LineTrace 실행
-    FHitResult HitResult;
-    FVector StartLocation = Camera->GetComponentLocation();
-    FVector Direction = Camera->GetForwardVector();
-    FVector EndLocation = StartLocation + 10000 * Direction;	// 100 m 검사
-    FCollisionQueryParams queryParams;
-    queryParams.AddIgnoredActor(this);
-
-    GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, queryParams);
+    FHitResult HitResult = LineTraceForward(10000);     // 100 m 검사
 
     if (HitResult.bBlockingHit == true)
     {
@@ -319,19 +335,10 @@ void ALA_PlayerCharacter::Blink()
     UCameraComponent* Camera = GetCameraComponent();
 
     // 바라보는 지점을 향하여 LineTrace 실행
-    FHitResult HitResult;
-    FVector StartLocation = Camera->GetComponentLocation();
-    FVector Direction = Camera->GetForwardVector();
-    FVector EndLocation = StartLocation + 1000 * Direction;     // 10m
-    FCollisionQueryParams QueryParams;
-    QueryParams.AddIgnoredActor(this);
-    QueryParams.AddIgnoredActor(EquipedWeapon);
-
-    // LineTrace 검사
-    bool bIsHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+    FHitResult HitResult = LineTraceForward(1000);      // 10 m 검사
 
     // 순간이동 예상 위치 얻기
-    FVector BlinkLocation = (bIsHit && HitResult.bBlockingHit == true) ? HitResult.ImpactPoint : EndLocation;
+    FVector BlinkLocation = HitResult.bBlockingHit == true ? HitResult.ImpactPoint : HitResult.TraceEnd;
 
     // 안전한 텔레포트 지점 계산
     GetWorld()->FindTeleportSpot(this, BlinkLocation, GetActorRotation());
@@ -438,16 +445,16 @@ void ALA_PlayerCharacter::OnPlayerDeath()
 
     // 캐릭터의 기본 SkeletalMeshComponent 설정
     USkeletalMeshComponent* CharacterMesh = GetMesh();
-    CharacterMesh->SetOwnerNoSee(false);
-    CharacterMesh->SetCollisionProfileName(FName("Ragdoll"));
-    CharacterMesh->SetSimulatePhysics(true);
+    CharacterMesh->SetOwnerNoSee(false);        // 카메라에 보이도록 설정
+    CharacterMesh->SetCollisionProfileName(FName("Ragdoll"));   // Collision Preset 설정
+    CharacterMesh->SetSimulatePhysics(true);        // 물리법칙에 따라 쓰러지도록 설정
 
     // Timeline에서 호출될 함수 설정
     FOnTimelineFloat TargetArmLengthCallback;
-    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));
+    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));  // TargetArmLength 길이 조정
 
     FOnTimelineVector CameraBoomRotationEulerCallback;
-    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation"));
+    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation")); // Rotation 조정
 
     // 타임라인 커브 추가
     DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
@@ -685,6 +692,28 @@ void ALA_PlayerCharacter::ReloadStartedAction()
 
     // 재장전 실행
     EquipedWeapon->Reload();
+}
+
+void ALA_PlayerCharacter::InteractStartedAction()
+{
+    if (Controller == nullptr)
+    {
+        return;
+    }
+
+    // 바라보는 방향 객체 검사
+    FHitResult HitResult = LineTraceForward(100);      // 1 m 검사
+
+    if (HitResult.bBlockingHit == true)
+    {
+        // 검출된 액터 nullptr 검사
+        AActor* HitActor = HitResult.GetActor();
+        if (HitActor != nullptr)
+        {
+            // 상호작용 함수 호출
+            ILA_Interactable::Execute_Interact(HitActor, this);
+        }
+    }
 }
 
 #pragma endregion
