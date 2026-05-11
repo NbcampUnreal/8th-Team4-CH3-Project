@@ -7,15 +7,17 @@
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
 #include "LastArtemis/Character/LA_Holder.h"
+#include "Components/TimelineComponent.h"
 #include "LA_PlayerCharacter.generated.h"
 
+// Forward Declaration
 class UCameraComponent;
-class UInputMappingContext;
-class UInputAction;
 
 struct FInputActionValue;
 
-// 달리기, 앉기 키 입력 방식에 대한 옵션을 나타내는 열거형
+// 키 입력 방식에 대한 옵션을 나타내는 열거형
+// Toggle : 키 입력 시작 시 상태 변경
+// Hold : 키 입력 중인 경우에만 상태 변경
 UENUM()
 enum class EMovementInputMode : uint8
 {
@@ -24,8 +26,11 @@ enum class EMovementInputMode : uint8
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 
+// 속도가 변경되었을 경우 호출되는 이벤트의 타입
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
+
 /*
-* (Apex Legend) 스타일의 달리기 지정
+* 
 */
 UCLASS()
 class LASTARTEMIS_API ALA_PlayerCharacter : public ACharacter, public ILA_Holder
@@ -67,23 +72,41 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
     EMovementInputMode AimInputMode = EMovementInputMode::Toggle;
 
+    // 걷기 속도 배율
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float WalkSpeedFactor = 1;
+
+    // 달리기 속도 배율
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float SprintSpeedFactor = 1;
+
+    // 앉은 상태의 속도 배율
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float CrouchSpeedFactor = 1;
+
 #pragma endregion
+
+    // 이동 속도 속성이 변경되었을 경우 호출되는 이벤트
+    UPROPERTY(BlueprintAssignable, Category = "LA_PlayerCharacter")
+    FOnSpeedChanged OnMovementSpeedChanged;
 
 protected:
     // 캐릭터 태그
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
     FGameplayTagContainer CharacterTags;
 
-	// 캐릭터 테스트 용도 카메라 사용 여부
-	UPROPERTY(EditAnywhere, Category = "0_Debug", meta = (AllowPrivateAccess = true))
-	bool bDebugCamera;
-
-	// 캐릭터 테스트 용도 카메라
-	UPROPERTY(EditAnywhere, Category = "0_Debug", meta = (AllowPrivateAccess = true))
-	TObjectPtr<UCameraComponent> TestCamera;
-
 #pragma region Components
 
+    // DeathCamera 위치를 관리하는 SpringArm
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
+    TObjectPtr<class USpringArmComponent> SpringArmComponent;
+
+    // 사망 시 캐릭터 주변을 회전하며 보여주는 카메라
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
+	TObjectPtr<UCameraComponent> DeathCamera;
+
+    // 캐릭터의 체력을 관리하는 컴포넌트
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
     TObjectPtr<class ULA_HealthComponent> HealthComponent;
 
 #pragma endregion
@@ -95,15 +118,15 @@ protected:
 	bool bIsSprint = false;
 
     // 걷기 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float WalkSpeed = 300;
 
-    // 달리기 이동 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    // 달리기 속도
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float SprintSpeed = 750;
 
-    // 앉은 상태의 이동 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    // 앉은 상태의 속도
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float CrouchSpeed = 150;
 
 #pragma endregion
@@ -114,7 +137,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
     TSubclassOf<ALA_WeaponBase> initialWeaponClass;
 
-    // 무기 퀵슬롯 (1, 2, 3)에 해당하는 무기 클래스의 이름들을 관리하는 번호
+    // 무기 퀵슬롯 (1, 2, 3)에 해당하는 무기 클래스의 이름들을 관리하는 배열
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     TArray<FName> WeaponClassNameIndexer;
 
@@ -129,6 +152,26 @@ protected:
 
 #pragma endregion
 
+#pragma region Death Event
+
+    // 캐릭터 사망 시 시간에 따른 SpringArm의 TargetArmLength 값을 설정하는 커브 에셋
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_Death Event")
+    TObjectPtr<UCurveFloat> TargetArmLengthCurve;
+
+    // 캐릭터 사망 시 시간에 따른 SpringArm의 Rotation 값을 설정하는 커브 에셋
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_Death Event")
+    TObjectPtr<UCurveVector> CameraBoomRotationEulerCurve;
+
+    // 사망 이벤트 재생 시간
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "5_Death Event")
+    float DeathCameraDuration;
+
+    UPROPERTY()
+    // 캐릭터 사망 시 재생되는 Timeline
+    FTimeline DeathCameraTimeline;
+
+#pragma endregion
+
 public:
     // 화면에 보여지는 시점의 카메라를 반환하는 함수
     UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
@@ -137,10 +180,23 @@ public:
     UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     FORCEINLINE void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const { TagContainer.AppendTags(CharacterTags); }
 
+    // 장착하고 있는 무기를 반환하는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    FORCEINLINE ALA_WeaponBase* GetEquipedWeapon() { return EquipedWeapon; }
+
+    // 플레이어의 바라보는 방향으로 수행한 LineTrace 검사 결과를 반환하는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    FHitResult LineTraceForward(float distance);
+
+    // 보유하고 있는 다른 무기로 교체하는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    void SwapWeapon(int32 WeaponIndex);
+
+    // 플레이어 캐릭터 사망 시 실행되는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    void OnPlayerDeath();
 
 #pragma region Derived From IHolder
-
-    ALA_WeaponBase* GetEquipedWeapon() { return EquipedWeapon; }
 
     /// <summary>
     /// 보유한 무기 목록에 임의 무기를 획득(추가)하는 함수
@@ -188,16 +244,20 @@ public:
 
 #pragma endregion
 
-    // 보유하고 있는 다른 무기로 교체하는 함수
-    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
-    void SwapWeapon(int32 WeaponIndex);
-
-    // 대량의 체력을 회복하는 함수 (999999)
-    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
-    void HealCharacter();
-
 protected:
-#pragma region InputAction BindingActions
+    // 액터의 이동 속도를 갱신하는 함수
+    UFUNCTION()
+    void UpdateMovementSpeed();
+
+    // SpringArmComponent의 TargetArmLength 값을 조정하는 함수
+    UFUNCTION()
+    void UpdateCameraBoomTargetArmLength(float Value);
+
+    // SpringArmComponent의 Rotation 값을 조정하는 함수
+    UFUNCTION()
+    void UpdateCameraBoomRotation(FVector Value);
+
+#pragma region InputAction Binding
 
 	// 이동 움직임에 대한 InputAction에 연결되는 함수
 	void MoveAction(const FInputActionValue& value);
@@ -230,6 +290,9 @@ protected:
     // 재장전 키 입력 시작 시 호출되는 함수
     void ReloadStartedAction();
 
+    // 상호작용 키 입력 시작 시 호출되는 함수
+    void InteractStartedAction();
+
 #pragma endregion
 
 	/// <summary>
@@ -243,12 +306,11 @@ protected:
 	virtual float TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;
 
 	// 캐릭터의 걷기/달리기 상태를 변경하는 함수
-	// (최대 속도 변경 + 카메라 시야각 변경)
+	// (최대 속도 변경)
 	void SetSprintState(bool bNewSprint);
 
     /// <summary>
-    /// 캐릭터의 SkeletalMesh Component를 비활성화 처리하는 함수
+    /// 캐릭터의 기본 SkeletalMesh Component를 비활성화 처리하는 함수
     /// </summary>
     void HideCharacterMesh();
-
 };
