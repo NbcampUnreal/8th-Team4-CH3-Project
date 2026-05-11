@@ -70,6 +70,7 @@ void ALA_PlayerCharacter::BeginPlay()
     }
 
     HealthComponent->OnDeath.AddDynamic(this, &ALA_PlayerCharacter::OnPlayerDeath);
+    OnMovementSpeedChanged.AddDynamic(this, &ALA_PlayerCharacter::UpdateMovementSpeed);
 }
 
 // Called every frame
@@ -78,6 +79,7 @@ void ALA_PlayerCharacter::Tick(float DeltaTime)
 	Super::Tick(DeltaTime);
 
     DeathCameraTimeline.TickTimeline(DeltaTime);
+
 }
 
 // Called to bind functionality to input
@@ -202,6 +204,64 @@ FHitResult ALA_PlayerCharacter::LineTraceForward(float distance)
     GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
 
     return HitResult;
+}
+
+void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
+{
+    // 인덱스 유효성 확인
+    if (WeaponClassNameIndexer.IsValidIndex(WeaponIndex) == false)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid Index (Out Of Range). No Weapon on %d Index Slot"), WeaponIndex);
+        return;
+    }
+
+    // 선택한 무기 클래스의 이름 얻기
+    FName WeaponClassName = WeaponClassNameIndexer[WeaponIndex];
+
+    // 해당 클래스의 무기를 보유하고 있는지 확인
+    if (OwnedWeapons.Contains(WeaponClassName) == true)
+    {
+        // 교체하려는 무기 얻기
+        ALA_WeaponBase* NewWeapon = OwnedWeapons[WeaponClassName];
+
+        // 선택된 무기 장착
+        ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
+
+    }
+}
+
+void ALA_PlayerCharacter::OnPlayerDeath()
+{
+    // 사용자의 임의 카메라 회전 방지
+    bUseControllerRotationYaw = false;
+
+    // 캐릭터의 Collision 비활성화
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+
+    // 장착된 무기 해제
+    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
+    EquipedWeapon = nullptr;
+
+    // 캐릭터의 기본 SkeletalMeshComponent 설정
+    USkeletalMeshComponent* CharacterMesh = GetMesh();
+    CharacterMesh->SetOwnerNoSee(false);        // 카메라에 보이도록 설정
+    CharacterMesh->SetCollisionProfileName(FName("Ragdoll"));   // Collision Preset 설정
+    CharacterMesh->SetSimulatePhysics(true);        // 물리법칙에 따라 쓰러지도록 설정
+
+    // Timeline에서 호출될 함수 설정
+    FOnTimelineFloat TargetArmLengthCallback;
+    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));  // TargetArmLength 길이 조정
+
+    FOnTimelineVector CameraBoomRotationEulerCallback;
+    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation")); // Rotation 조정
+
+    // 타임라인 커브 추가
+    DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
+    DeathCameraTimeline.AddInterpVector(CameraBoomRotationEulerCurve, CameraBoomRotationEulerCallback);
+
+    // 타임라인 재생
+    DeathCameraTimeline.SetTimelineLength(DeathCameraDuration);
+    DeathCameraTimeline.PlayFromStart();
 }
 
 #pragma region Derived From ILA_Holder
@@ -371,23 +431,26 @@ void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
 void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 {
     // 이동 속도 증가
-    WalkSpeed *= 2;
-    SprintSpeed *= 2;
-    CrouchSpeed *= 2;
+    WalkSpeedFactor = 2;
+    SprintSpeedFactor = 2;
+    CrouchSpeedFactor = 2;
 
-    // 이동 속도 적용
-    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
-    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed);
+    if (OnMovementSpeedChanged.IsBound() == true)
+    {
+        OnMovementSpeedChanged.Broadcast();
+    }
 
     FTimerDelegate Delegator = FTimerDelegate::CreateLambda([&]()
         {
             // 이동 속도 감소
-            WalkSpeed *= 0.5;
-            SprintSpeed *= 0.5;
-            CrouchSpeed *= 0.5;
+            WalkSpeedFactor = 1;
+            SprintSpeedFactor = 1;
+            CrouchSpeedFactor = 1;
 
-            GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
-            GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed);
+            if (OnMovementSpeedChanged.IsBound() == true)
+            {
+                OnMovementSpeedChanged.Broadcast();
+            }
         });
 
     // 이동 속도 감소 예약
@@ -397,72 +460,20 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 
 #pragma endregion
 
-void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
+void ALA_PlayerCharacter::UpdateMovementSpeed()
 {
-    // 인덱스 유효성 확인
-    if (WeaponClassNameIndexer.IsValidIndex(WeaponIndex) == false)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Invalid Index (Out Of Range). No Weapon on %d Index Slot"), WeaponIndex);
-        return;
-    }
-
-    // 선택한 무기 클래스의 이름 얻기
-    FName WeaponClassName = WeaponClassNameIndexer[WeaponIndex];
-
-    // 해당 클래스의 무기를 보유하고 있는지 확인
-    if (OwnedWeapons.Contains(WeaponClassName) == true)
-    {
-        // 교체하려는 무기 얻기
-        ALA_WeaponBase* NewWeapon = OwnedWeapons[WeaponClassName];
-
-        // 선택된 무기 장착
-        ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
-
-    }
+    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed * SprintSpeedFactor : WalkSpeed * WalkSpeedFactor);
+    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed * CrouchSpeedFactor;
 }
 
-void ALA_PlayerCharacter::HealCharacter()
+void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
 {
-    // 체력 컴포넌트 확인
-    if (HealthComponent != nullptr)
-    {
-        // 체력 회복
-        HealthComponent->Heal(999999.f);
-    }
+    SpringArmComponent->TargetArmLength = Value;
 }
 
-void ALA_PlayerCharacter::OnPlayerDeath()
+void ALA_PlayerCharacter::UpdateCameraBoomRotation(FVector Value)
 {
-    // 사용자의 임의 카메라 회전 방지
-    bUseControllerRotationYaw = false;
-
-    // 캐릭터의 Collision 비활성화
-    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
-
-    // 장착된 무기 해제
-    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
-    EquipedWeapon = nullptr;
-
-    // 캐릭터의 기본 SkeletalMeshComponent 설정
-    USkeletalMeshComponent* CharacterMesh = GetMesh();
-    CharacterMesh->SetOwnerNoSee(false);        // 카메라에 보이도록 설정
-    CharacterMesh->SetCollisionProfileName(FName("Ragdoll"));   // Collision Preset 설정
-    CharacterMesh->SetSimulatePhysics(true);        // 물리법칙에 따라 쓰러지도록 설정
-
-    // Timeline에서 호출될 함수 설정
-    FOnTimelineFloat TargetArmLengthCallback;
-    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));  // TargetArmLength 길이 조정
-
-    FOnTimelineVector CameraBoomRotationEulerCallback;
-    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation")); // Rotation 조정
-
-    // 타임라인 커브 추가
-    DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
-    DeathCameraTimeline.AddInterpVector(CameraBoomRotationEulerCurve, CameraBoomRotationEulerCallback);
-
-    // 타임라인 재생
-    DeathCameraTimeline.SetTimelineLength(DeathCameraDuration);
-    DeathCameraTimeline.PlayFromStart();
+    SpringArmComponent->SetWorldRotation(FRotator::MakeFromEuler(Value));
 }
 
 #pragma region Input Action
@@ -773,14 +784,4 @@ void ALA_PlayerCharacter::HideCharacterMesh()
         //// 컴포턴트 업데이트 방지
         //CharacterMesh->SetComponentTickEnabled(false);
     }
-}
-
-void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
-{
-    SpringArmComponent->TargetArmLength = Value;
-}
-
-void ALA_PlayerCharacter::UpdateCameraBoomRotation(FVector Value)
-{
-    SpringArmComponent->SetWorldRotation(FRotator::MakeFromEuler(Value));
 }

@@ -26,6 +26,9 @@ enum class EMovementInputMode : uint8
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 
+// 속도가 변경되었을 경우 호출되는 이벤트의 타입
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
+
 /*
 * 
 */
@@ -69,7 +72,23 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
     EMovementInputMode AimInputMode = EMovementInputMode::Toggle;
 
+    // 걷기 속도 배율
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float WalkSpeedFactor = 1;
+
+    // 달리기 속도 배율
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float SprintSpeedFactor = 1;
+
+    // 앉은 상태의 속도 배율
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    float CrouchSpeedFactor = 1;
+
 #pragma endregion
+
+    // 이동 속도 속성이 변경되었을 경우 호출되는 이벤트
+    UPROPERTY(BlueprintAssignable, Category = "LA_PlayerCharacter")
+    FOnSpeedChanged OnMovementSpeedChanged;
 
 protected:
     // 캐릭터 태그
@@ -99,15 +118,15 @@ protected:
 	bool bIsSprint = false;
 
     // 걷기 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float WalkSpeed = 300;
 
-    // 달리기 이동 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    // 달리기 속도
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float SprintSpeed = 750;
 
-    // 앉은 상태의 이동 속도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
+    // 앉은 상태의 속도
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float CrouchSpeed = 150;
 
 #pragma endregion
@@ -169,6 +188,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
     FHitResult LineTraceForward(float distance);
 
+    // 보유하고 있는 다른 무기로 교체하는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    void SwapWeapon(int32 WeaponIndex);
+
+    // 플레이어 캐릭터 사망 시 실행되는 함수
+    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
+    void OnPlayerDeath();
+
 #pragma region Derived From IHolder
 
     /// <summary>
@@ -217,19 +244,19 @@ public:
 
 #pragma endregion
 
-    // 보유하고 있는 다른 무기로 교체하는 함수
-    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
-    void SwapWeapon(int32 WeaponIndex);
-
-    // 대량의 체력을 회복하는 함수 (999999)
-    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
-    void HealCharacter();
-
-    // 플레이어 캐릭터 사망 시 실행되는 함수
-    UFUNCTION(BlueprintCallable, Category = "LA_PlayerCharacter")
-    void OnPlayerDeath();
-
 protected:
+    // 액터의 이동 속도를 갱신하는 함수
+    UFUNCTION()
+    void UpdateMovementSpeed();
+
+    // SpringArmComponent의 TargetArmLength 값을 조정하는 함수
+    UFUNCTION()
+    void UpdateCameraBoomTargetArmLength(float Value);
+
+    // SpringArmComponent의 Rotation 값을 조정하는 함수
+    UFUNCTION()
+    void UpdateCameraBoomRotation(FVector Value);
+
 #pragma region InputAction Binding
 
 	// 이동 움직임에 대한 InputAction에 연결되는 함수
@@ -286,12 +313,4 @@ protected:
     /// 캐릭터의 기본 SkeletalMesh Component를 비활성화 처리하는 함수
     /// </summary>
     void HideCharacterMesh();
-
-    // SpringArmComponent의 TargetArmLength 값을 조정하는 함수
-    UFUNCTION()
-    void UpdateCameraBoomTargetArmLength(float Value);
-
-    // SpringArmComponent의 Rotation 값을 조정하는 함수
-    UFUNCTION()
-    void UpdateCameraBoomRotation(FVector Value);
 };
