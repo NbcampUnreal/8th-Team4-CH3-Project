@@ -67,7 +67,7 @@ float ULA_HealthComponent::TakeDamage(float RawDamageAmount, bool bIsIgnoreShiel
 		float ActualDamage = 0;
 
 		// Modify Shield
-		if (bIsIgnoreShield == true && CurrentShield > 0.0f)
+		if (bIsIgnoreShield == false && CurrentShield > 0.0f)
 		{
 			// 실드에 적용되는 데미지 계산
 			float DamageToShield = CurrentShield <= RawDamageAmount ? CurrentShield : RawDamageAmount;

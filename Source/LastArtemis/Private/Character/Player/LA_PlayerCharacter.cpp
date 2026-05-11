@@ -2,14 +2,15 @@
 
 
 #include "Character/Player/LA_PlayerCharacter.h"
-#include "Camera/CameraComponent.h"		// UCameraComponent
-#include "GameFramework/CharacterMovementComponent.h"	// UCharacterMovementComponent
-#include "EnhancedInputSubsystems.h"    // UInputMappingContext, UInputAction
-#include "EnhancedInputComponent.h"		// UEnhancedInputComponent, FInputActionValue
-#include "Character/LA_DefaultPlayerController.h"		// ALA_DefaultPlayerController
+#include "GameFramework/CharacterMovementComponent.h"	        // UCharacterMovementComponent
+#include "GameFramework/SpringArmComponent.h"                   // USpringArmComponent
+#include "Components/CapsuleComponent.h"                        // UCapsuleComponent
+#include "Camera/CameraComponent.h"		                        // UCameraComponent
+#include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
+#include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
-#include "LastArtemis/Weapon/LA_WeaponBase.h"       // ALA_WeaponBase
-#include "Character/Player/Component/LA_HealthComponent.h"  // ULA_HealthComponent
+#include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
+#include "Object/LA_Interactable.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -17,22 +18,24 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
+    // 체력 관련 컴포넌트 부착
     HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
 
     // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
     GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
 
-    // 테스트 용도 카메라 활성화
-    bDebugCamera = true;
+    // SpringArm 컴포넌트 생성
+    SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(FName("CameraBoom"));
+    SpringArmComponent->SetupAttachment(RootComponent);
+    SpringArmComponent->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
+    SpringArmComponent->TargetArmLength = 0;
 
-    // 테스트 용도 카메라 생성
-	TestCamera = CreateDefaultSubobject<UCameraComponent>(FName("TestCamera"));
-	TestCamera->SetupAttachment(RootComponent);
-	TestCamera->SetRelativeLocation(FVector(0, 0, BaseEyeHeight));
+    // 사망 시점 카메라 생성
+	DeathCamera = CreateDefaultSubobject<UCameraComponent>(FName("DeathCamera"));
+	DeathCamera->SetupAttachment(SpringArmComponent);
 
 	// Rotation setting
 	bUseControllerRotationYaw = true;
-	TestCamera->bUsePawnControlRotation = true;
 
     // 캐릭터의 기본 Mesh 비활성화
     HideCharacterMesh();
@@ -65,6 +68,9 @@ void ALA_PlayerCharacter::BeginPlay()
             SwapWeapon(0);
         }
     }
+
+    HealthComponent->OnDeath.AddDynamic(this, &ALA_PlayerCharacter::OnPlayerDeath);
+    OnMovementSpeedChanged.AddDynamic(this, &ALA_PlayerCharacter::UpdateMovementSpeed);
 }
 
 // Called every frame
@@ -72,11 +78,8 @@ void ALA_PlayerCharacter::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
-    // 테스트 카메라 사용 여부에 따른 카메라 컴포넌트 제어
-    if (TestCamera->IsActive() != bDebugCamera)
-    {
-        bDebugCamera == true ? TestCamera->Deactivate() : TestCamera->Activate();
-    }
+    DeathCameraTimeline.TickTimeline(DeltaTime);
+
 }
 
 // Called to bind functionality to input
@@ -161,6 +164,11 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->WeaponSlot3InputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::SwapWeapon, 2);
             }
+            // Interact
+            if (LA_Controller->InteractInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->InteractInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InteractStartedAction);
+            }
 		}
 	}
 
@@ -177,7 +185,83 @@ void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResul
 
 UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
 {
-    return EquipedWeapon == nullptr ? TestCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
+    return EquipedWeapon == nullptr ? DeathCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
+}
+
+FHitResult ALA_PlayerCharacter::LineTraceForward(float distance)
+{
+    UCameraComponent* Camera = GetCameraComponent();
+
+    // LineTrace 실행
+    FHitResult HitResult;
+    FVector StartLocation = Camera->GetComponentLocation();
+    FVector Direction = Camera->GetForwardVector();
+    FVector EndLocation = StartLocation + distance * Direction;	// 100 m 검사
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this);
+    QueryParams.AddIgnoredActor(EquipedWeapon);
+
+    GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+
+    return HitResult;
+}
+
+void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
+{
+    // 인덱스 유효성 확인
+    if (WeaponClassNameIndexer.IsValidIndex(WeaponIndex) == false)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Invalid Index (Out Of Range). No Weapon on %d Index Slot"), WeaponIndex);
+        return;
+    }
+
+    // 선택한 무기 클래스의 이름 얻기
+    FName WeaponClassName = WeaponClassNameIndexer[WeaponIndex];
+
+    // 해당 클래스의 무기를 보유하고 있는지 확인
+    if (OwnedWeapons.Contains(WeaponClassName) == true)
+    {
+        // 교체하려는 무기 얻기
+        ALA_WeaponBase* NewWeapon = OwnedWeapons[WeaponClassName];
+
+        // 선택된 무기 장착
+        ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
+
+    }
+}
+
+void ALA_PlayerCharacter::OnPlayerDeath()
+{
+    // 사용자의 임의 카메라 회전 방지
+    bUseControllerRotationYaw = false;
+
+    // 캐릭터의 Collision 비활성화
+    GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
+
+    // 장착된 무기 해제
+    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
+    EquipedWeapon = nullptr;
+
+    // 캐릭터의 기본 SkeletalMeshComponent 설정
+    USkeletalMeshComponent* CharacterMesh = GetMesh();
+    CharacterMesh->SetOwnerNoSee(false);        // 카메라에 보이도록 설정
+    CharacterMesh->SetCollisionProfileName(FName("Ragdoll"));   // Collision Preset 설정
+    CharacterMesh->SetSimulatePhysics(true);        // 물리법칙에 따라 쓰러지도록 설정
+
+    // Timeline에서 호출될 함수 설정
+    FOnTimelineFloat TargetArmLengthCallback;
+    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));  // TargetArmLength 길이 조정
+
+    FOnTimelineVector CameraBoomRotationEulerCallback;
+    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation")); // Rotation 조정
+
+    // 타임라인 커브 추가
+    DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
+    DeathCameraTimeline.AddInterpVector(CameraBoomRotationEulerCurve, CameraBoomRotationEulerCallback);
+
+    // 타임라인 재생
+    DeathCameraTimeline.SetTimelineLength(DeathCameraDuration);
+    DeathCameraTimeline.PlayFromStart();
 }
 
 #pragma region Derived From ILA_Holder
@@ -292,17 +376,7 @@ void ALA_PlayerCharacter::UpdateHUDWidgetOnActor_Implementation(ALA_WeaponBase* 
 
 FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
 {
-    UCameraComponent* Camera = GetCameraComponent();
-
-    // LineTrace 실행
-    FHitResult HitResult;
-    FVector StartLocation = Camera->GetComponentLocation();
-    FVector Direction = Camera->GetForwardVector();
-    FVector EndLocation = StartLocation + 10000 * Direction;	// 100 m 검사
-    FCollisionQueryParams queryParams;
-    queryParams.AddIgnoredActor(this);
-
-    GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, queryParams);
+    FHitResult HitResult = LineTraceForward(10000);     // 100 m 검사
 
     if (HitResult.bBlockingHit == true)
     {
@@ -321,19 +395,10 @@ void ALA_PlayerCharacter::Blink()
     UCameraComponent* Camera = GetCameraComponent();
 
     // 바라보는 지점을 향하여 LineTrace 실행
-    FHitResult HitResult;
-    FVector StartLocation = Camera->GetComponentLocation();
-    FVector Direction = Camera->GetForwardVector();
-    FVector EndLocation = StartLocation + 1000 * Direction;     // 10m
-    FCollisionQueryParams QueryParams;
-    QueryParams.AddIgnoredActor(this);
-    QueryParams.AddIgnoredActor(EquipedWeapon);
-
-    // LineTrace 검사
-    bool bIsHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+    FHitResult HitResult = LineTraceForward(1000);      // 10 m 검사
 
     // 순간이동 예상 위치 얻기
-    FVector BlinkLocation = (bIsHit && HitResult.bBlockingHit == true) ? HitResult.ImpactPoint : EndLocation;
+    FVector BlinkLocation = HitResult.bBlockingHit == true ? HitResult.ImpactPoint : HitResult.TraceEnd;
 
     // 안전한 텔레포트 지점 계산
     GetWorld()->FindTeleportSpot(this, BlinkLocation, GetActorRotation());
@@ -366,23 +431,26 @@ void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
 void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 {
     // 이동 속도 증가
-    WalkSpeed *= 2;
-    SprintSpeed *= 2;
-    CrouchSpeed *= 2;
+    WalkSpeedFactor = 2;
+    SprintSpeedFactor = 2;
+    CrouchSpeedFactor = 2;
 
-    // 이동 속도 적용
-    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
-    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed);
+    if (OnMovementSpeedChanged.IsBound() == true)
+    {
+        OnMovementSpeedChanged.Broadcast();
+    }
 
     FTimerDelegate Delegator = FTimerDelegate::CreateLambda([&]()
         {
             // 이동 속도 감소
-            WalkSpeed *= 0.5;
-            SprintSpeed *= 0.5;
-            CrouchSpeed *= 0.5;
+            WalkSpeedFactor = 1;
+            SprintSpeedFactor = 1;
+            CrouchSpeedFactor = 1;
 
-            GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed;
-            GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed);
+            if (OnMovementSpeedChanged.IsBound() == true)
+            {
+                OnMovementSpeedChanged.Broadcast();
+            }
         });
 
     // 이동 속도 감소 예약
@@ -392,38 +460,20 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 
 #pragma endregion
 
-void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
+void ALA_PlayerCharacter::UpdateMovementSpeed()
 {
-    // 인덱스 유효성 확인
-    if (WeaponClassNameIndexer.IsValidIndex(WeaponIndex) == false)
-    {
-        UE_LOG(LogTemp, Warning, TEXT("Invalid Index (Out Of Range). No Weapon on %d Index Slot"), WeaponIndex);
-        return;
-    }
-
-    // 선택한 무기 클래스의 이름 얻기
-    FName WeaponClassName = WeaponClassNameIndexer[WeaponIndex];
-
-    // 해당 클래스의 무기를 보유하고 있는지 확인
-    if (OwnedWeapons.Contains(WeaponClassName) == true)
-    {
-        // 교체하려는 무기 얻기
-        ALA_WeaponBase* NewWeapon = OwnedWeapons[WeaponClassName];
-
-        // 선택된 무기 장착
-        ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
-
-    }
+    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed * SprintSpeedFactor : WalkSpeed * WalkSpeedFactor);
+    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed * CrouchSpeedFactor;
 }
 
-void ALA_PlayerCharacter::HealCharacter()
+void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
 {
-    // 체력 컴포넌트 확인
-    if (HealthComponent != nullptr)
-    {
-        // 체력 회복
-        HealthComponent->Heal(999999.f);
-    }
+    SpringArmComponent->TargetArmLength = Value;
+}
+
+void ALA_PlayerCharacter::UpdateCameraBoomRotation(FVector Value)
+{
+    SpringArmComponent->SetWorldRotation(FRotator::MakeFromEuler(Value));
 }
 
 #pragma region Input Action
@@ -655,6 +705,28 @@ void ALA_PlayerCharacter::ReloadStartedAction()
     EquipedWeapon->Reload();
 }
 
+void ALA_PlayerCharacter::InteractStartedAction()
+{
+    if (Controller == nullptr)
+    {
+        return;
+    }
+
+    // 바라보는 방향 객체 검사
+    FHitResult HitResult = LineTraceForward(100);      // 1 m 검사
+
+    if (HitResult.bBlockingHit == true)
+    {
+        // 검출된 액터 nullptr 검사
+        AActor* HitActor = HitResult.GetActor();
+        if (HitActor != nullptr)
+        {
+            // 상호작용 함수 호출
+            ILA_Interactable::Execute_Interact(HitActor, this);
+        }
+    }
+}
+
 #pragma endregion
 
 float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
@@ -694,13 +766,14 @@ void ALA_PlayerCharacter::HideCharacterMesh()
 {
     if (USkeletalMeshComponent* CharacterMesh = GetMesh())
     {
-        // Mesh 삭제
-        CharacterMesh->SetSkeletalMesh(nullptr);
+        //// Mesh 삭제
+        //CharacterMesh->SetSkeletalMesh(nullptr);
 
-        // 렌더링되지 않도록 설정
-        CharacterMesh->SetVisibility(false, true);
-        CharacterMesh->SetHiddenInGame(true, true);
-        CharacterMesh->SetCastShadow(false);
+        //// 렌더링되지 않도록 설정
+        //CharacterMesh->SetVisibility(false, true);
+        //CharacterMesh->SetHiddenInGame(true, true);
+        //CharacterMesh->SetCastShadow(false);
+        CharacterMesh->SetOwnerNoSee(true);
 
         // Collision 제거
         CharacterMesh->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
@@ -708,7 +781,7 @@ void ALA_PlayerCharacter::HideCharacterMesh()
         // Overlap Event 방지
         CharacterMesh->SetGenerateOverlapEvents(false);
 
-        // 컴포턴트 업데이트 방지
-        CharacterMesh->SetComponentTickEnabled(false);
+        //// 컴포턴트 업데이트 방지
+        //CharacterMesh->SetComponentTickEnabled(false);
     }
 }

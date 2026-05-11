@@ -80,6 +80,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
     TObjectPtr<UInputAction> WeaponSlot3InputAction;
 
+    // No.3 Weapon QuickSlot InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> InteractInputAction;
+
 #pragma endregion
 
 };
