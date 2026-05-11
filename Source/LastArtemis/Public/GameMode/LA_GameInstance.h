@@ -41,7 +41,7 @@ public:
     ////////////////////////////////////////////////////////////////////////
 
     UFUNCTION(BlueprintCallable, Category = "Save")
-    void SaveCheckPointLocation(FVector SaveLocation, FRotator SaveRotation);
+    void SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation);
 
     // 게임 데이터 저장
     UFUNCTION(BlueprintCallable, Category = "Save")
@@ -52,7 +52,7 @@ public:
     void LoadGameData();
 
 
-protected:
+public:
     // 현재 골드
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reward")
     int32 TotalGold;
@@ -79,4 +79,8 @@ protected:
     // 기본 슬롯 이름
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Save Data")
     FString SaveSlotName;
+
+    // 저장됐는지
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Save Data")
+    bool bSaveSuccess;
 };

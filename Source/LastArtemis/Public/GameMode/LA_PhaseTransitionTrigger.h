@@ -8,6 +8,7 @@
 
 class USceneComponent;
 class UBoxComponent;
+class UPrimitiveComponent;
 
 UCLASS(Blueprintable)
 class LASTARTEMIS_API ALA_PhaseTransitionTrigger : public AActor
@@ -44,5 +45,5 @@ protected:
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")
-    FVector TirggerBoxExtent;
+    FVector TriggerBoxExtent;
 };

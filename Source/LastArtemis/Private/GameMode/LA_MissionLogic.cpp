@@ -50,3 +50,8 @@ void ULA_MissionLogic::CompleteCurrentPhase()
     // 현재 Phase 종료
     GameState->SetCurrentPhaseCompleted(true);
 }
+
+void ULA_MissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
+{
+    // 자식 클래스에서 구현
+}

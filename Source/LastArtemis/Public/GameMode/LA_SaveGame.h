@@ -6,28 +6,35 @@
 #include "GameFramework/SaveGame.h"
 #include "LA_SaveGame.generated.h"
 
-/**
- * 
- */
-UCLASS()
+class ULA_MissionDataAsset;
+
+UCLASS(BlueprintType)
 class LASTARTEMIS_API ULA_SaveGame : public USaveGame
 {
 	GENERATED_BODY()
 
 public:
-    // 보상
-    UPROPERTY()
-    int32 SavedGold = 0;
-    UPROPERTY()
-    int32 SavedScore = 0;
+    ULA_SaveGame();
+
+public:
+    // 미션
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    ULA_MissionDataAsset* SavedMissionDataAsset;
+
 
     // 지금까지 도달한 Rest Phase
-    UPROPERTY()
-    int32 SavedPhaseIndex = -1;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    int32 SavedPhaseIndex;
+
+    // 보상
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    int32 SavedGold;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    int32 SavedScore;
 
     // 세이브 위치
-    UPROPERTY()
-    FVector SavedPlayerLocation = FVector::ZeroVector;
-    UPROPERTY()
-    FRotator SavedPlayerRotation = FRotator::ZeroRotator;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    FVector SavedPlayerLocation;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    FRotator SavedPlayerRotation;
 };
