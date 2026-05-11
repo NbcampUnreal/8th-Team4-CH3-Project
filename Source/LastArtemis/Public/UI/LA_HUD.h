@@ -31,13 +31,18 @@ public:
     void UpdateAmmo(int32 CurrentMagazineAmmo, int32 MaxMagazineSize);
 
     UFUNCTION(BlueprintImplementableEvent)
-    void UpdateMission();
+    void UpdateMission(ULA_MissionDataAsset* MissionData, int32 PhaseIndex, int32 CurrentCount);
 
 
 
     void BindHealth();
 
     void BindAmmo();
+
+protected:
+
+    UPROPERTY(BlueprintReadOnly, Category = "Reference")
+    class ALA_GameStateBase* GameState;
 
 
 };

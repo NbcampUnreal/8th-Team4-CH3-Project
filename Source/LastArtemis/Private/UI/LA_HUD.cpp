@@ -5,12 +5,32 @@
 #include "Kismet/GameplayStatics.h"
 #include "GameFramework/Character.h"
 #include "../Weapon/LA_WeaponBase.h"
+#include "GameMode/LA_GameStateBase.h"
+#include "GameMode/LA_GameModeBase.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 
 void ULA_HUD::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    GameState = Cast<ALA_GameStateBase>(GetWorld()->GetGameState());
+
+    if (GameState)
+    {
+        // 델리게이트에 업데이트 함수 연결
+        GameState->OnMissionStatusChanged.AddDynamic(this, &ULA_HUD::UpdateMission);
+
+        ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(GetWorld()->GetAuthGameMode());
+        ULA_MissionDataAsset* CurrentData = GM ? GM->GetMissionDataAsset() : nullptr;
+
+        // 초기화 시점에 현재 데이터를 한 번 반영
+        UpdateMission(
+            CurrentData,
+            GameState->GetCurrentPhaseIndex(),
+            GameState->GetCurrentProgressCount()
+        );
+    }
 
     BindHealth();
     BindAmmo();

@@ -8,6 +8,7 @@
 #include "GameMode/LA_GameInstance.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/LA_DefaultPlayerController.h"
+#include "UI/LA_HUD.h"
 #include "Kismet/GameplayStatics.h"
 
 /// <게임 흐름 구조>
@@ -72,6 +73,18 @@ void ALA_GameModeBase::BeginPlay()
             LA_GameState->SetGameFlowState(ELA_GameFlowState::Playing);
         }
 
+        // HUD 생성
+        APlayerController* PC = GetWorld()->GetFirstPlayerController();
+        if (PC && HUDClass)
+        {
+            // 위젯 생성
+            ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDClass);
+            if (NewHUD)
+            {
+                NewHUD->AddToViewport();
+            }
+        }
+
         UGameplayStatics::SetGamePaused(GetWorld(), false);
         StartMission();
 
@@ -100,7 +113,7 @@ void ALA_GameModeBase::BeginPlay()
 }
 
 ////////////////////////
-/// 게음 흐름 제어
+/// 게임 흐름 제어
 ////////////////////////
 
 void ALA_GameModeBase::StartNewGame()
@@ -253,5 +266,10 @@ void ALA_GameModeBase::NotifyEnemyKilled(AActor* DeadEnemy)
         return;
 
     CurrentMissionLogic->HandleEnemyKilled(DeadEnemy);
+}
+
+ULA_MissionDataAsset* ALA_GameModeBase::GetMissionDataAsset()
+{
+    return MissionDataAsset;
 }
 
