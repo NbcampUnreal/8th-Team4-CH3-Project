@@ -24,8 +24,7 @@ public:
     // 페이즈 값을 외부(컨트롤러 등)에서 읽을 수 있도록 Getter 추가
     FORCEINLINE EBossPhase GetCurrentPhase() const { return CurrentPhase; }
 
-    // 부모 클래스의 데미지 처리 및 사망 함수 오버라이드
-    virtual void TakeDamageCustom(float DamageAmount) override;
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
     virtual void Die() override;
 
 protected:
