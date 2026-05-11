@@ -6,7 +6,7 @@
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
 	AIControllerClass = ALA_EnemyController::StaticClass();
-	AutoPossessAI = EAutoPossessAI::Spawned;
+	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
 	PrimaryActorTick.bCanEverTick = true;
 
