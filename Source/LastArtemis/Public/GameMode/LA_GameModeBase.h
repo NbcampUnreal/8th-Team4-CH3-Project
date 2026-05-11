@@ -74,6 +74,9 @@ public:
     void AdvanceToNextPhase();
 
     UFUNCTION(BlueprintCallable, Category = "Mission")
+    void NotifyEnemyKilled(AActor* DeadEnemy);
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
     ULA_MissionDataAsset* GetMissionDataAsset();
 
 protected:

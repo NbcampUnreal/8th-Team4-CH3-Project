@@ -268,3 +268,8 @@ void ALA_GameModeBase::NotifyEnemyKilled(AActor* DeadEnemy)
     CurrentMissionLogic->HandleEnemyKilled(DeadEnemy);
 }
 
+ULA_MissionDataAsset* ALA_GameModeBase::GetMissionDataAsset()
+{
+    return MissionDataAsset;
+}
+
