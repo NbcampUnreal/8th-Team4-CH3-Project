@@ -8,6 +8,7 @@
 #include "GameMode/LA_GameStateBase.h"
 #include "GameMode/LA_GameModeBase.h"
 #include "Character/Player/LA_PlayerCharacter.h"
+#include "Character/Ally/LA_AllyAI.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 
 void ULA_HUD::NativeConstruct()
@@ -36,6 +37,38 @@ void ULA_HUD::NativeConstruct()
     BindAmmo();
 }
 
+void ULA_HUD::RegisterAllyAuto(ALA_AllyAI* NewAlly)
+{
+    if (!NewAlly) return;
+
+    // 1. 이미 등록된 액터인지 중복 체크
+    if (NewAlly == Ally1Actor || NewAlly == Ally2Actor) return;
+
+    ULA_HealthComponent* HealthComp = NewAlly->FindComponentByClass<ULA_HealthComponent>();
+    if (!HealthComp) return;
+
+    // 2. 빈자리 찾아서 등록
+    if (!Ally1Actor)
+    {
+        Ally1Actor = NewAlly;
+        HealthComp->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateAlly1HP);
+        UpdateAlly1HP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+        UE_LOG(LogTemp, Log, TEXT("HUD: Ally 1 Registered."));
+    }
+    else if (!Ally2Actor)
+    {
+        Ally2Actor = NewAlly;
+        HealthComp->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateAlly2HP);
+        UpdateAlly2HP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+        UE_LOG(LogTemp, Log, TEXT("HUD: Ally 2 Registered."));
+    }
+    else
+    {
+        // 둘 다 꽉 찼으면 아무것도 안 함
+        UE_LOG(LogTemp, Warning, TEXT("HUD: All Ally Slots are Full!"));
+    }
+}
+
 void ULA_HUD::BindHealth()
 {
     // OnHealthChanged에 UpdateHP 함수 바인딩
@@ -53,6 +86,31 @@ void ULA_HUD::BindHealth()
         UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
         UpdateShield(HealthComp->GetCurrentShield(), HealthComp->GetMaxShield());
         UE_LOG(LogTemp, Log, TEXT("HUD: Binding & Initial Update Success!"));
+    }
+
+    // 2. 아군 AI 바인딩
+    TArray<AActor*> FoundAllies;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_AllyAI::StaticClass(), FoundAllies);
+
+    for (int32 i = 0; i < FoundAllies.Num(); ++i)
+    {
+        ALA_AllyAI* Ally = Cast<ALA_AllyAI>(FoundAllies[i]);
+        if (!Ally) continue;
+
+        ULA_HealthComponent* AllyHealth = Ally->FindComponentByClass<ULA_HealthComponent>();
+        if (!AllyHealth) continue;
+
+        // i값(0 또는 1)에 따라 서로 다른 위젯 슬롯에 바인딩
+        if (i == 0)
+        {
+            AllyHealth->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateAlly1HP);
+            UpdateAlly1HP(AllyHealth->GetCurrentHealth(), AllyHealth->GetMaxHealth());
+        }
+        else if (i == 1)
+        {
+            AllyHealth->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateAlly2HP);
+            UpdateAlly2HP(AllyHealth->GetCurrentHealth(), AllyHealth->GetMaxHealth());
+        }
     }
 }
 

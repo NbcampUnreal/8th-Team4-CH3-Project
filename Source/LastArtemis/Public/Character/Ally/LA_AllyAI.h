@@ -13,6 +13,8 @@ public:
 
     ALA_AllyAI();
 
+    void BeginPlay() override;
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
 	float AttackRange;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
