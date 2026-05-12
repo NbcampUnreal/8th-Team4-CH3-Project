@@ -79,7 +79,7 @@ public:
 
     void PlayAttackMontage();
 
-    // 쉴드만 깎는 특수 데미지 함수
+    // 실드만 깎는 특수 데미지 함수
     void ReduceShieldOnly(float Amount);
 
     UFUNCTION(BlueprintCallable, Category = "Stats")

@@ -56,7 +56,7 @@ protected:
     UPROPERTY(meta = (BindWidget))
     class UHorizontalBox* HorizontalBox_Ally2;
         
-    // 누가 등록되었는지 추적
+    // 등록된 아군 액터
     UPROPERTY()
     TObjectPtr<AActor> Ally1Actor;
 

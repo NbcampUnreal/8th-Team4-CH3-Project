@@ -19,8 +19,31 @@ public:
 
     virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
 
+
+
 protected:
 	virtual void BeginPlay() override;
+    virtual void PostInitializeComponents() override;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Components")
+    class ULA_HealthComponent* HealthComp;
+
+    // 대미지 텍스트 출력 함수
+    void ExecuteShowDamageText();
+
+    UPROPERTY(VisibleAnywhere, Category = "UI")
+    TObjectPtr<class UWidgetComponent> HealthWidgetComp;
+
+    // 대미지 텍스트를 스폰할 클래스
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<UUserWidget> DamageTextClass;
+
+    // 사라지게 할 위젯 리스트
+    UPROPERTY()
+    TArray<UUserWidget*> ActiveDamageWidgets;
+
+    float AccumulatedDamage = 0.0f;
+    FTimerHandle DamageDisplayTimer;
 
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
 	class UAnimMontage* HitMontage;
