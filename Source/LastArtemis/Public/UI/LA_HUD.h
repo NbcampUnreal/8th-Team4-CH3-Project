@@ -25,6 +25,12 @@ public:
     void UpdateHP(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
+    void UpdateAlly1HP(float Current, float Max);
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void UpdateAlly2HP(float Current, float Max);
+
+    UFUNCTION(BlueprintImplementableEvent)
     void UpdateShield(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
@@ -33,7 +39,7 @@ public:
     UFUNCTION(BlueprintImplementableEvent)
     void UpdateMission(ULA_MissionDataAsset* MissionData, int32 PhaseIndex, int32 CurrentCount);
 
-
+    void RegisterAllyAuto(class ALA_AllyAI* NewAlly);
 
     void BindHealth();
 
@@ -44,5 +50,11 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Reference")
     class ALA_GameStateBase* GameState;
 
+    // 누가 등록되었는지 추적
+    UPROPERTY()
+    TObjectPtr<AActor> Ally1Actor;
+
+    UPROPERTY()
+    TObjectPtr<AActor> Ally2Actor;
 
 };
