@@ -50,6 +50,12 @@ protected:
     UPROPERTY(BlueprintReadOnly, Category = "Reference")
     class ALA_GameStateBase* GameState;
 
+    UPROPERTY(meta = (BindWidget))
+    class UHorizontalBox* HorizontalBox_Ally1;
+
+    UPROPERTY(meta = (BindWidget))
+    class UHorizontalBox* HorizontalBox_Ally2;
+        
     // 누가 등록되었는지 추적
     UPROPERTY()
     TObjectPtr<AActor> Ally1Actor;

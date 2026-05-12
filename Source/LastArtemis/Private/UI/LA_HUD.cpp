@@ -9,6 +9,7 @@
 #include "GameMode/LA_GameModeBase.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/Ally/LA_AllyAI.h"
+#include "Components/HorizontalBox.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 
 void ULA_HUD::NativeConstruct()
@@ -35,32 +36,44 @@ void ULA_HUD::NativeConstruct()
 
     BindHealth();
     BindAmmo();
+
+    if (HorizontalBox_Ally1) HorizontalBox_Ally1->SetVisibility(ESlateVisibility::Collapsed);
+    if (HorizontalBox_Ally2) HorizontalBox_Ally2->SetVisibility(ESlateVisibility::Collapsed);
 }
 
 void ULA_HUD::RegisterAllyAuto(ALA_AllyAI* NewAlly)
 {
     if (!NewAlly) return;
-
-    // 1. 이미 등록된 액터인지 중복 체크
     if (NewAlly == Ally1Actor || NewAlly == Ally2Actor) return;
 
     ULA_HealthComponent* HealthComp = NewAlly->FindComponentByClass<ULA_HealthComponent>();
     if (!HealthComp) return;
 
-    // 2. 빈자리 찾아서 등록
+    // 1번 슬롯이 비어있다면
     if (!Ally1Actor)
     {
         Ally1Actor = NewAlly;
+        // 박스 표시
+        if (HorizontalBox_Ally1) HorizontalBox_Ally1->SetVisibility(ESlateVisibility::Visible);
+
+        // HP 변화 시 UpdateAlly1HP 이벤트 호출되도록 바인딩
         HealthComp->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateAlly1HP);
+
+        // 초기값 전송
         UpdateAlly1HP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
-        UE_LOG(LogTemp, Log, TEXT("HUD: Ally 1 Registered."));
     }
+    // 2번 슬롯이 비어있다면
     else if (!Ally2Actor)
     {
         Ally2Actor = NewAlly;
+        // 박스 표시
+        if (HorizontalBox_Ally2) HorizontalBox_Ally2->SetVisibility(ESlateVisibility::Visible);
+
+        // HP 변화 시 UpdateAlly2HP 이벤트 호출되도록 바인딩
         HealthComp->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateAlly2HP);
+
+        // 초기값 전송
         UpdateAlly2HP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
-        UE_LOG(LogTemp, Log, TEXT("HUD: Ally 2 Registered."));
     }
     else
     {
