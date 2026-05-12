@@ -5,9 +5,11 @@
 #include "GameMode/LA_GameInstance.h"
 #include "GameMode/LA_GameStateBase.h"
 #include "Character/Player/LA_PlayerCharacter.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
+#include "Components/WidgetComponent.h"
 #include "GameFramework/Pawn.h"
 
 // Sets default values
@@ -31,16 +33,25 @@ ALA_CheckPointActor::ALA_CheckPointActor()
     InteractionSphere->SetCollisionResponseToAllChannels(ECR_Ignore);
     InteractionSphere->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
+    InteractableIndicator = CreateDefaultSubobject<UWidgetComponent>(TEXT("InteractableIndicatorUI"));
+    InteractableIndicator->SetupAttachment(SceneComponent);
+    InteractableIndicator->SetWidgetSpace(EWidgetSpace::Screen);
+
     bPlayerInRange = false;
     OverlappingPlayerPawn = nullptr;
 
-    bIntreactiveSavePoint = false;
+    RecoveryAmount = 300.0f;
 }
 
 // Called when the game starts or when spawned
 void ALA_CheckPointActor::BeginPlay()
 {
 	Super::BeginPlay();
+
+    if (InteractableIndicator)
+    {
+        InteractableIndicator->SetVisibility(false);
+    }
 
     // 범위 안에 들어오면 바인딩 
     if (InteractionSphere)
@@ -79,11 +90,9 @@ void ALA_CheckPointActor::OnInteractionBeginOverlap(
     bPlayerInRange = true;
     OverlappingPlayerPawn = LA_PlayerCharacter;
 
-    // 상호 작용 가능 UI 표시
+    if (InteractableIndicator)
     {
-        // F 입력 시 정비
-        bIntreactiveSavePoint = true;
-        InteractCheckPoint(LA_PlayerCharacter);
+        InteractableIndicator->SetVisibility(true);
     }
 }
 
@@ -104,9 +113,9 @@ void ALA_CheckPointActor::OnInteractionEndOverlap(
         OverlappingPlayerPawn = nullptr;
     }
 
-    // 상호 작용 가능 UI 숨김
+    if (InteractableIndicator)
     {
-        bIntreactiveSavePoint = false;
+        InteractableIndicator->SetVisibility(false);
     }
 }
 
@@ -114,9 +123,6 @@ void ALA_CheckPointActor::OnInteractionEndOverlap(
 // -> 위치 세이브 포인트로 사용
 void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
 {
-    if (!bIntreactiveSavePoint)
-        return;
-
     if (!InteractingPawn)
         return;
 
@@ -131,6 +137,7 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     if (!LA_GameState || LA_GameState->GetCurrentPhaseType() != ELA_PhaseType::Rest)
         return;
 
+    // 세이브 데이터 저장
     const int32 CurrentPhaseIndex = LA_GameState->GetCurrentPhaseIndex();
     const FVector SaveLocation = InteractingPawn->GetActorLocation();
     const FRotator SaveRotation = InteractingPawn->GetActorRotation();
@@ -138,8 +145,45 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation);
     LA_GameInstance->SaveGameData();
 
+    // 체력 회복
+    RecoverPlayer(InteractingPawn);
+
     UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s"),
         CurrentPhaseIndex,
         *SaveLocation.ToString()
     );
+}
+
+void ALA_CheckPointActor::RecoverPlayer(APawn* InteractingPawn)
+{
+    if (!InteractingPawn)
+    {
+        return;
+    }
+
+    ULA_HealthComponent* HealthComponent = InteractingPawn->FindComponentByClass<ULA_HealthComponent>();
+    if (!HealthComponent)
+    {
+        return;
+    }
+
+    if (RecoveryAmount <= 0.0f)
+    {
+        return;
+    }
+
+    HealthComponent->Heal(RecoveryAmount);
+}
+
+// 상호작용 시 체크 포인트 처리
+void ALA_CheckPointActor::Interact_Implementation(AActor* InteractInstigator)
+{
+    APawn* InteractingPawn = Cast<APawn>(InteractInstigator);
+    if (!InteractingPawn)
+    {
+        return;
+    }
+
+    // 세이브 포인트 저장 및 체력 회복
+    InteractCheckPoint(InteractingPawn);
 }
