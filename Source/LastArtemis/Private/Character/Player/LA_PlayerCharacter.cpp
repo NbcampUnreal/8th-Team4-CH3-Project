@@ -226,7 +226,7 @@ void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
 
         // 선택된 무기 장착
         ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
-
+        NewWeapon->SetOwner(this);
     }
 }
 
