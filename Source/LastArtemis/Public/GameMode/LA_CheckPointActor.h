@@ -4,15 +4,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Object/LA_Interactable.h"
 #include "LA_CheckPointActor.generated.h"
 
-class USphereComponent;
+class USceneComponent;
 class UStaticMeshComponent;
-class ALA_PlayerCharacter;
+class USphereComponent;
+class UWidgetComponent;
 class APawn;
 
 UCLASS(BlueprintType)
-class LASTARTEMIS_API ALA_CheckPointActor : public AActor
+class LASTARTEMIS_API ALA_CheckPointActor : public AActor, public ILA_Interactable
 {
 	GENERATED_BODY()
 	
@@ -45,6 +47,7 @@ protected:
     );
 
 public:
+    // F 입력 시 호출할 함수
     // CheckPoint와 상호작용
     // 세이브, 체력 회복 등등
     UFUNCTION(BlueprintCallable, Category = "Check Point")
@@ -58,15 +61,23 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USphereComponent* InteractionSphere;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    UWidgetComponent* InteractableIndicator;
+
     // 플레이어가 상호 작용 가능한 범위 안에 있는지
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     bool bPlayerInRange;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
-    bool bIntreactiveSavePoint;
 
     // 현재 범위 안에 있는 플레이어
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     APawn* OverlappingPlayerPawn;
 
+    // 회복량
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recovery")
+    float RecoveryAmount;
+
+    virtual void Interact_Implementation(AActor* InteractInstigator) override;
+    // 플레이어 체력 회복
+    void RecoverPlayer(APawn* InteractingPawn);
 };
