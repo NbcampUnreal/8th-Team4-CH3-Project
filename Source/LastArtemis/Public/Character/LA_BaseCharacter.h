@@ -87,5 +87,6 @@ public:
 
     virtual void UpdateTeamTag(FGameplayTag NewTeamTag);
 
-
+    // 오염도 제거 함수
+    void Decontaminate(float Amount);
 };
