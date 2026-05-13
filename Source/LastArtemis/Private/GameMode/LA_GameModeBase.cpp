@@ -194,15 +194,25 @@ void ALA_GameModeBase::OnGameOver()
 
 void ALA_GameModeBase::OnGameClear()
 {
+    ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
+    ALA_GameStateBase* LA_GameState = GetLAGameState(); // GameState 가져오기
+
+    if (LA_GameInstance && LA_GameState)
+    {
+        float FinalTime = static_cast<float>(LA_GameState->GetElapsedGameTime());
+
+        HandleMissionComplete(FinalTime, LA_GameInstance->TotalScore, "S");
+    }
+
     StopGameTimer();
 
-    if (ALA_GameStateBase* LA_GameState = GetLAGameState())
+    if (LA_GameState)
     {
         LA_GameState->SetGameFlowState(ELA_GameFlowState::GameClear);
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), true);
-   
+
 }
 
 void ALA_GameModeBase::HandleMissionComplete(float FinalTime, int32 FinalScore, FString FinalRank)
