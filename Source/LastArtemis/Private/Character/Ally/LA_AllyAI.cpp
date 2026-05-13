@@ -6,9 +6,3 @@
 ALA_AllyAI::ALA_AllyAI()
 {
 }
-
-
-void ALA_AllyAI::TakeDamageCustom(float DamageAmount)
-{
-    Super::TakeDamageCustom(DamageAmount);
-}
