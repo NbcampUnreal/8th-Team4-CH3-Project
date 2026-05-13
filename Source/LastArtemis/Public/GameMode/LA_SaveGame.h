@@ -37,4 +37,8 @@ public:
     FVector SavedPlayerLocation;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
     FRotator SavedPlayerRotation;
+
+    // 저장된 시간
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    int32 SavedElapsedGameTime;
 };

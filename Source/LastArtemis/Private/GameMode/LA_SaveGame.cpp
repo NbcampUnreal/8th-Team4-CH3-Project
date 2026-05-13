@@ -11,7 +11,8 @@ ULA_SaveGame::ULA_SaveGame()
     SavedPlayerLocation(FVector::ZeroVector),
     SavedPlayerRotation(FRotator::ZeroRotator),
     SavedGold(0),
-    SavedScore(0)
+    SavedScore(0),
+    SavedElapsedGameTime(0)
 {
 
 }
