@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
+#include "TimerManager.h"
 #include "LA_GameModeBase.generated.h"
 
 class ALA_GameStateBase;
@@ -87,4 +88,14 @@ protected:
     // 게임 시작 시 할당된 MissionDataAsset을 기반으로 Mission Logic 진행
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Mission")
     TObjectPtr<ULA_MissionLogic> CurrentMissionLogic;
+
+private:
+    FTimerHandle GameTimerHandle;
+
+    // 게임을 0초부터 시작해야 되면 true
+    void StartGameTimer(bool bResetTime);
+    void StopGameTimer();
+
+    UFUNCTION()
+    void UpdateGameTimer();
 };

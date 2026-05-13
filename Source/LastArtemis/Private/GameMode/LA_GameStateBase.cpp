@@ -12,7 +12,8 @@ ALA_GameStateBase::ALA_GameStateBase()
     CurrentPhaseType(ELA_PhaseType::None),
     CurrentProgressCount(0),
     RequiredProgressCount(0),
-    bCurrentPhaseCompleted(false)
+    bCurrentPhaseCompleted(false),
+    ElapsedGameTime(0)
 {
 }
 
@@ -129,4 +130,34 @@ int32 ALA_GameStateBase::GetRequiredProgressCount() const
 FText ALA_GameStateBase::GetCurrentObjectiveText() const
 {
     return CurrentObjectiveText;
+}
+
+////////////////////////
+// 타이머
+////////////////////////
+
+void ALA_GameStateBase::ResetElapsedGameTime()
+{
+    ElapsedGameTime = 0;
+}
+
+void ALA_GameStateBase::AddElapsedGameTime(int32 AddSeconds)
+{
+    if (AddSeconds <= 0)
+        return;
+
+    ElapsedGameTime += AddSeconds;
+}
+
+int32 ALA_GameStateBase::GetElapsedGameTime() const
+{
+    return ElapsedGameTime;
+}
+
+FText ALA_GameStateBase::GetElapsedGameTimeText() const
+{
+    const int32 Minutes = ElapsedGameTime / 60;
+    const int32 Seconds = ElapsedGameTime % 60;
+
+    return FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds));
 }

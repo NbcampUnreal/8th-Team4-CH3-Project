@@ -86,6 +86,19 @@ public:
     UFUNCTION(BlueprintPure, Category = "Mission|Objective")
     FText GetCurrentObjectiveText() const;
 
+    // 타이머 시간 초기화
+    UFUNCTION(BlueprintCallable, Category = "Game Timer")
+    void ResetElapsedGameTime();
+    // 시간 경과
+    UFUNCTION(BlueprintCallable, Category = "Game Timer")
+    void AddElapsedGameTime(int32 AddSeconds);
+    // 경과된 시간 리턴
+    UFUNCTION(BlueprintPure, Category = "Game Timer")
+    int32 GetElapsedGameTime() const;
+    // 경과된 시간 텍스트 리턴
+    UFUNCTION(BlueprintPure, Category = "Game Timer")
+    FText GetElapsedGameTimeText() const;
+
 protected:
     // 현재 Game Flow State(Main Menu, Playing, Paused 등)
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Flow")
@@ -114,4 +127,8 @@ protected:
     // 목표 Objective의 진행도
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission|Objective")
     int32 RequiredProgressCount;
+
+    // 경과 시간
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Game Timer")
+    int32 ElapsedGameTime;
 };
