@@ -2,7 +2,10 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "LA_WeaponData.h"
 #include "LA_WeaponBase.generated.h"
+
+//class ULA_WeaponData;
 
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
@@ -21,7 +24,6 @@ public:
     ALA_WeaponBase();
 
 protected:
-    virtual void BeginPlay() override;
     virtual void Tick(float DeltaTime) override;
 
     virtual float GetDynamicSpreadAngle() const;
@@ -36,6 +38,12 @@ protected:
     virtual void ResetState();
 
 public:
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Data")
+    void SetWeaponData(ULA_WeaponData* NewWeaponData);
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    float Draw(bool bActivate);
+
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     void Look(FVector InputValue);
 
@@ -50,7 +58,6 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
     bool bIsAiming;
-
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
@@ -68,83 +75,8 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
     EWeaponState CurrentState;
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Animation")
-    UAnimMontage* FiringMontage;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Animation")
-    UAnimMontage* ReloadMontage;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
-    float MaxSwayDegree;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
-    float SwayMultiplier;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
-    float SwaySpeed;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Sway")
-    float SwayReturnSpeed;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    float DefaultFOV;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    float AimFOV;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    float AimDistanceOffset;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    FVector DefaultMeshLocation;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    FRotator DefaultMeshRotation;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    FVector AimMeshLocation;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    FRotator AimMeshRotation;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
-    float AimInterpSpeed;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
-    float DefaultSpreadAngle;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
-    float MaxSpreadAngle;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
-    float MinSpreadAngle;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Spread")
-    float SpreadIncrement;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Recoil")
-    class UCurveVector* RecoilCurve;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Recoil")
-    float RecoilSpeed;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Recoil")
-    float RecoilResetTime;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float BaseDamage;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float FireRate;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    float MaxRange;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    int32 PelletCount;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Stats")
-    int32 MaxMagazineSize;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
+    ULA_WeaponData* WeaponData;
 
 private:
     float CameraPitch;
@@ -156,6 +88,9 @@ private:
 
     FRotator TargetSway;
     FRotator CurrentSway;
+
+    FVector AimMeshLocation;
+    FRotator AimMeshRotation;
 
     int32 CurrentShotCount;
     FRotator TargetRecoil;
@@ -170,5 +105,5 @@ public:
     class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
 
     int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
-    int32 GetMaxMagazineSize() const { return MaxMagazineSize; }
+    int32 GetMaxMagazineSize() const { return WeaponData->MaxMagazineSize; }
 };
