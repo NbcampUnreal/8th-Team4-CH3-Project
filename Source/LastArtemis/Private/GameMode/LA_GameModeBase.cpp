@@ -10,6 +10,7 @@
 #include "Character/LA_DefaultPlayerController.h"
 #include "UI/LA_HUD.h"
 #include "Kismet/GameplayStatics.h"
+#include "Engine/Engine.h"
 
 /// <게임 흐름 구조>
 /// <Main Menu -> Mission Select>
@@ -159,6 +160,9 @@ void ALA_GameModeBase::PauseGame()
         LA_GameState->SetGameFlowState(ELA_GameFlowState::Paused);
     }
 
+    // 일시 정지은 타이머에서 제외
+    StopGameTimer();
+
     UGameplayStatics::SetGamePaused(GetWorld(), true);
 }
 
@@ -169,12 +173,16 @@ void ALA_GameModeBase::ResumeGame()
         LA_GameState->SetGameFlowState(ELA_GameFlowState::Playing);
     }
 
-    // 
     UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+    // 이어서 측정해야 되므로 false
+    StartGameTimer(false);
 }
 
 void ALA_GameModeBase::OnGameOver()
 {
+    StopGameTimer();
+
     if (ALA_GameStateBase* LA_GameState = GetLAGameState())
     {
         LA_GameState->SetGameFlowState(ELA_GameFlowState::GameOver);
@@ -185,6 +193,8 @@ void ALA_GameModeBase::OnGameOver()
 
 void ALA_GameModeBase::OnGameClear()
 {
+    StopGameTimer();
+
     if (ALA_GameStateBase* LA_GameState = GetLAGameState())
     {
         LA_GameState->SetGameFlowState(ELA_GameFlowState::GameClear);
@@ -222,6 +232,9 @@ void ALA_GameModeBase::StartMission()
 
     // 생성된 Mission Logic 초기화 작업 및 Phase 시작
     CurrentMissionLogic->InitializeMission(MissionDataAsset, this);
+
+    // 새 미션 시작 시 게임 시간 0초부터 시작
+    StartGameTimer(true);
 
     int32 StartPhaseIndex = 0;
 
@@ -271,5 +284,67 @@ void ALA_GameModeBase::NotifyEnemyKilled(AActor* DeadEnemy)
 ULA_MissionDataAsset* ALA_GameModeBase::GetMissionDataAsset()
 {
     return MissionDataAsset;
+}
+
+////////////////////////
+/// 타이머
+////////////////////////
+
+// 게임을 처음 시작할 때는 true
+// 게임을 재개할 때는 false
+void ALA_GameModeBase::StartGameTimer(bool bResetTime)
+{
+    ALA_GameStateBase* LA_GameState = GetLAGameState();
+    if (!LA_GameState)
+        return;
+
+    if (bResetTime)
+    {
+        LA_GameState->ResetElapsedGameTime();
+    }
+
+    GetWorldTimerManager().ClearTimer(GameTimerHandle);
+
+    GetWorldTimerManager().SetTimer(
+        GameTimerHandle,
+        this,
+        &ALA_GameModeBase::UpdateGameTimer,
+        1.0f,
+        true
+    );
+}
+
+void ALA_GameModeBase::StopGameTimer()
+{
+    GetWorldTimerManager().ClearTimer(GameTimerHandle);
+}
+
+// 게임 플레이 중에만 타이머 업데이트
+void ALA_GameModeBase::UpdateGameTimer()
+{
+    ALA_GameStateBase* LA_GameState = GetLAGameState();
+    if (!LA_GameState)
+    {
+        StopGameTimer();
+        return;
+    }
+
+    if (LA_GameState->GetGameFlowState() != ELA_GameFlowState::Playing)
+        return;
+
+    LA_GameState->AddElapsedGameTime(1);
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(
+            1000,
+            1.0f,
+            FColor::Green,
+            FString::Printf(
+                TEXT("Play Time: %s"),
+                *LA_GameState->GetElapsedGameTimeText().ToString()
+            )
+        );
+    }
 }
 
