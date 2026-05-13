@@ -5,9 +5,8 @@
 #include "GameplayTagContainer.h"
 #include "LA_BaseCharacter.generated.h"
 
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnHealthChangedDelegate, float, NewHealth);
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnShieldChangedDelegate, float, NewShield);
-//DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAttributeChangedSignature, float, NewValue);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathSignature);
 
 UCLASS()
 class LASTARTEMIS_API ALA_BaseCharacter : public ACharacter
@@ -28,6 +27,8 @@ protected:
 
 public:
     ALA_BaseCharacter();
+
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
     float MaxHealth;
@@ -50,12 +51,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
     bool bIsDead;
 
-    /*
-    UPROPERTY(EditDefaultsOnly, Category = "Weapon")
-    TSubclassOf<class ALA_Weapon> DefaultWeaponClass;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon")
-    class ALA_Weapon* CurrentWeapon; */
 
     // --- 기본 함수 ---
     UFUNCTION(BlueprintCallable, Category = "Health")
@@ -64,38 +59,34 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Health")
     virtual void Die();
 
-    /*UFUNCTION(BlueprintCallable, Category = "Weapon")
-    virtual void EquipWeapon(TSubclassOf<ALA_Weapon> WeaponClass);
-
-    UFUNCTION(BlueprintCallable, Category = "Stats")
-    virtual float GetAttackPower() const; */
-
-    //UPROPERTY(BlueprintAssignable, Category = "Events")
-    //FOnHealthChangedDelegate OnHealthChanged;
-
-    //UPROPERTY(BlueprintAssignable, Category = "Events")
-    //FOnShieldChangedDelegate OnShieldChanged;
-
-    //UPROPERTY(BlueprintAssignable, Category = "Events")
-    //FOnDeathDelegate OnDeath;
-
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     class UAnimMontage* AttackMontage;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
     FGameplayTagContainer CharacterTags;
 
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnAttributeChangedSignature OnHealthChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnAttributeChangedSignature OnShieldChanged;
+
+    UPROPERTY(BlueprintAssignable, Category = "Events")
+    FOnDeathSignature OnDeath;
+
     // 오염도 증가 함수
     void IncreaseContamination(float Amount);
 
     void PlayAttackMontage();
 
-    // 쉴드만 깎는 특수 데미지 함수
+    // 실드만 깎는 특수 데미지 함수
     void ReduceShieldOnly(float Amount);
 
-    FORCEINLINE float GetCurrentShield() const { return CurrentShield; }
+    UFUNCTION(BlueprintCallable, Category = "Stats")
+    float GetCurrentShield() const { return CurrentShield; }
 
     virtual void UpdateTeamTag(FGameplayTag NewTeamTag);
 
-
+    // 오염도 제거 함수
+    void Decontaminate(float Amount);
 };

@@ -40,20 +40,21 @@ void ALA_BossCharacter::BeginPlay()
     Super::BeginPlay();
 }
 
-void ALA_BossCharacter::TakeDamageCustom(float DamageAmount)
+float ALA_BossCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
+    class AController* EventInstigator, AActor* DamageCauser)
 {
-    if (bIsDead) return;
+    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-    // 부모 클래스의 데미지 처리 로직 실행
-    Super::TakeDamageCustom(DamageAmount);
+    if (bIsDead || ActualDamage <= 0.0f) return 0.0f;
 
-    // 페이즈 전환 조건 검사
     CheckPhaseTransition();
 
     if (HitMontage)
     {
         PlayAnimMontage(HitMontage);
     }
+
+    return ActualDamage;
 }
 
 void ALA_BossCharacter::Die()
@@ -74,7 +75,7 @@ void ALA_BossCharacter::Die()
         GetCharacterMovement()->DisableMovement();
     }
 
-    SetLifeSpan(5.0f);
+    SetLifeSpan(10.0f);
 }
 
 void ALA_BossCharacter::CheckPhaseTransition()

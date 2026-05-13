@@ -9,7 +9,7 @@
 
 class ULA_MissionLogic;
 
-UCLASS()
+UCLASS(BlueprintType, Blueprintable)
 class LASTARTEMIS_API ULA_MissionDataAsset : public UDataAsset
 {
 	GENERATED_BODY()
@@ -29,4 +29,7 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
     TSubclassOf<ULA_MissionLogic> MissionLogicClass;
+
+    UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Mission")
+    void GetPhaseInfo(int32 PhaseIndex, FText& OutDescription, int32& OutMaxCount) const;
 };

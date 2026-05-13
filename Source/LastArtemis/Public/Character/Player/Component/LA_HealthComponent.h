@@ -56,7 +56,7 @@ protected:
 	float MaxHealth;
 
 	// 현재 체력
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	float CurrentHealth;
 
 #pragma endregion
@@ -68,7 +68,7 @@ protected:
 	float MaxShield;
 
 	// 현재 실드량
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Stats")
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
 	float CurrentShield;
 
 #pragma endregion
@@ -127,6 +127,5 @@ public:
         return MaxShield;
     }
 
-    
 	void Die();
 };

@@ -2,6 +2,7 @@
 
 
 #include "GameMode/LA_GameStateBase.h"
+#include "GameMode/LA_GameModeBase.h"
 
 ALA_GameStateBase::ALA_GameStateBase()
     :
@@ -59,6 +60,11 @@ void ALA_GameStateBase::SetCurrentPhaseInfo(
     CurrentProgressCount = 0;
     RequiredProgressCount = NewRequiredProgressCount;
     bCurrentPhaseCompleted = false;
+
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        OnMissionStatusChanged.Broadcast(GM->GetMissionDataAsset(), CurrentPhaseIndex, CurrentProgressCount);
+    }
 }
 
 void ALA_GameStateBase::AddObjectiveProgress(int32 AddCount)
@@ -67,11 +73,20 @@ void ALA_GameStateBase::AddObjectiveProgress(int32 AddCount)
         return;
 
     CurrentProgressCount += AddCount;
+
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        OnMissionStatusChanged.Broadcast(GM->GetMissionDataAsset(), CurrentPhaseIndex, CurrentProgressCount);
+    }
 }
 
 void ALA_GameStateBase::ResetObjectiveProgress()
 {
     CurrentProgressCount = 0;
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(GetWorld()->GetAuthGameMode()))
+    {
+        OnMissionStatusChanged.Broadcast(GM->GetMissionDataAsset(), CurrentPhaseIndex, CurrentProgressCount);
+    }
 }
 
 void ALA_GameStateBase::SetCurrentPhaseCompleted(bool bCompleted)

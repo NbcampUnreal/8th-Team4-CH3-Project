@@ -4,7 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "GameMode/LA_MissionLogic.h"
-#include "UI/LA_Gametype.h"
+#include "UI/LA_GameType.h"
 #include "LA_InvasionMissionLogic.generated.h"
 
 /**
@@ -22,4 +22,5 @@ public:
 protected:
     // 침투 미션 세부 기능 구현
     void HandleInvasionObjective(const FLA_InvasionPhaseData& PhaseData);
+    virtual void HandleEnemyKilled(AActor* DeadEnemy) override;
 };

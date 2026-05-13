@@ -8,6 +8,7 @@
 #include "GameMode/LA_GameInstance.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/LA_DefaultPlayerController.h"
+#include "UI/LA_HUD.h"
 #include "Kismet/GameplayStatics.h"
 
 /// <게임 흐름 구조>
@@ -54,6 +55,14 @@ void ALA_GameModeBase::BeginPlay()
 
     ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
 
+    //////////////////////////
+    ///// 테스트용 불러오기
+    //////////////////////////
+    //if (LA_GameInstance)
+    //{
+    //    LA_GameInstance->LoadGameData();
+    //}
+
     // Game Instance에서 Mission 선택
     if (LA_GameInstance && LA_GameInstance->GetSelectedMission())
     {
@@ -64,8 +73,35 @@ void ALA_GameModeBase::BeginPlay()
             LA_GameState->SetGameFlowState(ELA_GameFlowState::Playing);
         }
 
+        // HUD 생성
+        APlayerController* PC = GetWorld()->GetFirstPlayerController();
+        if (PC && HUDClass)
+        {
+            // 위젯 생성
+            ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDClass);
+            if (NewHUD)
+            {
+                NewHUD->AddToViewport();
+            }
+        }
+
         UGameplayStatics::SetGamePaused(GetWorld(), false);
         StartMission();
+
+        //////////////////////////
+        ///// 테스트용 세이브 데이터 복구
+        //////////////////////////
+        //if (LA_GameInstance->SavedPhaseIndex >= 0)
+        //{
+        //    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+
+        //    if (PlayerPawn)
+        //    {
+        //        PlayerPawn->SetActorLocation(LA_GameInstance->SavedPlayerLocation);
+        //        PlayerPawn->SetActorRotation(LA_GameInstance->SavedPlayerRotation);
+        //    }
+        //}
+
         return;
     }
 
@@ -77,7 +113,7 @@ void ALA_GameModeBase::BeginPlay()
 }
 
 ////////////////////////
-/// 게음 흐름 제어
+/// 게임 흐름 제어
 ////////////////////////
 
 void ALA_GameModeBase::StartNewGame()
@@ -90,6 +126,30 @@ void ALA_GameModeBase::StartNewGame()
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), false);
+}
+
+void ALA_GameModeBase::LoadSavedGame()
+{
+    // 메인 메뉴에서 "불러오기" 클릭 시 저장된 미션, Rest Phase Index, 체크포인트 위치 복구
+    ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
+    if (!LA_GameInstance)
+        return;
+
+    LA_GameInstance->LoadGameData();
+
+    if (!LA_GameInstance->GetSelectedMission())
+        return;
+
+    MissionDataAsset = LA_GameInstance->GetSelectedMission();
+
+    StartMission();
+
+    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+    if (PlayerPawn && LA_GameInstance->SavedPhaseIndex >= 0)
+    {
+        PlayerPawn->SetActorLocation(LA_GameInstance->SavedPlayerLocation);
+        PlayerPawn->SetActorRotation(LA_GameInstance->SavedPlayerRotation);
+    }
 }
 
 void ALA_GameModeBase::PauseGame()
@@ -162,7 +222,18 @@ void ALA_GameModeBase::StartMission()
 
     // 생성된 Mission Logic 초기화 작업 및 Phase 시작
     CurrentMissionLogic->InitializeMission(MissionDataAsset, this);
-    CurrentMissionLogic->StartPhase(0);
+
+    int32 StartPhaseIndex = 0;
+
+    if (ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>())
+    {
+        if (LA_GameInstance->SavedPhaseIndex >= 0)
+        {
+            StartPhaseIndex = LA_GameInstance->SavedPhaseIndex;
+        }
+    }
+
+    CurrentMissionLogic->StartPhase(StartPhaseIndex);
 }
 
 void ALA_GameModeBase::AddObjectiveProgress(int32 AddCount)
@@ -187,5 +258,18 @@ void ALA_GameModeBase::AdvanceToNextPhase()
     {
         CurrentMissionLogic->AdvanceToNextPhase();
     }
+}
+
+void ALA_GameModeBase::NotifyEnemyKilled(AActor* DeadEnemy)
+{
+    if (!CurrentMissionLogic || !DeadEnemy)
+        return;
+
+    CurrentMissionLogic->HandleEnemyKilled(DeadEnemy);
+}
+
+ULA_MissionDataAsset* ALA_GameModeBase::GetMissionDataAsset()
+{
+    return MissionDataAsset;
 }
 

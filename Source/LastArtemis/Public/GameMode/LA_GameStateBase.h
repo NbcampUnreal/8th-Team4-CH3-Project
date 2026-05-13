@@ -7,6 +7,7 @@
 #include "UI/LA_GameType.h"
 #include "LA_GameStateBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnMissionStatusChanged, ULA_MissionDataAsset*, MissionData, int32, PhaseIndex, int32, CurrentCount);
 /**
  *
  */
@@ -28,6 +29,9 @@ public:
     // 현재 게임 흐름 상태 반환
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     ELA_GameFlowState GetGameFlowState() const;
+
+    // UI 업데이트
+    FOnMissionStatusChanged OnMissionStatusChanged;
 
     ////////////////////////
     /// 미션 정보

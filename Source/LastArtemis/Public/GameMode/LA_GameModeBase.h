@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameModeBase.h"
-#include "UI/LA_GameType.h"
 #include "LA_GameModeBase.generated.h"
 
 class ALA_GameStateBase;
@@ -32,6 +31,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void StartNewGame();
 
+    // 게임 불러오기
+    UFUNCTION(BlueprintCallable, Category = "Game Flow")
+    void LoadSavedGame();
+
     // 일시 정지 (UI로 조작 가능)
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void PauseGame();
@@ -52,7 +55,10 @@ public:
     ////////////////////////
     /// 미션 진행 제어
     ////////////////////////
-    
+
+    // 위젯 클래스
+    TSubclassOf<UUserWidget> HUDClass;
+
     // 현재 미션 데이터(MissionDataAsset)을 바탕으로 Phase 시작
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void StartMission();
@@ -66,6 +72,12 @@ public:
     // 다음 Phase 진행
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void AdvanceToNextPhase();
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void NotifyEnemyKilled(AActor* DeadEnemy);
+
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    ULA_MissionDataAsset* GetMissionDataAsset();
 
 protected:
     // Mission Data Asset 할당

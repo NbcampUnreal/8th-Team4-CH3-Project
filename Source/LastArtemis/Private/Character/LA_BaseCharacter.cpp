@@ -17,6 +17,35 @@ ALA_BaseCharacter::ALA_BaseCharacter()
 	bIsDead = false;
 }
 
+float ALA_BaseCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
+{
+    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+    if (bIsDead || ActualDamage <= 0.0f) return 0.0f;
+
+    float FinalDamage = FMath::Max(ActualDamage - Defense, 0.0f);
+    if (FinalDamage <= 0.0f) return 0.0f;
+
+    if (CurrentShield > 0.0f)
+    {
+        float DamageToShield = FMath::Min(FinalDamage, CurrentShield);
+        CurrentShield -= DamageToShield;
+        FinalDamage -= DamageToShield;
+
+        if (OnShieldChanged.IsBound()) OnShieldChanged.Broadcast(CurrentShield);
+    }
+
+    if (FinalDamage > 0.0f)
+    {
+        CurrentHealth = FMath::Clamp(CurrentHealth - FinalDamage, 0.0f, MaxHealth);
+        if (OnHealthChanged.IsBound()) OnHealthChanged.Broadcast(CurrentHealth);
+    }
+
+    if (CurrentHealth <= 0.0f) Die();
+
+    return ActualDamage;
+}
+
 void ALA_BaseCharacter::BeginPlay()
 {
 	Super::BeginPlay();
@@ -66,6 +95,7 @@ void ALA_BaseCharacter::TakeDamageCustom(float DamageAmount)
 
 void ALA_BaseCharacter::Die()
 {
+    if (bIsDead) return;
 	bIsDead = true;
 
 	if (GetCapsuleComponent())
@@ -73,10 +103,7 @@ void ALA_BaseCharacter::Die()
 		GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::NoCollision);
 	}
 
-	//if (OnDeath.IsBound())
-	//{
-	//	OnDeath.Broadcast();
-	//}
+    if (OnDeath.IsBound()) OnDeath.Broadcast();
 }
 
 void ALA_BaseCharacter::IncreaseContamination(float Amount)
@@ -122,24 +149,14 @@ void ALA_BaseCharacter::UpdateTeamTag(FGameplayTag NewTeamTag)
     TeamTags.AddTag(NewTeamTag);
 }
 
-/*
-void ALA_BaseCharacter::EquipWeapon(TSubclassOf<ALA_Weapon> WeaponClass)
+void ALA_BaseCharacter::Decontaminate(float Amount)
 {
-	if (GetWorld() && WeaponClass)
-	{
-		FActorSpawnParameters SpawnParams;
-		SpawnParams.Owner = this;
-		SpawnParams.Instigator = GetInstigator();
+    if (Contamination <= 0.0f)
+        return;
 
-		CurrentWeapon = GetWorld()->SpawnActor<AAWeapon>(WeaponClass, SpawnParams);
-	}
+    if (Amount <= 0.0f)
+        return;
+
+    Contamination = FMath::Clamp(Contamination - Amount, 0.0f, MaxContamination);
 }
 
-float ALA_BaseCharacter::GetAttackPower() const
-{
-	if (CurrentWeapon)
-	{
-		return CurrentWeapon->AttackPower;
-	}
-	return AttackPower;
-}*/

@@ -25,19 +25,42 @@ public:
     void UpdateHP(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
+    void UpdateAlly1HP(float Current, float Max);
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void UpdateAlly2HP(float Current, float Max);
+
+    UFUNCTION(BlueprintImplementableEvent)
     void UpdateShield(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
     void UpdateAmmo(int32 CurrentMagazineAmmo, int32 MaxMagazineSize);
 
     UFUNCTION(BlueprintImplementableEvent)
-    void UpdateMission();
+    void UpdateMission(ULA_MissionDataAsset* MissionData, int32 PhaseIndex, int32 CurrentCount);
 
-
+    void RegisterAllyAuto(class ALA_AllyAI* NewAlly);
 
     void BindHealth();
 
     void BindAmmo();
 
+protected:
+
+    UPROPERTY(BlueprintReadOnly, Category = "Reference")
+    class ALA_GameStateBase* GameState;
+
+    UPROPERTY(meta = (BindWidget))
+    class UHorizontalBox* HorizontalBox_Ally1;
+
+    UPROPERTY(meta = (BindWidget))
+    class UHorizontalBox* HorizontalBox_Ally2;
+        
+    // 등록된 아군 액터
+    UPROPERTY()
+    TObjectPtr<AActor> Ally1Actor;
+
+    UPROPERTY()
+    TObjectPtr<AActor> Ally2Actor;
 
 };
