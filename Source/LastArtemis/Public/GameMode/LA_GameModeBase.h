@@ -52,6 +52,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void OnGameClear();
 
+    // 미션 완료 시 호출할 함수
+    UFUNCTION(BlueprintCallable, Category = "Mission")
+    void HandleMissionComplete(float FinalTime, int32 FinalScore, FString FinalRank);
 
     ////////////////////////
     /// 미션 진행 제어
@@ -59,6 +62,13 @@ public:
 
     // 위젯 클래스
     TSubclassOf<UUserWidget> HUDClass;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<class ULA_MissionResult> ResultWidgetClass;
+
+    // 결과 위젯 인스턴스를 보관할 포인터
+    UPROPERTY()
+    class ULA_MissionResult* CurrentResultWidget;
 
     // 현재 미션 데이터(MissionDataAsset)을 바탕으로 Phase 시작
     UFUNCTION(BlueprintCallable, Category = "Mission")

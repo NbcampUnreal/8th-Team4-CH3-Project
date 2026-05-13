@@ -9,6 +9,7 @@
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/LA_DefaultPlayerController.h"
 #include "UI/LA_HUD.h"
+#include "UI/LA_MissionResult.h"
 #include "Kismet/GameplayStatics.h"
 #include "Engine/Engine.h"
 
@@ -193,14 +194,53 @@ void ALA_GameModeBase::OnGameOver()
 
 void ALA_GameModeBase::OnGameClear()
 {
+    ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
+    ALA_GameStateBase* LA_GameState = GetLAGameState(); // GameState 가져오기
+
+    if (LA_GameInstance && LA_GameState)
+    {
+        float FinalTime = static_cast<float>(LA_GameState->GetElapsedGameTime());
+
+        HandleMissionComplete(FinalTime, LA_GameInstance->TotalScore, "S");
+    }
+
     StopGameTimer();
 
-    if (ALA_GameStateBase* LA_GameState = GetLAGameState())
+    if (LA_GameState)
     {
         LA_GameState->SetGameFlowState(ELA_GameFlowState::GameClear);
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+}
+
+void ALA_GameModeBase::HandleMissionComplete(float FinalTime, int32 FinalScore, FString FinalRank)
+{
+    if (ResultWidgetClass)
+    {
+        // 위젯 생성
+        CurrentResultWidget = CreateWidget<ULA_MissionResult>(GetWorld(), ResultWidgetClass);
+
+        if (CurrentResultWidget)
+        {
+            // 데이터 전달
+            CurrentResultWidget->DisplayResults(FinalTime, FinalScore, FinalRank);
+
+            // 화면에 표시
+            CurrentResultWidget->AddToViewport();
+
+            // 입력 모드 설정
+            APlayerController* PC = GetWorld()->GetFirstPlayerController();
+            if (PC)
+            {
+                FInputModeUIOnly InputMode;
+                InputMode.SetWidgetToFocus(CurrentResultWidget->TakeWidget());
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true;
+            }
+        }
+    }
 }
 
 ////////////////////////
