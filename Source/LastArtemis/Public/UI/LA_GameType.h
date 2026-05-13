@@ -80,3 +80,13 @@ struct FLA_InvasionPhaseData
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
     int32 RequiredProgressCount = 0;
 };
+
+
+// 아이템 타입
+UENUM(BlueprintType)
+enum class ELA_ItemType : uint8
+{
+    None        UMETA(DisplayName = "None"),
+    Weapon      UMETA(DisplayName = "Weapon"),
+    Consumable  UMETA(DisplayName = "Consumable"),
+};
