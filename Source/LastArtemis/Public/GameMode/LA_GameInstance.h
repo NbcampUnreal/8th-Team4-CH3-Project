@@ -41,7 +41,7 @@ public:
     ////////////////////////////////////////////////////////////////////////
 
     UFUNCTION(BlueprintCallable, Category = "Save")
-    void SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation);
+    void SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime);
 
     // 게임 데이터 저장
     UFUNCTION(BlueprintCallable, Category = "Save")
@@ -75,6 +75,10 @@ public:
     FVector SavedPlayerLocation;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
     FRotator SavedPlayerRotation;
+
+    // 지금까지 플레이한 시간
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
+    int32 SavedElapsedGameTime;
 
     // 기본 슬롯 이름
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Save Data")

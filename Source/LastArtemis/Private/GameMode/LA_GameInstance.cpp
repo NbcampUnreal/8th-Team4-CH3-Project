@@ -48,16 +48,17 @@ ULA_MissionDataAsset* ULA_GameInstance::GetSelectedMission() const
     return SelectedMissionDataAsset;
 }
 
-void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation)
+////////////////////////////////////////////////////////////////////////
+/// 세이브 로직
+////////////////////////////////////////////////////////////////////////
+
+void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime)
 {
     SavedPhaseIndex = PhaseIndex;
     SavedPlayerLocation = SaveLocation;
     SavedPlayerRotation = SaveRotation;
+    SavedElapsedGameTime = ElapsedGameTime;
 }
-
-////////////////////////////////////////////////////////////////////////
-/// 세이브 로직
-////////////////////////////////////////////////////////////////////////
 
 void ULA_GameInstance::SaveGameData()
 {
@@ -69,11 +70,15 @@ void ULA_GameInstance::SaveGameData()
         return;
 
     LA_SaveGame->SavedMissionDataAsset = SelectedMissionDataAsset;
+
     LA_SaveGame->SavedPhaseIndex = SavedPhaseIndex;
     LA_SaveGame->SavedPlayerLocation = SavedPlayerLocation;
     LA_SaveGame->SavedPlayerRotation = SavedPlayerRotation;
+
     LA_SaveGame->SavedGold = TotalGold;
     LA_SaveGame->SavedScore = TotalScore;
+
+    LA_SaveGame->SavedElapsedGameTime = SavedElapsedGameTime;
 
     UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
 
@@ -106,6 +111,8 @@ void ULA_GameInstance::LoadGameData()
 
     TotalGold = LA_SaveGame->SavedGold;
     TotalScore = LA_SaveGame->SavedScore;
+
+    SavedElapsedGameTime = LA_SaveGame->SavedElapsedGameTime;
 
     bSaveSuccess = UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
 

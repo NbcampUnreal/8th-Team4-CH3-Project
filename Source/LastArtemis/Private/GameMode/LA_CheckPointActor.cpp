@@ -141,16 +141,18 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     const int32 CurrentPhaseIndex = LA_GameState->GetCurrentPhaseIndex();
     const FVector SaveLocation = InteractingPawn->GetActorLocation();
     const FRotator SaveRotation = InteractingPawn->GetActorRotation();
+    const int32 SaveElapsedGameTime = LA_GameState->GetElapsedGameTime();
 
-    LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation);
+    LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation, SaveElapsedGameTime);
     LA_GameInstance->SaveGameData();
 
     // 체력 회복
     RecoverPlayer(InteractingPawn);
 
-    UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s"),
+    UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s, ElapsedGmeTime: %d"),
         CurrentPhaseIndex,
-        *SaveLocation.ToString()
+        *SaveLocation.ToString(),
+        SaveElapsedGameTime
     );
 }
 
