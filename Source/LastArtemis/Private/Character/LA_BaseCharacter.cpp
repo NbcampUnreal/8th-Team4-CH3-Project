@@ -149,3 +149,14 @@ void ALA_BaseCharacter::UpdateTeamTag(FGameplayTag NewTeamTag)
     TeamTags.AddTag(NewTeamTag);
 }
 
+void ALA_BaseCharacter::Decontaminate(float Amount)
+{
+    if (Contamination <= 0.0f)
+        return;
+
+    if (Amount <= 0.0f)
+        return;
+
+    Contamination = FMath::Clamp(Contamination - Amount, 0.0f, MaxContamination);
+}
+
