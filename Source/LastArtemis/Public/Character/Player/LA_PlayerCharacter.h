@@ -133,19 +133,22 @@ protected:
 
 #pragma region Weapons Settings
 
-    // 초기에 사용하는 무기
+    // 초기에 사용하는 무기 데이터
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
-    TSubclassOf<ALA_WeaponBase> initialWeaponClass;
+    TObjectPtr<ULA_WeaponData> initialWeaponData;
 
-    // 무기 퀵슬롯 (1, 2, 3)에 해당하는 무기 클래스의 이름들을 관리하는 배열
+    // 무기 퀵슬롯 (1, 2, 3)에 해당하는 OwnedWeapons의 Key 값을 관리하는 배열
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TArray<FName> WeaponClassNameIndexer;
+    TArray<FName> WeaponNameIndexer;
 
     // 보유한 무기 목록
-    // { UClass::GetFName, ALA_WeaponBase* }
+    // { ULA_WeaponData::WeaponName, ULA_WeaponData* }
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TMap<FName, ALA_WeaponBase*> OwnedWeapons;
-
+    TMap<FName, ULA_WeaponData*> OwnedWeapons;
+    // Key : 무기 데이터 클래스
+    // Value : CDO와 비교하여 달라진 부분을 관리하는 구조체 또는 클래스
+    //TMap<TSubclassOf<ULA_WeaponData>, FLA_WeaponDeltaProperty*> OwnedWeapons;
+    
     // 현재 장착중인 무기를 저장하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     ALA_WeaponBase* EquipedWeapon;
@@ -202,20 +205,19 @@ public:
     /// 보유한 무기 목록에 임의 무기를 획득(추가)하는 함수
     /// 중복된 무기 획득 시 총알 보충
     /// </summary>
-    /// <param name="WeaponClass">무기의 클래스</param>
-    virtual void AddWeaponToPawn_Implementation(TSubclassOf<ALA_WeaponBase> WeaponClass) override;
+    /// <param name="WeaponData">획득한 무기 데이터</param>
+    virtual void AddWeaponToPawn_Implementation(ULA_WeaponData* WeaponData) override;
 
     /// <summary>
     /// 임의 무기를 장착(부착)하는 함수
     /// </summary>
-    /// <param name="Weapon">무기 액터</param>
-    virtual void ActivateWeapon_Implementation(ALA_WeaponBase* Weapon) override;
+    /// <param name="Weapon">장착 하려는 무기 데이터</param>
+    virtual void ActivateWeapon_Implementation(ULA_WeaponData* WeaponData) override;
 
     /// <summary>
-    /// 임의 무기를 장착 해제 또는 비활성화 하는 함수
+    /// 무기를 장착 해제 또는 비활성화 하는 함수
     /// </summary>
-    /// <param name="Weapon">무기 액터</param>
-    virtual void DeactivateWeapon_Implementation(ALA_WeaponBase* Weapon) override;
+    virtual void DeactivateWeapon_Implementation() override;
 
     /// <summary>
     /// 부착되어있는 무기의 정보를 HUD에 업데이트 하는 함수
@@ -313,4 +315,6 @@ protected:
     /// 캐릭터의 기본 SkeletalMesh Component를 비활성화 처리하는 함수
     /// </summary>
     void HideCharacterMesh();
+
+    void SpawnWeaponActor();
 };

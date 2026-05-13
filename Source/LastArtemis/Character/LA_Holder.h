@@ -8,6 +8,7 @@
 
 // 무기 기본 클래스 전방 선언
 class ALA_WeaponBase;
+class ULA_WeaponData;
 
 // This class does not need to be modified.
 UINTERFACE(MinimalAPI)
@@ -29,23 +30,22 @@ public:
     /// <summary>
     /// 보유한 무기 목록에 임의 무기를 획득(추가)하는 함수
     /// </summary>
-    /// <param name="WeaponClass">무기의 클래스</param>
+    /// <param name="WeaponData">무기의 데이터</param>
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-    void AddWeaponToPawn(TSubclassOf<ALA_WeaponBase> WeaponClass);
+    void AddWeaponToPawn(ULA_WeaponData* WeaponData);
 
 	/// <summary>
 	/// 임의 무기를 장착(부착)하는 함수
 	/// </summary>
-	/// <param name="Weapon">무기 액터</param>
+	/// <param name="Weapon">장착하려는 무기 데이터</param>
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-	void ActivateWeapon(ALA_WeaponBase* Weapon);
+	void ActivateWeapon(ULA_WeaponData* WeaponData);
 
 	/// <summary>
 	/// 장착되어있는 임의 무기를 해제하는 함수
 	/// </summary>
-	/// <param name="Weapon">무기 액터</param>
 	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-	void DeactivateWeapon(ALA_WeaponBase* Weapon);
+	void DeactivateWeapon();
 
 	/// <summary>
 	/// 부착되어있는 무기의 정보를 HUD에 업데이트 하는 함수
