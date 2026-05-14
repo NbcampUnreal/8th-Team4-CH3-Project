@@ -10,9 +10,10 @@
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
 {
+    Draw,
     Idle,
-    Firing,
-    Reloading
+    Fire,
+    Reload
 };
 
 UCLASS()
@@ -31,7 +32,6 @@ protected:
     virtual bool CanFire() const;
     virtual void Fire();
     virtual void HitScan();
-    virtual void UpdateAmmo();
 
     virtual void ApplyRecoil();
     virtual void ResetRecoil();
@@ -42,7 +42,7 @@ public:
     void SetWeaponData(ULA_WeaponData* NewWeaponData);
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
-    float Draw(bool bActivate);
+    void Draw();
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     void Look(FVector InputValue);
@@ -106,4 +106,6 @@ public:
 
     int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
     int32 GetMaxMagazineSize() const { return WeaponData->MaxMagazineSize; }
+
+    virtual void UpdateAmmo();
 };

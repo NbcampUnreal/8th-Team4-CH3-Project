@@ -324,9 +324,10 @@ void ALA_PlayerCharacter::ActivateWeapon_Implementation(ULA_WeaponData* WeaponDa
     //{
     //    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
     //}
-    
+
     // 장착 무기 교체
     EquipedWeapon->SetWeaponData(WeaponData);
+    EquipedWeapon->Draw();
 
     // HUD 업데이트
     ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);

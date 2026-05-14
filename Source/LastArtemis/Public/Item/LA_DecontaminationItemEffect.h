@@ -8,7 +8,7 @@
 
 class AActor;
 
-UCLASS(Blueprintable)
+UCLASS(Blueprintable, EditInlineNew, DefaultToInstanced)
 class LASTARTEMIS_API ULA_DecontaminationItemEffect : public ULA_ItemEffect
 {
 	GENERATED_BODY()

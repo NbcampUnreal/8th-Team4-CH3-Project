@@ -5,6 +5,9 @@ ALA_BaseCharacter::ALA_BaseCharacter()
 {
 	PrimaryActorTick.bCanEverTick = false;
 
+    MaxContamination = 100;
+    Contamination = 0;
+
 	MaxHealth = 100.0f;
 	CurrentHealth = MaxHealth;
 

@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
 #include "Object/LA_Interactable.h"
+#include "Item/LA_ItemDataAsset.h"
 #include "LA_CheckPointActor.generated.h"
 
 class USceneComponent;
@@ -53,31 +54,53 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Check Point")
     void InteractCheckPoint(APawn* InteractingPawn);
 
+    // 플레이어 체력 회복
+    void RecoverPlayer(APawn* InteractingPawn);
+    // 플레이어 오염도 제거
+    void Decontaminate(APawn* InteractingPawn);
+
+    void RefillItems(APawn* InteractingPawn);
+
 protected:
+    ////////////////////
+    // 컴포넌트
+    ////////////////////
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USceneComponent* SceneComponent;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UStaticMeshComponent* StaticMeshComponent;
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USphereComponent* InteractionSphere;
-
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     UWidgetComponent* InteractableIndicator;
 
+    ////////////////////
+    // 오버랩
+    ////////////////////
     // 플레이어가 상호 작용 가능한 범위 안에 있는지
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     bool bPlayerInRange;
-
-
     // 현재 범위 안에 있는 플레이어
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     APawn* OverlappingPlayerPawn;
 
+    virtual void Interact_Implementation(AActor* InteractInstigator) override;
+
+
     // 회복량
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recovery")
     float RecoveryAmount;
+    // 오염도 제거
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Recovery")
+    float DecontaminationAmount;
 
-    virtual void Interact_Implementation(AActor* InteractInstigator) override;
-    // 플레이어 체력 회복
-    void RecoverPlayer(APawn* InteractingPawn);
+    ////////////////////
+    // 아이템
+    ////////////////////
+    // 체력 회복 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<ULA_ItemDataAsset> HealingItemData;
+    // 오염도 제거 아이템
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<ULA_ItemDataAsset> DecontaminationItemData;
 };
