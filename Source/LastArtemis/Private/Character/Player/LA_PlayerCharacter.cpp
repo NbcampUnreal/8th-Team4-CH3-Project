@@ -633,6 +633,12 @@ void ALA_PlayerCharacter::FireStartedAction()
         return;
     }
 
+    // 달리기 상태에서 총이 발사되는 것을 방지
+    if (bIsSprint)
+    {
+        return;
+    }
+
     EquipedWeapon->StartFire();
 }
 
