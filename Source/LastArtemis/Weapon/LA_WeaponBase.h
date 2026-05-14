@@ -31,7 +31,6 @@ protected:
     virtual bool CanFire() const;
     virtual void Fire();
     virtual void HitScan();
-    virtual void UpdateAmmo();
 
     virtual void ApplyRecoil();
     virtual void ResetRecoil();
@@ -106,4 +105,6 @@ public:
 
     int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
     int32 GetMaxMagazineSize() const { return WeaponData->MaxMagazineSize; }
+
+    virtual void UpdateAmmo();
 };

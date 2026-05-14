@@ -33,6 +33,7 @@ ALA_WeaponBase::ALA_WeaponBase()
     CameraYaw = 0.f;
     TargetSway = FRotator::ZeroRotator;
     CurrentSway = FRotator::ZeroRotator;
+    CurrentSpareAmmo = 90;
     CurrentState = EWeaponState::Idle;
 }
 
@@ -162,10 +163,9 @@ void ALA_WeaponBase::Reload()
     CurrentState = EWeaponState::Reloading;
     bIsAiming = false; // 장전 시 조준 강제 해제
 
-    if (WeaponData->ReloadMontage && Mesh->GetAnimInstance())
+    if (UAnimMontage* AnimMontage = WeaponData->ReloadMontage)
     {
-        Mesh->GetAnimInstance()->Montage_Play(WeaponData->ReloadMontage);
-        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::UpdateAmmo, WeaponData->ReloadMontage->GetPlayLength(), false);
+        Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
 }
 
