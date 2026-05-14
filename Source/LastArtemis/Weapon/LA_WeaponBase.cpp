@@ -115,20 +115,17 @@ void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
     }
 }
 
-float ALA_WeaponBase::Draw(bool bActivate)
+void ALA_WeaponBase::Draw()
 {
-    if (CurrentState != EWeaponState::Idle) return 0.f;
+    if (CurrentState != EWeaponState::Idle) return;
 
-    if (WeaponData->DrawMontage && Mesh->GetAnimInstance())
+    CurrentState = EWeaponState::Draw;
+
+    if (UAnimMontage* AnimMontage = WeaponData->DrawMontage)
     {
-        float Rate = bActivate ? 1.0f : -1.0f;
-        float StartTime = bActivate ? 0.0f : WeaponData->DrawMontage->GetPlayLength();
-
-        Mesh->GetAnimInstance()->Montage_Play(WeaponData->DrawMontage, Rate, EMontagePlayReturnType::MontageLength, StartTime);
-        return WeaponData->DrawMontage->GetPlayLength();
+        float Duration = Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
+        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, Duration, false);
     }
-
-    return 0.01f;
 }
 
 void ALA_WeaponBase::Look(FVector InputValue)
@@ -160,7 +157,7 @@ void ALA_WeaponBase::Reload()
 {
     if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == WeaponData->MaxMagazineSize || CurrentSpareAmmo <= 0) return;
 
-    CurrentState = EWeaponState::Reloading;
+    CurrentState = EWeaponState::Reload;
     bIsAiming = false; // 장전 시 조준 강제 해제
 
     if (UAnimMontage* AnimMontage = WeaponData->ReloadMontage)
@@ -203,11 +200,11 @@ void ALA_WeaponBase::Fire()
         return;
     }
 
-    CurrentState = EWeaponState::Firing;
+    CurrentState = EWeaponState::Fire;
 
-    if (WeaponData->FireMontage && Mesh->GetAnimInstance())
+    if (UAnimMontage* AnimMontage = WeaponData->FireMontage)
     {
-        Mesh->GetAnimInstance()->Montage_Play(WeaponData->FireMontage);
+        Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
 
     // 총알 소모

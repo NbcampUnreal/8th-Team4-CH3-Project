@@ -10,9 +10,10 @@
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
 {
+    Draw,
     Idle,
-    Firing,
-    Reloading
+    Fire,
+    Reload
 };
 
 UCLASS()
@@ -41,7 +42,7 @@ public:
     void SetWeaponData(ULA_WeaponData* NewWeaponData);
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
-    float Draw(bool bActivate);
+    void Draw();
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     void Look(FVector InputValue);
