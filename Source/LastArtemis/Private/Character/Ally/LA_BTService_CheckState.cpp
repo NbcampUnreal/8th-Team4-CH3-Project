@@ -5,6 +5,8 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "AIController.h"
 #include "Character/LA_BaseCharacter.h"
+#include "Character/Player/LA_PlayerCharacter.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 
@@ -20,25 +22,43 @@ void ULA_BTService_CheckState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
 {
     Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
+
     if (APawn* ControllingPawn = OwnerComp.GetAIOwner()->GetPawn())
     {
-        
-        // 플레이어 캐릭터 찾기 (GetPlayerCharacter)
-        // 플레이어 HP 및 오염도 체크
+
+
 
         bool bIsSupportMode = false;
 
-        if (ALA_BaseCharacter* PlayerCharacter = Cast<ALA_BaseCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)))
+        // 플레이어 캐릭터 체력 상태 체크
+        if (ALA_PlayerCharacter* Player = Cast<ALA_PlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)))
         {
-            
-            if (!PlayerCharacter->bIsDead)
+            if (ULA_HealthComponent* HealthComponent = Player->FindComponentByClass<ULA_HealthComponent>())
             {
-                bIsSupportMode = (PlayerCharacter->CurrentHealth / PlayerCharacter->MaxHealth) <= 0.3;
+
+                UE_LOG(LogTemp, Warning, TEXT("HP: %f / %f (Percent: %f)"),
+                HealthComponent->GetCurrentHealth(),
+                HealthComponent->GetMaxHealth(),
+                HealthComponent->GetHealthPercent());
+
+                if (!HealthComponent->IsDead())
+                {
+                    // 체력 50 이하 -> 서포트 모드 true
+                    bIsSupportMode = HealthComponent->GetHealthPercent() <= 0.5;
+                    if (bIsSupportMode)
+                    {
+                        GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Support Mode Activated"));
+                    }
+
+
+                }
+
             }
+
+
+
         }
 
-
-        // 플레이어 체력 체크
 
 
 
@@ -58,11 +78,12 @@ void ULA_BTService_CheckState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
             Blackboard->SetValueAsBool(FName("bIsSupportMode"), bIsSupportMode);
         }
 
-        
-        
+
+
     }
 
-    
+
 
 
 }
+
