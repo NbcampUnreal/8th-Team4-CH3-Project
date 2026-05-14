@@ -11,8 +11,8 @@ ALA_GameStateBase::ALA_GameStateBase()
     CurrentPhaseIndex(-1),
     CurrentPhaseType(ELA_PhaseType::None),
     CurrentProgressCount(0),
-    RequiredProgressCount(0),
     bCurrentPhaseCompleted(false),
+    RequiredProgressCount(0),
     ElapsedGameTime(0)
 {
 }

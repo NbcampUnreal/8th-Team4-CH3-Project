@@ -186,7 +186,7 @@ int32 ULA_InventoryComponent::GetItemTotalCount(ULA_ItemDataAsset* ItemData) con
 {
     if (!ItemData)
     {
-        return false;
+        return 0;
     }
 
     const FPrimaryAssetId ItemAssetId = ItemData->GetPrimaryAssetId();
