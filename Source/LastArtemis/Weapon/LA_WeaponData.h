@@ -12,6 +12,9 @@ class LASTARTEMIS_API ULA_WeaponData : public UPrimaryDataAsset
     GENERATED_BODY()
 
 public:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
+    FName WeaponName;   // 서로 다른 ULA_WeaponData를 구분하는 고유값
+
     // Visual
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
     USkeletalMesh* WeaponMesh = nullptr;

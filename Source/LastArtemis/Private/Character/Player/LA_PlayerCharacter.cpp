@@ -21,8 +21,12 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
     // 체력 관련 컴포넌트 부착
     HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
 
-    // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
-    GetCharacterMovement()->MaxWalkSpeed = WalkSpeed;
+    UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
+    MovementComponent->MaxWalkSpeed = WalkSpeed; // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
+    MovementComponent->bUseSeparateBrakingFriction = true;  // 입력 종료 시 GroundFriction 대신 BrakingFriction을 사용하여 감속 적용
+    MovementComponent->BrakingFriction = 0.5f;      // 입력 종료 시 적용되는 마찰력 설정
+    MovementComponent->BrakingFrictionFactor = 2;   // Friction 적용 배율 설정
+    MovementComponent->BrakingDecelerationWalking = 256;    // 입력 없을 경우에 적용되는 고정 감속량 설정
 
     // SpringArm 컴포넌트 생성
     SpringArmComponent = CreateDefaultSubobject<USpringArmComponent>(FName("CameraBoom"));
@@ -56,13 +60,16 @@ void ALA_PlayerCharacter::BeginPlay()
     // 캐릭터의 기본 USkeletalMeshComponent 숨기기
     HideCharacterMesh();
 
-    // 기본 무기 획득
-    if (IsValid(initialWeaponClass) == true)
+    // 무기 인스턴스 생성
+    SpawnWeaponActor();
+
+    // 초기 무기의 유효성 확인 획득
+    if (IsValid(initialWeaponData) == true)
     {
         // 초기 무기 획득
-        ILA_Holder::Execute_AddWeaponToPawn(this, initialWeaponClass);
+        ILA_Holder::Execute_AddWeaponToPawn(this, initialWeaponData);
 
-        if (WeaponClassNameIndexer.IsEmpty() == false)
+        if (WeaponNameIndexer.IsEmpty() == false)
         {
             // 0번 인덱스의 무기 장착
             SwapWeapon(0);
@@ -209,24 +216,23 @@ FHitResult ALA_PlayerCharacter::LineTraceForward(float distance)
 void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
 {
     // 인덱스 유효성 확인
-    if (WeaponClassNameIndexer.IsValidIndex(WeaponIndex) == false)
+    if (WeaponNameIndexer.IsValidIndex(WeaponIndex) == false)
     {
         UE_LOG(LogTemp, Warning, TEXT("Invalid Index (Out Of Range). No Weapon on %d Index Slot"), WeaponIndex);
         return;
     }
 
     // 선택한 무기 클래스의 이름 얻기
-    FName WeaponClassName = WeaponClassNameIndexer[WeaponIndex];
+    FName WeaponName = WeaponNameIndexer[WeaponIndex];
 
     // 해당 클래스의 무기를 보유하고 있는지 확인
-    if (OwnedWeapons.Contains(WeaponClassName) == true)
+    if (OwnedWeapons.Contains(WeaponName) == true)
     {
         // 교체하려는 무기 얻기
-        ALA_WeaponBase* NewWeapon = OwnedWeapons[WeaponClassName];
+        ULA_WeaponData* NewWeaponData = OwnedWeapons[WeaponName];
 
         // 선택된 무기 장착
-        ILA_Holder::Execute_ActivateWeapon(this, NewWeapon);
-        NewWeapon->SetOwner(this);
+        ILA_Holder::Execute_ActivateWeapon(this, NewWeaponData);
     }
 }
 
@@ -239,7 +245,7 @@ void ALA_PlayerCharacter::OnPlayerDeath()
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 
     // 장착된 무기 해제
-    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
+    ILA_Holder::Execute_DeactivateWeapon(this);
     EquipedWeapon = nullptr;
 
     // 캐릭터의 기본 SkeletalMeshComponent 설정
@@ -266,21 +272,21 @@ void ALA_PlayerCharacter::OnPlayerDeath()
 
 #pragma region Derived From ILA_Holder
 
-void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(TSubclassOf<ALA_WeaponBase> WeaponClass)
+void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(ULA_WeaponData* WeaponData)
 {
-    if (IsValid(WeaponClass) == false)
+    if (IsValid(WeaponData) == false)
     {
         return;
     }
 
-    // 획득한 무기 클래스의 고유 값 얻기
-    FName CLS_UID = WeaponClass->GetFName();
+    // 획득한 무기 데이터의 고유 값 얻기
+    FName WeaponUID = WeaponData->WeaponName;
 
     // 중복 무기 획득 검사
-    if (OwnedWeapons.Contains(CLS_UID) == true)
+    if (OwnedWeapons.Contains(WeaponUID) == true)
     {
-        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("이미 소유하고 있는 무기입니다. - %s"), *CLS_UID.ToString()));
-        ALA_WeaponBase* Weapon = OwnedWeapons[CLS_UID];
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("이미 소유하고 있는 무기입니다. - %s"), *WeaponUID.ToString()));
+        ULA_WeaponData* DuplicatedData = OwnedWeapons[WeaponUID];
 
         // 무기의 총알 채워넣기
         //Weapon->
@@ -288,75 +294,59 @@ void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(TSubclassOf<ALA_WeaponB
     }
     else
     {
-        // 무기 인스턴스 생성
-        FActorSpawnParameters SpawnParams;
-        SpawnParams.Owner = this;   // 소유자 설정
-        SpawnParams.Instigator = this;
-        ALA_WeaponBase* Weapon = GetWorld()->SpawnActor<ALA_WeaponBase>(WeaponClass, GetActorTransform(), SpawnParams);
-
         // 보유한 무기 목록에 추가
-        OwnedWeapons.Add({ CLS_UID, Weapon });
-        WeaponClassNameIndexer.Add(CLS_UID);
-
-        // 캐릭터에 무기 부착
-        Weapon->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
-        Weapon->SetActorRelativeLocation(FVector(0, 0, BaseEyeHeight));
+        OwnedWeapons.Add(WeaponUID, WeaponData);
+        WeaponNameIndexer.Add(WeaponUID);
 
         // 획득한 무기 비활성화 처리
-        ILA_Holder::Execute_DeactivateWeapon(this, Weapon);
+        ILA_Holder::Execute_DeactivateWeapon(this);
     }
 }
 
-void ALA_PlayerCharacter::ActivateWeapon_Implementation(ALA_WeaponBase* Weapon)
+void ALA_PlayerCharacter::ActivateWeapon_Implementation(ULA_WeaponData* WeaponData)
 {
-    if (IsValid(Weapon) == false)
+    if (IsValid(WeaponData) == false)
     {
         return;
     }
 
-    FString DebugMessage = FString::Printf(TEXT("무기(%s) 장착"), *Weapon->GetName());
+    FString DebugMessage = FString::Printf(TEXT("무기(%s) 장착"), *WeaponData->WeaponName.ToString());
     GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Orange, DebugMessage);
 
-    // 현재 장착 중인 무기를 활성화하는 경우
-    if (Weapon == EquipedWeapon)
-    {
-        // 함수 조기 종료
-        return;
-    }
-
-    // 다른 무기 활성화 시 현재 무기 비활성화
-    if (EquipedWeapon != nullptr)
-    {
-        ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
-    }
-
-    // 선택 무기 활성화
-    Weapon->SetActorHiddenInGame(false);
-
+    //// 현재 장착 중인 무기를 활성화하는 경우
+    //if (Weapon == EquipedWeapon)
+    //{
+    //    // 함수 조기 종료
+    //    return;
+    //}
+    //// 다른 무기 활성화 시 현재 무기 비활성화
+    //if (EquipedWeapon != nullptr)
+    //{
+    //    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
+    //}
+    
     // 장착 무기 교체
-    EquipedWeapon = Weapon;
+    EquipedWeapon->SetWeaponData(WeaponData);
 
+    // HUD 업데이트
     ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
 
     return;
 }
 
-void ALA_PlayerCharacter::DeactivateWeapon_Implementation(ALA_WeaponBase* Weapon)
+void ALA_PlayerCharacter::DeactivateWeapon_Implementation()
 {
-    if (Weapon == nullptr)
+    if (EquipedWeapon == nullptr)
     {
         return;
     }
 
     // 무기 조준 상태 해제 및 발사 중지
-    Weapon->bIsAiming = false;
-    Weapon->StopFire();
+    EquipedWeapon->bIsAiming = false;
+    EquipedWeapon->StopFire();
 
-    // 무기 숨기기
-    Weapon->SetActorHiddenInGame(true);
-
-    // 무기의 Collision 비활성화
-    Weapon->SetActorEnableCollision(false);
+    // 할당된 무기 데이터 제거
+    EquipedWeapon->SetWeaponData(nullptr);
     return;
 }
 
@@ -664,6 +654,12 @@ void ALA_PlayerCharacter::AimingStartedAction()
         return;
     }
 
+    // 달리기 상태에서 줌 방지
+    if (bIsSprint == true)
+    {
+        return;
+    }
+
 	// 토글 옵션이면서 조준 상태인 경우
 	if (AimInputMode == EMovementInputMode::Toggle)
 	{
@@ -758,6 +754,12 @@ void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
         UnCrouch();
     }
 
+    // 달리기 전환 시 조준 상태 해제
+    if (bIsSprint == true && EquipedWeapon != nullptr)
+    {
+        EquipedWeapon->bIsAiming = false;
+    }
+
     // 이동 속도 변경
     GetCharacterMovement()->MaxWalkSpeed = (bIsSprint ? SprintSpeed : WalkSpeed);
 }
@@ -784,4 +786,24 @@ void ALA_PlayerCharacter::HideCharacterMesh()
         //// 컴포턴트 업데이트 방지
         //CharacterMesh->SetComponentTickEnabled(false);
     }
+}
+
+void ALA_PlayerCharacter::SpawnWeaponActor()
+{
+    if (EquipedWeapon != nullptr)
+    {
+        return;
+    }
+
+    // 무기 인스턴스 생성
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;   // 소유자 설정
+    SpawnParams.Instigator = this;
+    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(GetActorLocation(), GetActorRotation(), SpawnParams);
+
+    // 무기 액터를 캐릭터의 자식으로 붙이기
+    EquipedWeapon->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
+
+    // 무기 액터 위치 조정
+    EquipedWeapon->SetActorRelativeLocation(FVector(0, 0, BaseEyeHeight));
 }
