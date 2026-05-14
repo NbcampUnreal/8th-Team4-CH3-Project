@@ -15,6 +15,7 @@ public:
 
     void BeginPlay() override;
 
+
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
 	float AttackRange;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
@@ -22,14 +23,5 @@ public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
 	float DeContaminateAmount;
 
-	UFUNCTION(BlueprintCallable)
-	void Attack();
-	UFUNCTION(BlueprintCallable)
-	void Heal();
-	UFUNCTION(BlueprintCallable)
-	void Decontaminate();
 
-    /*virtual float TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser) override;*/
-
-    virtual void TakeDamageCustom(float DamageAmount) override;
 };
