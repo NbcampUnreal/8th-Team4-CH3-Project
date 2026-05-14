@@ -8,7 +8,7 @@
 
 class AActor;
 
-UCLASS(Abstract, Blueprintable)
+UCLASS(Abstract, Blueprintable, EditInlineNew, DefaultToInstanced)
 class LASTARTEMIS_API ULA_ItemEffect : public UObject
 {
 	GENERATED_BODY()

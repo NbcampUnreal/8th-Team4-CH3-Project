@@ -4,12 +4,14 @@
 #include "GameMode/LA_CheckPointActor.h"
 #include "GameMode/LA_GameInstance.h"
 #include "GameMode/LA_GameStateBase.h"
+#include "Character/LA_BaseCharacter.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
 #include "Components/WidgetComponent.h"
+#include "Item/LA_InventoryComponent.h"
 #include "GameFramework/Pawn.h"
 
 // Sets default values
@@ -40,7 +42,8 @@ ALA_CheckPointActor::ALA_CheckPointActor()
     bPlayerInRange = false;
     OverlappingPlayerPawn = nullptr;
 
-    RecoveryAmount = 300.0f;
+    RecoveryAmount = 500.0f;
+    DecontaminationAmount = 100.0f;
 }
 
 // Called when the game starts or when spawned
@@ -146,8 +149,12 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation, SaveElapsedGameTime);
     LA_GameInstance->SaveGameData();
 
-    // 체력 회복
+    // 체력 회복 / 오염도 제거
     RecoverPlayer(InteractingPawn);
+    Decontaminate(InteractingPawn);
+
+    // 아이템 보급
+    RefillItems(InteractingPawn);
 
     UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s, ElapsedGmeTime: %d"),
         CurrentPhaseIndex,
@@ -159,22 +166,54 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
 void ALA_CheckPointActor::RecoverPlayer(APawn* InteractingPawn)
 {
     if (!InteractingPawn)
-    {
         return;
-    }
 
     ULA_HealthComponent* HealthComponent = InteractingPawn->FindComponentByClass<ULA_HealthComponent>();
     if (!HealthComponent)
-    {
         return;
-    }
 
     if (RecoveryAmount <= 0.0f)
-    {
         return;
-    }
 
     HealthComponent->Heal(RecoveryAmount);
+}
+
+void ALA_CheckPointActor::Decontaminate(APawn* InteractingPawn)
+{
+    if (!InteractingPawn)
+        return;
+
+    if (DecontaminationAmount <= 0.0f)
+        return;
+
+
+    ALA_BaseCharacter* BaseCharacter = Cast<ALA_BaseCharacter>(InteractingPawn);
+    if (!BaseCharacter)
+        return;
+
+    BaseCharacter->Decontaminate(DecontaminationAmount);
+}
+
+void ALA_CheckPointActor::RefillItems(APawn* InteractingPawn)
+{
+    if (!InteractingPawn)
+        return;
+
+    ULA_InventoryComponent* InventoryComponent = InteractingPawn->FindComponentByClass<ULA_InventoryComponent>();
+
+    if (!InventoryComponent)
+        return;
+
+    InventoryComponent->RefillItem(HealingItemData);
+    InventoryComponent->RefillItem(DecontaminationItemData);
+
+    InventoryComponent->PrintInventory();
+
+    UE_LOG(LogTemp, Warning, TEXT("HealingItemData: %s"),
+        HealingItemData ? *HealingItemData->GetName() : TEXT("nullptr"));
+
+    UE_LOG(LogTemp, Warning, TEXT("DecontaminationItemData: %s"),
+        DecontaminationItemData ? *DecontaminationItemData->GetName() : TEXT("nullptr"));
 }
 
 // 상호작용 시 체크 포인트 처리
@@ -182,9 +221,7 @@ void ALA_CheckPointActor::Interact_Implementation(AActor* InteractInstigator)
 {
     APawn* InteractingPawn = Cast<APawn>(InteractInstigator);
     if (!InteractingPawn)
-    {
         return;
-    }
 
     // 세이브 포인트 저장 및 체력 회복
     InteractCheckPoint(InteractingPawn);
