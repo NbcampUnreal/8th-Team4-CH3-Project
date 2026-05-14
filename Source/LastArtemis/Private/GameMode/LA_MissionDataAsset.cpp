@@ -8,3 +8,10 @@ void ULA_MissionDataAsset::GetPhaseInfo_Implementation(int32 PhaseIndex, FText& 
     OutObjectiveText = FText::FromString(TEXT("Base Mission Data"));
     OutRequiredCount = 0;
 }
+
+FPrimaryAssetId ULA_MissionDataAsset::GetPrimaryAssetId() const
+{
+    const FName DataAssetName = MissionId.IsNone() ? GetFName() : MissionId;
+
+    return FPrimaryAssetId(TEXT("Mission"), DataAssetName);
+}

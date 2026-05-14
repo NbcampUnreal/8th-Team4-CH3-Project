@@ -4,41 +4,72 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
+#include "UObject/PrimaryAssetId.h"
 #include "LA_SaveGame.generated.h"
 
 class ULA_MissionDataAsset;
 
+USTRUCT(BlueprintType)
+struct FLA_CheckPointSaveData
+{
+    GENERATED_BODY()
+
+public:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    FPrimaryAssetId MissionId;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    int32 PhaseIndex = -1;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    FVector PlayerLocation = FVector::ZeroVector;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    FRotator PlayerRotation = FRotator::ZeroRotator;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    int32 ElapsedGameTime = 0;
+
+    bool IsValid() const
+    {
+        return MissionId.IsValid() && PhaseIndex >= 0;
+    }
+};
+
+USTRUCT(BlueprintType)
+struct FLA_MissionResultSaveData
+{
+    GENERATED_BODY()
+
+public:
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission Result")
+    FPrimaryAssetId MissionId;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission Result")
+    bool bCleared = false;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission Result")
+    int32 BestClearTime = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission Result")
+    int32 BestScore = 0;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Mission Result")
+    FString BestRank;
+};
+
+
 UCLASS(BlueprintType)
 class LASTARTEMIS_API ULA_SaveGame : public USaveGame
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
     ULA_SaveGame();
 
 public:
-    // 미션
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    ULA_MissionDataAsset* SavedMissionDataAsset;
+    FLA_CheckPointSaveData CheckPointData;
 
-
-    // 지금까지 도달한 Rest Phase
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    int32 SavedPhaseIndex;
-
-    // 보상
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    int32 SavedGold;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    int32 SavedScore;
-
-    // 세이브 위치
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    FVector SavedPlayerLocation;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    FRotator SavedPlayerRotation;
-
-    // 저장된 시간
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    int32 SavedElapsedGameTime;
+    TArray<FLA_MissionResultSaveData> MissionResultData;
 };

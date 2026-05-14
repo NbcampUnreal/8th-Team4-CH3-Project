@@ -6,10 +6,12 @@
 #include "GameFramework/SpringArmComponent.h"                   // USpringArmComponent
 #include "Components/CapsuleComponent.h"                        // UCapsuleComponent
 #include "Camera/CameraComponent.h"		                        // UCameraComponent
+#include "Item/LA_InventoryComponent.h"                         // ULA_InventoryComponent
 #include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
+#include "GameMode/LA_GameInstance.h"                           // ULA_GameInstance
 #include "Object/LA_Interactable.h"
 
 // Sets default values
@@ -20,6 +22,9 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 
     // 체력 관련 컴포넌트 부착
     HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
+
+    // 인벤토리 컴포넌트 부착
+    InventoryComponent = CreateDefaultSubobject<ULA_InventoryComponent>(TEXT("InventoryComponent"));
 
     UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
     MovementComponent->MaxWalkSpeed = WalkSpeed; // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
@@ -56,6 +61,13 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 void ALA_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+    // GameInstance를 가져와서 설정을 적용.
+    ULA_GameInstance* GI = Cast<ULA_GameInstance>(GetGameInstance());
+    if (GI)
+    {
+        GI->ApplySettingsToCharacter();
+    }
 
     // 캐릭터의 기본 USkeletalMeshComponent 숨기기
     HideCharacterMesh();
@@ -324,9 +336,10 @@ void ALA_PlayerCharacter::ActivateWeapon_Implementation(ULA_WeaponData* WeaponDa
     //{
     //    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
     //}
-    
+
     // 장착 무기 교체
     EquipedWeapon->SetWeaponData(WeaponData);
+    EquipedWeapon->Draw();
 
     // HUD 업데이트
     ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
@@ -629,6 +642,12 @@ void ALA_PlayerCharacter::FireStartedAction()
     if (Controller == nullptr || EquipedWeapon == nullptr)
     {
         UE_LOG(LogTemp, Warning, TEXT("Invalid Controller or Weapon to start Fire"));
+        return;
+    }
+
+    // 달리기 상태에서 총이 발사되는 것을 방지
+    if (bIsSprint)
+    {
         return;
     }
 

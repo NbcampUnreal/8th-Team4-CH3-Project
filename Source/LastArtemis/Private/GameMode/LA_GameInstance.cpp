@@ -1,36 +1,91 @@
 ﻿#include "GameMode/LA_GameInstance.h"
 #include "GameMode/LA_SaveGame.h"
-#include "GameMode/LA_GameStateBase.h"
+#include "GameMode/LA_SaveGameSettings.h"
+#include "GameMode/LA_MissionDataAsset.h"
+#include "Character/Player/LA_PlayerCharacter.h"
+#include "Engine/AssetManager.h"
 #include "Kismet/GameplayStatics.h"
 
 ULA_GameInstance::ULA_GameInstance()
     :
-    TotalGold(0),
     TotalScore(0),
     SelectedMissionDataAsset(nullptr),
-
-    SavedPhaseIndex(-1),
-    SavedPlayerLocation(FVector::ZeroVector),
-    SavedPlayerRotation(FRotator::ZeroRotator),
     bSaveSuccess(false)
 {
     SaveSlotName = TEXT("SaveSlot");
 }
 
 ////////////////////////////////////////////////////////////////////////
-/// 보상 로직
+/// 옵션 설정값 저장
+///////////////////////////////////////////////////////////////////////
+
+void ULA_GameInstance::Init()
+{
+    Super::Init();
+    LoadSettingsFromDisk();
+}
+
+void ULA_GameInstance::UpdateAndSaveSettings(EMovementInputMode NewAimMode, EMovementInputMode NewSprintMode)
+{
+    // 메모리 값 업데이트
+    CurrentAimInputMode = NewAimMode;
+    CurrentSprintInputMode = NewSprintMode;
+
+    // 즉시 파일로 저장
+    ULA_SaveGameSettings* SaveObj = Cast<ULA_SaveGameSettings>(UGameplayStatics::CreateSaveGameObject(ULA_SaveGameSettings::StaticClass()));
+    if (SaveObj)
+    {
+        SaveObj->SavedAimInputMode = CurrentAimInputMode;
+        SaveObj->SavedSprintInputMode = CurrentSprintInputMode;
+        UGameplayStatics::SaveGameToSlot(SaveObj, SettingsSlotName, 0);
+    }
+
+    // 캐릭터가 있다면 즉시 반영
+    ApplySettingsToCharacter();
+}
+
+void ULA_GameInstance::ApplySettingsToCharacter()
+{
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (PC && PC->GetPawn())
+    {
+        ALA_PlayerCharacter* Character = Cast<ALA_PlayerCharacter>(PC->GetPawn());
+        if (Character)
+        {
+            Character->AimInputMode = CurrentAimInputMode;
+            Character->SprintInputMode = CurrentSprintInputMode;
+        }
+    }
+}
+
+void ULA_GameInstance::LoadSettingsFromDisk()
+{
+    if (UGameplayStatics::DoesSaveGameExist(SettingsSlotName, 0))
+    {
+        ULA_SaveGameSettings* LoadObj = Cast<ULA_SaveGameSettings>(UGameplayStatics::LoadGameFromSlot(SettingsSlotName, 0));
+        if (LoadObj)
+        {
+            CurrentAimInputMode = LoadObj->SavedAimInputMode;
+            CurrentSprintInputMode = LoadObj->SavedSprintInputMode;
+        }
+    }
+}
+
+////////////////////////////////////////////////////////////////////////
+/// 점수 로직
 ////////////////////////////////////////////////////////////////////////
 
-void ULA_GameInstance::AddReward(int32 GoldReward, int32 ScoreReward)
+void ULA_GameInstance::AddScore(int32 ScoreAmount)
 {
-	TotalGold += GoldReward;
-	TotalScore += ScoreReward;
+    if (ScoreAmount <= 0)
+        return;
+
+	TotalScore += ScoreAmount;
 }
 
 
-void ULA_GameInstance::ResetPlayerData()
+void ULA_GameInstance::ResetScore()
 {
-	TotalGold = 0;
     TotalScore = 0;
 }
 
@@ -48,49 +103,149 @@ ULA_MissionDataAsset* ULA_GameInstance::GetSelectedMission() const
     return SelectedMissionDataAsset;
 }
 
+FPrimaryAssetId ULA_GameInstance::GetSelectedMissionId() const
+{
+    if (!SelectedMissionDataAsset)
+    {
+        return FPrimaryAssetId();
+    }
+
+    return SelectedMissionDataAsset->GetPrimaryAssetId();
+}
+
 ////////////////////////////////////////////////////////////////////////
 /// 세이브 로직
 ////////////////////////////////////////////////////////////////////////
 
-void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime)
+ULA_SaveGame* ULA_GameInstance::LoadOrCreateSaveGameObject() const
 {
-    SavedPhaseIndex = PhaseIndex;
-    SavedPlayerLocation = SaveLocation;
-    SavedPlayerRotation = SaveRotation;
-    SavedElapsedGameTime = ElapsedGameTime;
+    ULA_SaveGame* LA_SaveGame = nullptr;
+
+    // Save File이 있으면 불러오기
+    if (UGameplayStatics::DoesSaveGameExist(SaveSlotName, 0))
+    {
+        LA_SaveGame = Cast<ULA_SaveGame>(
+            UGameplayStatics::LoadGameFromSlot(SaveSlotName, 0)
+        );
+    }
+
+    // Save File이 없으면 새로 생성
+    if (!LA_SaveGame)
+    {
+        LA_SaveGame = Cast<ULA_SaveGame>(
+            UGameplayStatics::CreateSaveGameObject(ULA_SaveGame::StaticClass())
+        );
+    }
+
+    return LA_SaveGame;
 }
 
-void ULA_GameInstance::SaveGameData()
-{
-    ULA_SaveGame* LA_SaveGame = Cast<ULA_SaveGame>(
-        UGameplayStatics::CreateSaveGameObject(ULA_SaveGame::StaticClass())
-    );
 
+void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime)
+{
+    const FPrimaryAssetId CurrentMissionId = GetSelectedMissionId();
+    if (!CurrentMissionId.IsValid())
+        return;
+
+    CheckPointData.MissionId = CurrentMissionId;
+    CheckPointData.PhaseIndex = PhaseIndex;
+    CheckPointData.PlayerLocation = SaveLocation;
+    CheckPointData.PlayerRotation = SaveRotation;
+    CheckPointData.ElapsedGameTime = ElapsedGameTime;
+}
+
+void ULA_GameInstance::SaveMissionResultData(int32 ClearTime, int32 FinalScore, const FString& FinalRank)
+{
+    const FPrimaryAssetId CurrentMissionId = GetSelectedMissionId();
+    if (!CurrentMissionId.IsValid())
+    {
+        bSaveSuccess = false;
+        return;
+    }
+
+    ULA_SaveGame* LA_SaveGame = LoadOrCreateSaveGameObject();
     if (!LA_SaveGame)
         return;
 
-    LA_SaveGame->SavedMissionDataAsset = SelectedMissionDataAsset;
+    // 기존 미션 결과 데이터 가져오기
+    FLA_MissionResultSaveData* ResultData = LA_SaveGame->MissionResultData.FindByPredicate(
+        [&CurrentMissionId]
+        (const FLA_MissionResultSaveData& Data)
+        {
+            return Data.MissionId == CurrentMissionId;
+        }
+    );
 
-    LA_SaveGame->SavedPhaseIndex = SavedPhaseIndex;
-    LA_SaveGame->SavedPlayerLocation = SavedPlayerLocation;
-    LA_SaveGame->SavedPlayerRotation = SavedPlayerRotation;
+    // 기존 미션 결과 데이터가 SaveGame에 없으면 새로 생성
+    if (!ResultData)
+    {
+        FLA_MissionResultSaveData NewResultData;
+        NewResultData.MissionId = CurrentMissionId;
 
-    LA_SaveGame->SavedGold = TotalGold;
-    LA_SaveGame->SavedScore = TotalScore;
+        LA_SaveGame->MissionResultData.Add(NewResultData);
+        ResultData = &LA_SaveGame->MissionResultData.Last();
+    }
 
-    LA_SaveGame->SavedElapsedGameTime = SavedElapsedGameTime;
+    // 미션 클리어 여부
+    // 미션 실패 시 저장 X
+    ResultData->bCleared = true;
 
-    UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
+    // 베스트 클리어 시간 갱신
+    if (ResultData->BestClearTime <= 0 || ClearTime < ResultData->BestClearTime)
+    {
+        ResultData->BestClearTime = ClearTime;
+    }
+
+    // 최고 점수 갱신
+    if (FinalScore > ResultData->BestScore)
+    {
+        ResultData->BestScore = FinalScore;
+        ResultData->BestRank = FinalRank;
+    }
+
+    if (ResultData->BestRank.IsEmpty())
+    {
+        ResultData->BestRank = FinalRank;
+    }
 
     bSaveSuccess = UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
 
-    UE_LOG(LogTemp, Warning, TEXT("Save Data - Success: %s, PhaseIndex: %d, Location: %s"),
-        bSaveSuccess ? TEXT("True") : TEXT("False"),
-        SavedPhaseIndex,
-        *SavedPlayerLocation.ToString()
+    UE_LOG(LogTemp, Warning, TEXT("Mission Result Save - MissionId: %s, Time: %d, Score: %d, Rank: %s"),
+        *CurrentMissionId.ToString(),
+        ClearTime,
+        FinalScore,
+        *FinalRank
     );
 }
 
+// SaveSlot에 저장
+void ULA_GameInstance::SaveGameData()
+{
+    ULA_SaveGame* LA_SaveGame = LoadOrCreateSaveGameObject();
+
+    if (!LA_SaveGame)
+    {
+        bSaveSuccess = false;
+        return;
+    }
+
+    if (!CheckPointData.IsValid())
+    {
+        bSaveSuccess = false;
+        return;
+    }
+
+    LA_SaveGame->CheckPointData = CheckPointData;
+
+    UE_LOG(LogTemp, Warning, TEXT("CheckPoint Save - MissionId: %s, PhaseIndex: %d, Location: %s, ElapsedTime: %d"),
+        *CheckPointData.MissionId.ToString(),
+        CheckPointData.PhaseIndex,
+        *CheckPointData.PlayerLocation.ToString(),
+        CheckPointData.ElapsedGameTime
+    );
+}
+
+// SaveSLot에서 체크포인트 데이터 불러와 GameInstance에 복구
 void ULA_GameInstance::LoadGameData()
 {
     if (!UGameplayStatics::DoesSaveGameExist(SaveSlotName, 0))
@@ -103,24 +258,17 @@ void ULA_GameInstance::LoadGameData()
     if (!LA_SaveGame)
         return;
 
-    SelectedMissionDataAsset = LA_SaveGame->SavedMissionDataAsset;
+    CheckPointData = LA_SaveGame->CheckPointData;
 
-    SavedPhaseIndex = LA_SaveGame->SavedPhaseIndex;
-    SavedPlayerLocation = LA_SaveGame->SavedPlayerLocation;
-    SavedPlayerRotation = LA_SaveGame->SavedPlayerRotation;
+    bSaveSuccess = true;
 
-    TotalGold = LA_SaveGame->SavedGold;
-    TotalScore = LA_SaveGame->SavedScore;
-
-    SavedElapsedGameTime = LA_SaveGame->SavedElapsedGameTime;
-
-    bSaveSuccess = UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
-
-    UE_LOG(LogTemp, Warning, TEXT("Load Data - Success: %s, PhaseIndex: %d, Location: %s"),
-        bSaveSuccess ? TEXT("True") : TEXT("False"),
-        SavedPhaseIndex,
-        *SavedPlayerLocation.ToString()
+    UE_LOG(LogTemp, Warning, TEXT("Load Data - MissionId: %s, PhaseIndex: %d, Location: %s, ElapsedTime: %d"),
+        *CheckPointData.MissionId.ToString(),
+        CheckPointData.PhaseIndex,
+        *CheckPointData.PlayerLocation.ToString(),
+        CheckPointData.ElapsedGameTime
     );
 }
+
 
 

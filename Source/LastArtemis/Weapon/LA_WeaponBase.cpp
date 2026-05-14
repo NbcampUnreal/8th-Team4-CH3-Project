@@ -1,14 +1,13 @@
 ﻿#include "LA_WeaponBase.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Camera/CameraComponent.h"
-#include "Curves/CurveVector.h"
-#include "Engine/World.h"
-#include "LastArtemis/Character/LA_Holder.h"
-#include "Kismet/GameplayStatics.h"
-#include "GameFramework/DamageType.h"
 #include "GameFramework/Character.h"
-#include "Character/Player/LA_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/DamageType.h"
+#include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
+#include "Components/DecalComponent.h"
+#include "LastArtemis/Character/LA_Holder.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 
 ALA_WeaponBase::ALA_WeaponBase()
 {
@@ -33,6 +32,7 @@ ALA_WeaponBase::ALA_WeaponBase()
     CameraYaw = 0.f;
     TargetSway = FRotator::ZeroRotator;
     CurrentSway = FRotator::ZeroRotator;
+    CurrentSpareAmmo = 90;
     CurrentState = EWeaponState::Idle;
 }
 
@@ -114,20 +114,17 @@ void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
     }
 }
 
-float ALA_WeaponBase::Draw(bool bActivate)
+void ALA_WeaponBase::Draw()
 {
-    if (CurrentState != EWeaponState::Idle) return 0.f;
+    if (CurrentState != EWeaponState::Idle) return;
 
-    if (WeaponData->DrawMontage && Mesh->GetAnimInstance())
+    CurrentState = EWeaponState::Draw;
+
+    if (UAnimMontage* AnimMontage = WeaponData->DrawMontage)
     {
-        float Rate = bActivate ? 1.0f : -1.0f;
-        float StartTime = bActivate ? 0.0f : WeaponData->DrawMontage->GetPlayLength();
-
-        Mesh->GetAnimInstance()->Montage_Play(WeaponData->DrawMontage, Rate, EMontagePlayReturnType::MontageLength, StartTime);
-        return WeaponData->DrawMontage->GetPlayLength();
+        float Duration = Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
+        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::ResetState, Duration, false);
     }
-
-    return 0.01f;
 }
 
 void ALA_WeaponBase::Look(FVector InputValue)
@@ -159,13 +156,12 @@ void ALA_WeaponBase::Reload()
 {
     if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == WeaponData->MaxMagazineSize || CurrentSpareAmmo <= 0) return;
 
-    CurrentState = EWeaponState::Reloading;
+    CurrentState = EWeaponState::Reload;
     bIsAiming = false; // 장전 시 조준 강제 해제
 
-    if (WeaponData->ReloadMontage && Mesh->GetAnimInstance())
+    if (UAnimMontage* AnimMontage = WeaponData->ReloadMontage)
     {
-        Mesh->GetAnimInstance()->Montage_Play(WeaponData->ReloadMontage);
-        GetWorld()->GetTimerManager().SetTimer(StateTimerHandle, this, &ALA_WeaponBase::UpdateAmmo, WeaponData->ReloadMontage->GetPlayLength(), false);
+        Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
 }
 
@@ -203,11 +199,11 @@ void ALA_WeaponBase::Fire()
         return;
     }
 
-    CurrentState = EWeaponState::Firing;
+    CurrentState = EWeaponState::Fire;
 
-    if (WeaponData->FireMontage && Mesh->GetAnimInstance())
+    if (UAnimMontage* AnimMontage = WeaponData->FireMontage)
     {
-        Mesh->GetAnimInstance()->Montage_Play(WeaponData->FireMontage);
+        Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
 
     // 총알 소모
@@ -253,8 +249,29 @@ void ALA_WeaponBase::HitScan()
             {
                 UGameplayStatics::ApplyPointDamage(HitActor, WeaponData->BaseDamage, RandomizedDirection, HitResult, OwnerController, this, UDamageType::StaticClass());
             }
+
             DrawDebugLine(GetWorld(), StartLocation, HitResult.ImpactPoint, FColor::Red, false, 2.f, 0, 1.f);
             DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 10.f, FColor::Red, false, 3.f);
+
+            UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
+                WeaponData->DecalMaterial,
+                FVector(10.f, 10.f, 10.f),
+                HitResult.GetComponent(),
+                HitResult.BoneName,
+                HitResult.ImpactPoint,
+                HitResult.ImpactNormal.Rotation(),
+                EAttachLocation::KeepWorldPosition,
+                10.f
+            );
+
+            if (Decal)
+            {
+                if (UMaterialInstanceDynamic* DynamicMaterial = Decal->CreateDynamicMaterialInstance())
+                {
+                    float RandomFrame = FMath::RandRange(0, 63);
+                    DynamicMaterial->SetScalarParameterValue(FName("AtlasIndex"), RandomFrame);
+                }
+            }
         }
         else
         {

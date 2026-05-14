@@ -11,9 +11,13 @@ class UTexture2D;
 class ULA_ItemEffect;
 
 UCLASS(BlueprintType)
-class LASTARTEMIS_API ULA_ItemDataAsset : public UDataAsset
+class LASTARTEMIS_API ULA_ItemDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
+
+
+public:
+    virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 
 public:
     // 아이템 구분용 ID
@@ -30,7 +34,7 @@ public:
 
     // 아이템 2D 이미지
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-    TObjectPtr<UTexture2D> ItexmTexture2D;
+    TObjectPtr<UTexture2D> ItemTexture2D;
 
     // 아이템 유형(무기, 소모성 아이템 등)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
@@ -38,13 +42,17 @@ public:
 
     // 슬롯 당 최대 개수
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
-    int32 MaxStackCount = 1;
+    int32 MaxStackCount = 99;
 
     // 소모성 아이템인지?
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
     bool bConsumable = false;
 
+    // 체크 포인트에서 리필 가능한 최대 개수
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    int32 MaxRefillCount;
+
     // 아이템 효과
-    UPROPERTY(EditAnywhere, Instanced, BlueprintReadOnly, Category = "Item|Effect")
-    TArray<TObjectPtr<ULA_ItemEffect>> Effects;
+    UPROPERTY(EditDefaultsOnly, Instanced, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<ULA_ItemEffect> Effect;
 };

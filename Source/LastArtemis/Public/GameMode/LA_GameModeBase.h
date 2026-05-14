@@ -26,13 +26,14 @@ public:
     ALA_GameStateBase* GetLAGameState() const;
 
     ////////////////////////
-    /// 게음 흐름 제어
+    /// 게임 흐름 제어
     ////////////////////////
+
     // 새 게임 시작
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void StartNewGame();
 
-    // 게임 불러오기
+    // 체크 포인트 데이터로 게임 시작
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void LoadSavedGame();
 
@@ -40,19 +41,19 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void PauseGame();
 
-    // 일시정지 된 게임 재개
+    // 게임 재개
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void ResumeGame();
 
-    // 게임 오버 조건 충족 시 호출
+    // 게임 오버
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void OnGameOver();
 
-    // 게임 클리어 시 호출
+    // 게임 클리어
     UFUNCTION(BlueprintCallable, Category = "Game Flow")
     void OnGameClear();
 
-    // 미션 완료 시 호출할 함수
+    // 미션 결과 UI에 표시할 값
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void HandleMissionComplete(float FinalTime, int32 FinalScore, FString FinalRank);
 

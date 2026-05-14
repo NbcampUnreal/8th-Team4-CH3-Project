@@ -109,6 +109,10 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
     TObjectPtr<class ULA_HealthComponent> HealthComponent;
 
+    // 인벤토리 컴포넌트
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
+    TObjectPtr<class ULA_InventoryComponent> InventoryComponent;
+
 #pragma endregion
 
 #pragma region General Settings

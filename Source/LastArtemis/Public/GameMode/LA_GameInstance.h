@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/GameInstance.h"
+#include "GameMode/LA_SaveGame.h"
 #include "LA_GameInstance.generated.h"
 
 class ULA_MissionDataAsset;
@@ -17,74 +18,112 @@ public:
 	ULA_GameInstance();
 
 public:
-    ////////////////////////////////////////////////////////////////////////
-    /// 보상 로직 함수
-    ////////////////////////////////////////////////////////////////////////
-
-    UFUNCTION(BlueprintCallable, Category = "Reward")
-    void AddReward(int32 GoldReward, int32 ScoreReward);
-	// 게임 데이터 초기화
-	UFUNCTION(BlueprintCallable)
-	void ResetPlayerData();
 
     ////////////////////////////////////////////////////////////////////////
-    /// 미션 로직 함수
-    ////////////////////////////////////////////////////////////////////////
+    /// 옵션 설정값 저장
+    ///////////////////////////////////////////////////////////////////////
+    virtual void Init() override;
 
+    // 설정을 바꿀 때마다 호출할 함수
+    UFUNCTION(BlueprintCallable, Category = "Settings")
+    void UpdateAndSaveSettings(EMovementInputMode NewAimMode, EMovementInputMode NewSprintMode);
+
+    // 캐릭터에게 설정 적용
+    UFUNCTION(BlueprintCallable, Category = "Settings")
+    void ApplySettingsToCharacter();
+
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    EMovementInputMode CurrentAimInputMode;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    EMovementInputMode CurrentSprintInputMode;
+
+    // 설정 전용 슬롯
+    const FString SettingsSlotName = TEXT("UserSettings");
+
+private:
+    void LoadSettingsFromDisk();
+
+public:
+
+    ////////////////////////////////////////////////////////////////////////
+    /// 점수 로직
+    ////////////////////////////////////////////////////////////////////////
+    
+    // 점수 증가
+    UFUNCTION(BlueprintCallable, Category = "Score")
+    void AddScore(int32 ScoreAmount);
+
+    // 점수 초기화
+    UFUNCTION(BlueprintCallable, Category = "Score")
+    void ResetScore();
+
+    ////////////////////////////////////////////////////////////////////////
+    // 미션 로직
+    // - UI에서 선택한 MissionDataAsset을 GameInstnace에서 보관
+    // - GameMode에서 이 데이터를 읽고 미션 시작
+    ////////////////////////////////////////////////////////////////////////
+    
+    // 선택한 미션 DataAsset 저장
     UFUNCTION(BlueprintCallable, Category = "Mission")
     void SetSelectedMission(ULA_MissionDataAsset* InMissionData);
+
+    // 선택한 미션 DataAsset 리턴
     UFUNCTION(BlueprintPure, Category = "Mission")
     ULA_MissionDataAsset* GetSelectedMission() const;
 
-    ////////////////////////////////////////////////////////////////////////
-    /// 세이브 로직 함수
-    ////////////////////////////////////////////////////////////////////////
+    // 현재 선택된 미션의 PrimaryAssetId 리턴
+    // SaveGAme에서 ID를 통해 아이템을 가져옴
+    UFUNCTION(BlueprintPure, Category = "Mission")
+    FPrimaryAssetId GetSelectedMissionId() const;
 
+
+    ////////////////////////////////////////////////////////////////////////
+    // 세이브 로직
+    // - 체크 포인트: 게임 재개 / 게임 오버 후 재시작
+    // - 미션 결과: 게임 결과 UI 출력
+    ////////////////////////////////////////////////////////////////////////
+    
+    // 체크 포인트 상호 작용 시 메모리에 저장
+    // SaveGameData()에서 저장
     UFUNCTION(BlueprintCallable, Category = "Save")
     void SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime);
 
-    // 게임 데이터 저장
+    // 미션 클리어 시 결과 저장
+    // 게임 오버는 UI로만 전달
+    UFUNCTION(BlueprintCallable, Category = "Save")
+    void SaveMissionResultData(int32 ClearTime, int32 FinalScore, const FString& FinalRank);
+
+    // CheckPointData를 SaveSlot에 저장
     UFUNCTION(BlueprintCallable, Category = "Save")
     void SaveGameData();
 
-    // 게임 데이터 불러오기
+    // SaveSlot에서 데이터를 불러옴
     UFUNCTION(BlueprintCallable, Category = "Save")
     void LoadGameData();
 
+private:
+    // 기존 SaveGame이 있으면 불러오고, 없으면 새로 생성
+    ULA_SaveGame* LoadOrCreateSaveGameObject() const;
 
 public:
-    // 현재 골드
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reward")
-    int32 TotalGold;
-    // 몬스터 처치 점수
+    // 현재 미션에서 획득한 점수
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Reward")
     int32 TotalScore;
-
 
     // 선택된 미션 Data Asset
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
     ULA_MissionDataAsset* SelectedMissionDataAsset;
 
-
-    // 최근 방문한 Rest Stage의 Phase Index
+    // 현재 체크포인트 데이터
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    int32 SavedPhaseIndex;
-
-    // Check Point와 상호 작용한 위치
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    FVector SavedPlayerLocation;
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    FRotator SavedPlayerRotation;
-
-    // 지금까지 플레이한 시간
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Save Data")
-    int32 SavedElapsedGameTime;
+    FLA_CheckPointSaveData CheckPointData;
 
     // 기본 슬롯 이름
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Save Data")
     FString SaveSlotName;
 
-    // 저장됐는지
+    // 마지막 저장 성공 여부
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Save Data")
     bool bSaveSuccess;
 };
