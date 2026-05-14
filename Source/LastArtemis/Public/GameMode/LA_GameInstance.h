@@ -17,6 +17,34 @@ public:
 	ULA_GameInstance();
 
 public:
+
+    ////////////////////////////////////////////////////////////////////////
+    /// 옵션 설정값 저장
+    ///////////////////////////////////////////////////////////////////////
+    virtual void Init() override;
+
+    // 설정을 바꿀 때마다 호출할 함수
+    UFUNCTION(BlueprintCallable, Category = "Settings")
+    void UpdateAndSaveSettings(EMovementInputMode NewAimMode, EMovementInputMode NewSprintMode);
+
+    // 캐릭터에게 설정 적용
+    UFUNCTION(BlueprintCallable, Category = "Settings")
+    void ApplySettingsToCharacter();
+
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    EMovementInputMode CurrentAimInputMode;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    EMovementInputMode CurrentSprintInputMode;
+
+    // 설정 전용 슬롯
+    const FString SettingsSlotName = TEXT("UserSettings");
+
+private:
+    void LoadSettingsFromDisk();
+
+public:
+
     ////////////////////////////////////////////////////////////////////////
     /// 보상 로직 함수
     ////////////////////////////////////////////////////////////////////////

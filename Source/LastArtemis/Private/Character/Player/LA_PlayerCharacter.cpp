@@ -10,6 +10,7 @@
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
+#include "GameMode/LA_GameInstance.h"                           // ULA_GameInstance
 #include "Object/LA_Interactable.h"
 
 // Sets default values
@@ -56,6 +57,13 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 void ALA_PlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
+    // GameInstance를 가져와서 설정을 적용.
+    ULA_GameInstance* GI = Cast<ULA_GameInstance>(GetGameInstance());
+    if (GI)
+    {
+        GI->ApplySettingsToCharacter();
+    }
 
     // 캐릭터의 기본 USkeletalMeshComponent 숨기기
     HideCharacterMesh();
