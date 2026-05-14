@@ -13,20 +13,24 @@ EBTNodeResult::Type ULA_BTTask_MoveToSupport::ExecuteTask(UBehaviorTreeComponent
         if (AActor* Player = Cast<AActor>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(FName("PlayerActor"))))
         {
             OwnerCompRef = &OwnerComp;
-            AIController->GetPathFollowingComponent()->OnRequestFinished.AddUObject(
-                this,
-                &ULA_BTTask_MoveToSupport::OnMoveCompleted);
 
-
+            AIController->GetPathFollowingComponent()->OnRequestFinished.RemoveAll(this);
+            AIController->GetPathFollowingComponent()->OnRequestFinished.AddUObject
+            (
+              this,
+              &ULA_BTTask_MoveToSupport::OnMoveCompleted
+            );
 
             FVector PlayerForward = Player->GetActorForwardVector();
             FVector SupportLocation = Player->GetActorLocation() - PlayerForward * BehindDistance;
 
-            /*FAIMoveRequest MoveRequest;
+            FAIMoveRequest MoveRequest;
             MoveRequest.SetGoalLocation(SupportLocation);
             MoveRequest.SetAcceptanceRadius(50.f);
 
-            AIController->MoveTo(MoveRequest);*/
+            FPathFollowingRequestResult RequestResult = AIController->MoveTo(MoveRequest);
+            MoveRequestID = RequestResult.MoveId;
+
 
             return EBTNodeResult::InProgress;
         }
@@ -36,7 +40,7 @@ EBTNodeResult::Type ULA_BTTask_MoveToSupport::ExecuteTask(UBehaviorTreeComponent
 
 void ULA_BTTask_MoveToSupport::OnMoveCompleted(FAIRequestID RequestID, const FPathFollowingResult& Result)
 {
-    if (OwnerCompRef)
+    if (OwnerCompRef && RequestID == MoveRequestID)
     {
         FinishLatentTask(*OwnerCompRef, EBTNodeResult::Succeeded);
     }

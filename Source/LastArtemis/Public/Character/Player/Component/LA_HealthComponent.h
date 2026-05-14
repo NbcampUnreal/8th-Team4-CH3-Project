@@ -96,20 +96,18 @@ public:
 
     UFUNCTION(BlueprintCallable)
     void Heal(float HealAmount);
-    
+
     UFUNCTION(BlueprintCallable)
     float GetHealthPercent() const
     {
         if (MaxHealth <= 0.0f) return 0.0f;
         return CurrentHealth / MaxHealth;
     }
-
     UFUNCTION(BlueprintCallable)
     float GetCurrentHealth() const
     {
         return CurrentHealth;
     }
-
     UFUNCTION(BlueprintCallable)
     float GetMaxHealth() const
     {
@@ -125,6 +123,12 @@ public:
     float GetMaxShield() const
     {
         return MaxShield;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    bool IsDead() const
+    {
+        return bIsDead;
     }
 
 	void Die();
