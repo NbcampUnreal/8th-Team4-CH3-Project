@@ -5,14 +5,6 @@
 #include "GameMode/LA_MissionDataAsset.h"
 
 ULA_SaveGame::ULA_SaveGame()
-    :
-    SavedMissionDataAsset(nullptr),
-    SavedPhaseIndex(-1),
-    SavedPlayerLocation(FVector::ZeroVector),
-    SavedPlayerRotation(FRotator::ZeroRotator),
-    SavedGold(0),
-    SavedScore(0),
-    SavedElapsedGameTime(0)
 {
 
 }

@@ -6,6 +6,7 @@
 #include "GameFramework/SpringArmComponent.h"                   // USpringArmComponent
 #include "Components/CapsuleComponent.h"                        // UCapsuleComponent
 #include "Camera/CameraComponent.h"		                        // UCameraComponent
+#include "Item/LA_InventoryComponent.h"                         // ULA_InventoryComponent
 #include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
@@ -21,6 +22,9 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 
     // 체력 관련 컴포넌트 부착
     HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
+
+    // 인벤토리 컴포넌트 부착
+    InventoryComponent = CreateDefaultSubobject<ULA_InventoryComponent>(TEXT("InventoryComponent"));
 
     UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
     MovementComponent->MaxWalkSpeed = WalkSpeed; // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
