@@ -1,14 +1,13 @@
 ﻿#include "LA_WeaponBase.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Camera/CameraComponent.h"
-#include "Curves/CurveVector.h"
-#include "Engine/World.h"
-#include "LastArtemis/Character/LA_Holder.h"
-#include "Kismet/GameplayStatics.h"
-#include "GameFramework/DamageType.h"
 #include "GameFramework/Character.h"
-#include "Character/Player/LA_PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "GameFramework/DamageType.h"
+#include "Kismet/GameplayStatics.h"
+#include "Camera/CameraComponent.h"
+#include "Components/DecalComponent.h"
+#include "LastArtemis/Character/LA_Holder.h"
+#include "Character/Player/LA_PlayerCharacter.h"
 
 ALA_WeaponBase::ALA_WeaponBase()
 {
@@ -250,8 +249,29 @@ void ALA_WeaponBase::HitScan()
             {
                 UGameplayStatics::ApplyPointDamage(HitActor, WeaponData->BaseDamage, RandomizedDirection, HitResult, OwnerController, this, UDamageType::StaticClass());
             }
+
             DrawDebugLine(GetWorld(), StartLocation, HitResult.ImpactPoint, FColor::Red, false, 2.f, 0, 1.f);
             DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 10.f, FColor::Red, false, 3.f);
+
+            UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
+                WeaponData->DecalMaterial,
+                FVector(10.f, 10.f, 10.f),
+                HitResult.GetComponent(),
+                HitResult.BoneName,
+                HitResult.ImpactPoint,
+                HitResult.ImpactNormal.Rotation(),
+                EAttachLocation::KeepWorldPosition,
+                10.f
+            );
+
+            if (Decal)
+            {
+                if (UMaterialInstanceDynamic* DynamicMaterial = Decal->CreateDynamicMaterialInstance())
+                {
+                    float RandomFrame = FMath::RandRange(0, 63);
+                    DynamicMaterial->SetScalarParameterValue(FName("AtlasIndex"), RandomFrame);
+                }
+            }
         }
         else
         {
