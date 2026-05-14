@@ -161,3 +161,8 @@ FText ALA_GameStateBase::GetElapsedGameTimeText() const
 
     return FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds));
 }
+
+void ALA_GameStateBase::SetElapsedGameTime(int32 NewElapsedGameTime)
+{
+    ElapsedGameTime = FMath::Max(0, NewElapsedGameTime);
+}
