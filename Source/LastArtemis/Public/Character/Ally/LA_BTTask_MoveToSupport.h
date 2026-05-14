@@ -21,5 +21,7 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Move")
     float BehindDistance = 150.f;
 
+    FAIRequestID MoveRequestID;
+
     UBehaviorTreeComponent* OwnerCompRef;
 };

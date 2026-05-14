@@ -98,6 +98,9 @@ public:
     // 경과된 시간 텍스트 리턴
     UFUNCTION(BlueprintPure, Category = "Game Timer")
     FText GetElapsedGameTimeText() const;
+    // 현재 저장된 시간
+    UFUNCTION(BlueprintCallable, Category = "Game Timer")
+    void SetElapsedGameTime(int32 NewElapsedGameTime);
 
 protected:
     // 현재 Game Flow State(Main Menu, Playing, Paused 등)

@@ -10,11 +10,14 @@
 class ULA_MissionLogic;
 
 UCLASS(BlueprintType, Blueprintable)
-class LASTARTEMIS_API ULA_MissionDataAsset : public UDataAsset
+class LASTARTEMIS_API ULA_MissionDataAsset : public UPrimaryDataAsset
 {
 	GENERATED_BODY()
 
 public:
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
+    FName MissionId;
+
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
     FText MissionName;
 
@@ -29,6 +32,9 @@ public:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Mission")
     TSubclassOf<ULA_MissionLogic> MissionLogicClass;
+
+public:
+    virtual FPrimaryAssetId GetPrimaryAssetId() const override;
 
     UFUNCTION(BlueprintNativeEvent, BlueprintPure, Category = "Mission")
     void GetPhaseInfo(int32 PhaseIndex, FText& OutDescription, int32& OutMaxCount) const;

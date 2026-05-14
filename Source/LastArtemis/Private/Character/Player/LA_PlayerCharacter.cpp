@@ -6,11 +6,15 @@
 #include "GameFramework/SpringArmComponent.h"                   // USpringArmComponent
 #include "Components/CapsuleComponent.h"                        // UCapsuleComponent
 #include "Camera/CameraComponent.h"		                        // UCameraComponent
+#include "Item/LA_InventoryComponent.h"                         // ULA_InventoryComponent
 #include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
 #include "GameMode/LA_GameInstance.h"                           // ULA_GameInstance
+#include "GameMode/LA_GameModeBase.h"                           // ULA_GameModeBase
+#include "Blueprint/UserWidget.h"
+#include "Kismet/GameplayStatics.h"
 #include "Object/LA_Interactable.h"
 
 // Sets default values
@@ -21,6 +25,9 @@ ALA_PlayerCharacter::ALA_PlayerCharacter()
 
     // 체력 관련 컴포넌트 부착
     HealthComponent = CreateDefaultSubobject<ULA_HealthComponent>(FName("HealthComponent"));
+
+    // 인벤토리 컴포넌트 부착
+    InventoryComponent = CreateDefaultSubobject<ULA_InventoryComponent>(TEXT("InventoryComponent"));
 
     UCharacterMovementComponent* MovementComponent = GetCharacterMovement();
     MovementComponent->MaxWalkSpeed = WalkSpeed; // 캐릭터 기본 이동 속도 변경 (10.8 km/s)
@@ -183,6 +190,11 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             if (LA_Controller->InteractInputAction != nullptr)
             {
                 enhancedInputComponent->BindAction(LA_Controller->InteractInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InteractStartedAction);
+            }
+            // Pause
+            if (LA_Controller->PauseInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->PauseInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::PauseAction);
             }
 		}
 	}
@@ -641,6 +653,12 @@ void ALA_PlayerCharacter::FireStartedAction()
         return;
     }
 
+    // 달리기 상태에서 총이 발사되는 것을 방지
+    if (bIsSprint)
+    {
+        return;
+    }
+
     EquipedWeapon->StartFire();
 }
 
@@ -728,6 +746,35 @@ void ALA_PlayerCharacter::InteractStartedAction()
         {
             // 상호작용 함수 호출
             ILA_Interactable::Execute_Interact(HitActor, this);
+        }
+    }
+}
+
+void ALA_PlayerCharacter::PauseAction()
+{
+    if (Controller == nullptr) return;
+    // 게임 일시정지 로직 실행
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        GM->PauseGame();
+    }
+
+    // 일시정지 UI 생성 및 출력
+    if (PauseMenuWidgetClass)
+    {
+        UUserWidget* PauseMenu = CreateWidget<UUserWidget>(GetWorld(), PauseMenuWidgetClass);
+        if (PauseMenu)
+        {
+            PauseMenu->AddToViewport();
+
+            // 입력 모드 전환
+            if (APlayerController* PC = Cast<APlayerController>(Controller))
+            {
+                FInputModeUIOnly InputMode;
+                InputMode.SetWidgetToFocus(PauseMenu->TakeWidget());
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true;
+            }
         }
     }
 }

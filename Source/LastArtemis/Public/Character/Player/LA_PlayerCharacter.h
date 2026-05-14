@@ -109,6 +109,10 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
     TObjectPtr<class ULA_HealthComponent> HealthComponent;
 
+    // 인벤토리 컴포넌트
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Components", meta = (AllowPrivateAccess = true))
+    TObjectPtr<class ULA_InventoryComponent> InventoryComponent;
+
 #pragma endregion
 
 #pragma region General Settings
@@ -128,6 +132,10 @@ protected:
     // 앉은 상태의 속도
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float CrouchSpeed = 150;
+
+    // 블루프린트에서 설정할 일시정지 위젯 클래스
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UUserWidget> PauseMenuWidgetClass;
 
 #pragma endregion
 
@@ -294,6 +302,9 @@ protected:
 
     // 상호작용 키 입력 시작 시 호출되는 함수
     void InteractStartedAction();
+
+    // 일시정지 키에 입력 시 호출되는  함수
+    void PauseAction();
 
 #pragma endregion
 

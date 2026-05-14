@@ -147,10 +147,10 @@ void ALA_GameModeBase::LoadSavedGame()
     StartMission();
 
     APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    if (PlayerPawn && LA_GameInstance->SavedPhaseIndex >= 0)
+    if (PlayerPawn && LA_GameInstance->CheckPointData.IsValid())
     {
-        PlayerPawn->SetActorLocation(LA_GameInstance->SavedPlayerLocation);
-        PlayerPawn->SetActorRotation(LA_GameInstance->SavedPlayerRotation);
+        PlayerPawn->SetActorLocation(LA_GameInstance->CheckPointData.PlayerLocation);
+        PlayerPawn->SetActorRotation(LA_GameInstance->CheckPointData.PlayerRotation);
     }
 }
 
@@ -197,11 +197,16 @@ void ALA_GameModeBase::OnGameClear()
     ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
     ALA_GameStateBase* LA_GameState = GetLAGameState(); // GameState 가져오기
 
+    // 미션 결과 데이터 SaveGame에 저장
     if (LA_GameInstance && LA_GameState)
     {
-        float FinalTime = static_cast<float>(LA_GameState->GetElapsedGameTime());
+        const int32 FinalTime = LA_GameState->GetElapsedGameTime();
+        const int32 FinalScore = LA_GameInstance->TotalScore;
+        const FString FinalRank = TEXT("S");
 
-        HandleMissionComplete(FinalTime, LA_GameInstance->TotalScore, "S");
+        LA_GameInstance->SaveMissionResultData(FinalTime, FinalScore, FinalRank);
+
+        HandleMissionComplete(static_cast<float>(FinalTime), FinalScore, FinalRank);
     }
 
     StopGameTimer();
@@ -280,12 +285,21 @@ void ALA_GameModeBase::StartMission()
 
     if (ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>())
     {
-        if (LA_GameInstance->SavedPhaseIndex >= 0)
+        const FPrimaryAssetId CurrentMissionId = MissionDataAsset->GetPrimaryAssetId();
+
+
+        // 체크 포인트 데이터와 선택한 데이터가 같은 MissionId를 가지고 있으면 저장된 Phase 시작
+        if (
+            LA_GameInstance->CheckPointData.IsValid() &&
+            LA_GameInstance->CheckPointData.MissionId == CurrentMissionId
+            )
         {
-            StartPhaseIndex = LA_GameInstance->SavedPhaseIndex;
+            StartPhaseIndex = LA_GameInstance->CheckPointData.PhaseIndex;
+            LA_GameState->SetElapsedGameTime(LA_GameInstance->CheckPointData.ElapsedGameTime);
         }
     }
 
+    // 선택된 MissionDataAsset을 기반으로 MissionLogic 생성 후 첫 번째 Phase 시작
     CurrentMissionLogic->StartPhase(StartPhaseIndex);
 }
 

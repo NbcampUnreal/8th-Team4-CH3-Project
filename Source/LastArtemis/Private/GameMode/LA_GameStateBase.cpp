@@ -11,8 +11,8 @@ ALA_GameStateBase::ALA_GameStateBase()
     CurrentPhaseIndex(-1),
     CurrentPhaseType(ELA_PhaseType::None),
     CurrentProgressCount(0),
-    RequiredProgressCount(0),
     bCurrentPhaseCompleted(false),
+    RequiredProgressCount(0),
     ElapsedGameTime(0)
 {
 }
@@ -160,4 +160,9 @@ FText ALA_GameStateBase::GetElapsedGameTimeText() const
     const int32 Seconds = ElapsedGameTime % 60;
 
     return FText::FromString(FString::Printf(TEXT("%02d:%02d"), Minutes, Seconds));
+}
+
+void ALA_GameStateBase::SetElapsedGameTime(int32 NewElapsedGameTime)
+{
+    ElapsedGameTime = FMath::Max(0, NewElapsedGameTime);
 }
