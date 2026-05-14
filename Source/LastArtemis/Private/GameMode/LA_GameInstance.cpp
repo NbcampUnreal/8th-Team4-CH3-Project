@@ -1,5 +1,6 @@
 ﻿#include "GameMode/LA_GameInstance.h"
 #include "GameMode/LA_SaveGame.h"
+#include "GameMode/LA_SaveGameSettings.h"
 #include "GameMode/LA_GameStateBase.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -15,6 +16,62 @@ ULA_GameInstance::ULA_GameInstance()
     bSaveSuccess(false)
 {
     SaveSlotName = TEXT("SaveSlot");
+}
+
+////////////////////////////////////////////////////////////////////////
+/// 옵션 설정값 저장
+///////////////////////////////////////////////////////////////////////
+
+void ULA_GameInstance::Init()
+{
+    Super::Init();
+    LoadSettingsFromDisk();
+}
+
+void ULA_GameInstance::UpdateAndSaveSettings(EMovementInputMode NewAimMode, EMovementInputMode NewSprintMode)
+{
+    // 메모리 값 업데이트
+    CurrentAimInputMode = NewAimMode;
+    CurrentSprintInputMode = NewSprintMode;
+
+    // 즉시 파일로 저장
+    ULA_SaveGameSettings* SaveObj = Cast<ULA_SaveGameSettings>(UGameplayStatics::CreateSaveGameObject(ULA_SaveGameSettings::StaticClass()));
+    if (SaveObj)
+    {
+        SaveObj->SavedAimInputMode = CurrentAimInputMode;
+        SaveObj->SavedSprintInputMode = CurrentSprintInputMode;
+        UGameplayStatics::SaveGameToSlot(SaveObj, SettingsSlotName, 0);
+    }
+
+    // 캐릭터가 있다면 즉시 반영
+    ApplySettingsToCharacter();
+}
+
+void ULA_GameInstance::ApplySettingsToCharacter()
+{
+    APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
+    if (PC && PC->GetPawn())
+    {
+        ALA_PlayerCharacter* Character = Cast<ALA_PlayerCharacter>(PC->GetPawn());
+        if (Character)
+        {
+            Character->AimInputMode = CurrentAimInputMode;
+            Character->SprintInputMode = CurrentSprintInputMode;
+        }
+    }
+}
+
+void ULA_GameInstance::LoadSettingsFromDisk()
+{
+    if (UGameplayStatics::DoesSaveGameExist(SettingsSlotName, 0))
+    {
+        ULA_SaveGameSettings* LoadObj = Cast<ULA_SaveGameSettings>(UGameplayStatics::LoadGameFromSlot(SettingsSlotName, 0));
+        if (LoadObj)
+        {
+            CurrentAimInputMode = LoadObj->SavedAimInputMode;
+            CurrentSprintInputMode = LoadObj->SavedSprintInputMode;
+        }
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////
