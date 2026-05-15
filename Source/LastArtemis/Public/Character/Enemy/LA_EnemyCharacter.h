@@ -19,6 +19,8 @@ public:
 
     virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
 
+    UFUNCTION(BlueprintCallable, Category = "Combat")
+    void EnemyMeleeAttackCheck();
 
 
 protected:
@@ -53,5 +55,12 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
     FGameplayTagContainer GameplayTags;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float MeleeAttackRange = 120.0f;
+
+    // 공격 판정 반지름 (구체 트레이스)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
+    float MeleeAttackRadius = 40.0f;
 
 };

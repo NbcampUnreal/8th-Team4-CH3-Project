@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Runtime/AIModule/Classes/AIController.h"
+#include "Perception/AIPerceptionTypes.h"
 #include "LA_EnemyController.generated.h"
 
 struct FAIStimulus;
@@ -33,6 +34,12 @@ protected:
 
 	UFUNCTION()
 	void OnPerceptionUpdated(AActor* Actor, FAIStimulus Stimulus);
+
+    UFUNCTION()
+    void OnTargetDetected(AActor* Actor, FAIStimulus Stimulus);
+
+    UPROPERTY(EditDefaultsOnly, Category = "AI")
+    class UBehaviorTree* BTAsset;
 
 	// --- 상태 변수 ---
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "AI")
