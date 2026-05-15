@@ -84,6 +84,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
     TObjectPtr<UInputAction> InteractInputAction;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> PauseInputAction;
+
 #pragma endregion
 
 };

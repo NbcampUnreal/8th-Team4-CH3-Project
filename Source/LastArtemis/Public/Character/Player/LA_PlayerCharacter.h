@@ -133,6 +133,10 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float CrouchSpeed = 150;
 
+    // 블루프린트에서 설정할 일시정지 위젯 클래스
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UUserWidget> PauseMenuWidgetClass;
+
 #pragma endregion
 
 #pragma region Weapons Settings
@@ -298,6 +302,9 @@ protected:
 
     // 상호작용 키 입력 시작 시 호출되는 함수
     void InteractStartedAction();
+
+    // 일시정지 키에 입력 시 호출되는  함수
+    void PauseAction();
 
 #pragma endregion
 
