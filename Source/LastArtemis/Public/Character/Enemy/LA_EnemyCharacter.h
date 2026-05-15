@@ -9,58 +9,59 @@
 UCLASS()
 class LASTARTEMIS_API ALA_EnemyCharacter : public ALA_BaseCharacter, public IGameplayTagAssetInterface
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	ALA_EnemyCharacter();
+    ALA_EnemyCharacter();
 
+    // --- 전투 및 데미지 시스템 ---
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
-	virtual void Die() override;
+    virtual void Die() override;
 
-    virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
-
+    // --- 애니메이션 노티파이 연결용 ---
     UFUNCTION(BlueprintCallable, Category = "Combat")
     void EnemyMeleeAttackCheck();
 
+    // --- 인터페이스 구현 ---
+    virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
 
 protected:
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
     virtual void PostInitializeComponents() override;
 
+    // --- 컴포넌트 ---
     UPROPERTY(BlueprintReadOnly, Category = "Components")
     class ULA_HealthComponent* HealthComp;
-
-    // 대미지 텍스트 출력 함수
-    void ExecuteShowDamageText();
 
     UPROPERTY(VisibleAnywhere, Category = "UI")
     TObjectPtr<class UWidgetComponent> HealthWidgetComp;
 
-    // 대미지 텍스트를 스폰할 클래스
+    // --- 대미지 UI (누적 방식) ---
     UPROPERTY(EditDefaultsOnly, Category = "UI")
-    TSubclassOf<UUserWidget> DamageTextClass;
+    TSubclassOf<class UUserWidget> DamageTextClass;
 
-    // 사라지게 할 위젯 리스트
     UPROPERTY()
-    TArray<UUserWidget*> ActiveDamageWidgets;
+    TArray<class UUserWidget*> ActiveDamageWidgets;
+
+    void ExecuteShowDamageText();
 
     float AccumulatedDamage = 0.0f;
     FTimerHandle DamageDisplayTimer;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-	class UAnimMontage* HitMontage;
+    // --- 애니메이션 에셋 ---
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    class UAnimMontage* HitMontage;
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
-	class UAnimMontage* DeathMontage;
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
+    class UAnimMontage* DeathMontage;
 
+    // --- 데이터 (태그/전투 수치) ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "GameplayTags")
     FGameplayTagContainer GameplayTags;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     float MeleeAttackRange = 120.0f;
 
-    // 공격 판정 반지름 (구체 트레이스)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Combat")
     float MeleeAttackRadius = 40.0f;
-
 };
