@@ -13,27 +13,25 @@
 
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
-	AIControllerClass = ALA_EnemyController::StaticClass();
-	AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
+    AIControllerClass = ALA_EnemyController::StaticClass();
+    AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = false;
 
-	MaxHealth = 80.0f;
-	CurrentHealth = MaxHealth;
+    MaxHealth = 80.0f;
+    CurrentHealth = MaxHealth;
+    MaxShield = 30.0f;
+    CurrentShield = MaxShield;
+    AttackPower = 15.0f;
+    Defense = 3.0f;
 
-	MaxShield = 30.0f;
-	CurrentShield = MaxShield;
-
-	AttackPower = 15.0f;
-	Defense = 3.0f;
-
+    // 팀 태그 설정
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     if (EnemyTag.IsValid())
     {
         GameplayTags.AddTag(EnemyTag);
     }
 
-    // 체력 컴포넌트 부착
     HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthWidget"));
     HealthWidgetComp->SetupAttachment(RootComponent);
     HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
@@ -43,10 +41,7 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
 void ALA_EnemyCharacter::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
-
-    // 컴포넌트 찾기
     HealthComp = FindComponentByClass<ULA_HealthComponent>();
-
 }
 
 void ALA_EnemyCharacter::BeginPlay()
@@ -55,22 +50,12 @@ void ALA_EnemyCharacter::BeginPlay()
 
     if (HealthComp && HealthWidgetComp)
     {
-        // 위젯 인스턴스 가져오기
         if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
         {
-            // 바인딩
             HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
-
-            // 초기화
             HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
         }
     }
-
-    if (!HealthComp)
-    {
-        UE_LOG(LogTemp, Error, TEXT("[%s] HealthComponent를 찾을 수 없습니다!"), *GetName());
-    }
-
 }
 
 void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
@@ -80,160 +65,123 @@ void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContaine
 
 void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 {
+    // 공격 판정 로직 (기존 유지)
     FVector StartLocation = GetActorLocation() + GetActorForwardVector() * 40.f;
     FVector EndLocation = StartLocation + GetActorForwardVector() * MeleeAttackRange;
 
-    // 자기 자신은 충돌 검사에서 제외
     TArray<AActor*> ActorsToIgnore;
     ActorsToIgnore.Add(this);
 
     FHitResult HitResult;
 
-    // 구체 형태의 선을 그어 충돌을 감지 (Sphere Trace)
     bool bHit = UKismetSystemLibrary::SphereTraceSingle(
-         GetWorld(),
-         StartLocation,
-         EndLocation,
-         MeleeAttackRadius,
-         UEngineTypes::ConvertToTraceType(ECC_Pawn),
-         false,
-         ActorsToIgnore,
-         EDrawDebugTrace::ForDuration,
-         HitResult,
-         true
+         GetWorld(), StartLocation, EndLocation, MeleeAttackRadius,
+         UEngineTypes::ConvertToTraceType(ECC_Pawn), false, ActorsToIgnore,
+         EDrawDebugTrace::ForDuration, HitResult, true
      );
 
     if (bHit && HitResult.GetActor())
     {
-        UGameplayStatics::ApplyDamage(
-            HitResult.GetActor(),
-            AttackPower,
-            GetController(),
-            this,
-            nullptr
-        );
+        UGameplayStatics::ApplyDamage(HitResult.GetActor(), AttackPower, GetController(), this, nullptr);
     }
 }
 
 float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
                                      class AController* EventInstigator, AActor* DamageCauser)
 {
-    // 이미 죽었다면 무시
     if (bIsDead) return 0.0f;
 
-    // 기본 대미지 계산
+    // 1. 부모의 데미지 계산 로직 호출
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-
-    // 데이터 갱신 및 델리게이트 호출
     if (HealthComp)
     {
         HealthComp->TakeDamage(ActualDamage);
     }
 
-    // 대미지 텍스트 타이머
+    // 2. 데미지 텍스트 누적 표시
     AccumulatedDamage += ActualDamage;
     if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
     {
         GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
     }
 
-    // 5. 피격/사망 처리 분기
-    if (bIsDead)
+    // 3. 상태 피드백 (사망 시 처리는 Die()에서 하므로 여기선 피격 리액션만)
+    if (!bIsDead && ActualDamage > 0.0f)
     {
-        // 죽었을 때 로직
-         HealthWidgetComp->SetVisibility(false);
-    }
-    else
-    {
-        // 살았을 때만 피격 애니메이션과 체력바 표시
-        if (HealthWidgetComp)
+        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
+
+        UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+        if (AnimInstance && AnimInstance->IsAnyMontagePlaying())
         {
-            HealthWidgetComp->SetVisibility(true);
+            // [정리] 특정 몽타주가 아닌 '현재 재생 중인 모든 몽타주'를 정지하여 확실히 경직시킴
+            AnimInstance->Montage_Stop(0.2f);
         }
 
-        if (ActualDamage > 0.0f && HitMontage)
-        {
-            // 공격 중일 때 맞으면 공격을 캔슬 (경직 효과)
-            UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-            if (AnimInstance && AnimInstance->IsAnyMontagePlaying())
-            {
-                // 현재 공격 몽타주가 재생 중인지 확인 후 정지
-                AnimInstance->Montage_Stop(0.2f, AttackMontage);
-            }
-
-            PlayAnimMontage(HitMontage);
-        }
+        if (HitMontage) PlayAnimMontage(HitMontage);
     }
 
     return ActualDamage;
 }
 
-
 void ALA_EnemyCharacter::ExecuteShowDamageText()
 {
     if (!DamageTextClass || AccumulatedDamage <= 0.0f) return;
 
-    // 대미지 표시 위젯 생성
     ULA_EnemyDamageTextWidget* DamageWidget = CreateWidget<ULA_EnemyDamageTextWidget>(GetWorld(), DamageTextClass);
-
     if (DamageWidget)
     {
-        // 화면에 대미지 위젯 표시
         DamageWidget->SetDamageValue(AccumulatedDamage);
         DamageWidget->AddToViewport();
 
         FVector WorldLocation = GetActorLocation() + FVector(0, 0, 100.0f);
         FVector2D ScreenPosition;
 
-        if (UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(
-            GetWorld()->GetFirstPlayerController(), WorldLocation, ScreenPosition, true))
+        if (UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(GetWorld()->GetFirstPlayerController(), WorldLocation, ScreenPosition, true))
         {
             DamageWidget->SetRenderTranslation(ScreenPosition);
         }
 
         ActiveDamageWidgets.Add(DamageWidget);
-        FTimerHandle RemoveTimer;
 
-        // 0.5초 후 제거
-        GetWorld()->GetTimerManager().SetTimer(RemoveTimer, [this, DamageWidget]()
+        // [안전성] TWeakObjectPtr를 사용하여 액터 파괴 시 안전성 확보
+        TWeakObjectPtr<ALA_EnemyCharacter> WeakSelf(this);
+        TWeakObjectPtr<ULA_EnemyDamageTextWidget> WeakWidget(DamageWidget);
+
+        FTimerHandle RemoveTimer;
+        GetWorld()->GetTimerManager().SetTimer(RemoveTimer, [WeakSelf, WeakWidget]()
             {
-                if (DamageWidget)
+                if (WeakWidget.IsValid())
                 {
-                    DamageWidget->RemoveFromParent();
-                    ActiveDamageWidgets.Remove(DamageWidget);
+                    WeakWidget->RemoveFromParent();
+                    if (WeakSelf.IsValid())
+                    {
+                        WeakSelf->ActiveDamageWidgets.Remove(WeakWidget.Get());
+                    }
                 }
             }, 0.5f, false);
     }
-
     AccumulatedDamage = 0.0f;
 }
 
 void ALA_EnemyCharacter::Die()
 {
-	if (bIsDead) return;
+    if (bIsDead) return;
 
-    // 사망 즉시 체력바 숨기기
-    if (HealthWidgetComp)
+    if (HealthWidgetComp) HealthWidgetComp->SetVisibility(false);
+
+    // 데미지 텍스트 타이머 정리
+    GetWorldTimerManager().ClearTimer(DamageDisplayTimer);
+
+    Super::Die(); // 여기서 bIsDead가 true가 됨
+
+    if (DeathMontage) PlayAnimMontage(DeathMontage);
+
+    if (GetCharacterMovement())
     {
-        HealthWidgetComp->SetVisibility(false);
+       GetCharacterMovement()->StopMovementImmediately(); // 즉시 정지 추가
+       GetCharacterMovement()->DisableMovement();
     }
 
-	// 부모 클래스의 사망 로직 실행
-	Super::Die();
-
-	// 사망 애니메이션 재생
-	if (DeathMontage)
-	{
-		PlayAnimMontage(DeathMontage);
-	}
-
-	// 사망 시 이동 및 회전 완전 정지
-	if (GetCharacterMovement())
-	{
-		GetCharacterMovement()->DisableMovement();
-	}
-
-	SetLifeSpan(5.0f);
+    SetLifeSpan(5.0f);
 }
-
