@@ -4,6 +4,8 @@
 #include "Components/WidgetComponent.h"
 #include "Blueprint/UserWidget.h"
 #include "UI/LA_EnemyDamageTextWidget.h"
+#include "Kismet/KismetSystemLibrary.h"
+#include "Kismet/GameplayStatics.h"
 #include "UI/LA_EnemyHealthWidget.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
@@ -35,7 +37,40 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthWidget"));
     HealthWidgetComp->SetupAttachment(RootComponent);
     HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
-    HealthWidgetComp->SetVisibility(false);             
+    HealthWidgetComp->SetVisibility(false);
+}
+
+void ALA_EnemyCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    // 컴포넌트 찾기
+    HealthComp = FindComponentByClass<ULA_HealthComponent>();
+
+}
+
+void ALA_EnemyCharacter::BeginPlay()
+{
+    Super::BeginPlay();
+
+    if (HealthComp && HealthWidgetComp)
+    {
+        // 위젯 인스턴스 가져오기
+        if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
+        {
+            // 바인딩
+            HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
+
+            // 초기화
+            HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+        }
+    }
+
+    if (!HealthComp)
+    {
+        UE_LOG(LogTemp, Error, TEXT("[%s] HealthComponent를 찾을 수 없습니다!"), *GetName());
+    }
+
 }
 
 void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
@@ -43,14 +78,52 @@ void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContaine
     TagContainer.AppendTags(GameplayTags);
 }
 
+void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
+{
+    FVector StartLocation = GetActorLocation() + GetActorForwardVector() * 40.f;
+    FVector EndLocation = StartLocation + GetActorForwardVector() * MeleeAttackRange;
+
+    // 자기 자신은 충돌 검사에서 제외
+    TArray<AActor*> ActorsToIgnore;
+    ActorsToIgnore.Add(this);
+
+    FHitResult HitResult;
+
+    // 구체 형태의 선을 그어 충돌을 감지 (Sphere Trace)
+    bool bHit = UKismetSystemLibrary::SphereTraceSingle(
+         GetWorld(),
+         StartLocation,
+         EndLocation,
+         MeleeAttackRadius,
+         UEngineTypes::ConvertToTraceType(ECC_Pawn),
+         false,
+         ActorsToIgnore,
+         EDrawDebugTrace::ForDuration,
+         HitResult,
+         true
+     );
+
+    if (bHit && HitResult.GetActor())
+    {
+        UGameplayStatics::ApplyDamage(
+            HitResult.GetActor(),
+            AttackPower,
+            GetController(),
+            this,
+            nullptr
+        );
+    }
+}
+
 float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent,
-    class AController* EventInstigator, AActor* DamageCauser)
+                                     class AController* EventInstigator, AActor* DamageCauser)
 {
     // 이미 죽었다면 무시
     if (bIsDead) return 0.0f;
 
     // 기본 대미지 계산
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
 
     // 데이터 갱신 및 델리게이트 호출
     if (HealthComp)
@@ -60,7 +133,10 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 
     // 대미지 텍스트 타이머
     AccumulatedDamage += ActualDamage;
-    GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
+    if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
+    {
+        GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
+    }
 
     // 5. 피격/사망 처리 분기
     if (bIsDead)
@@ -78,6 +154,14 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 
         if (ActualDamage > 0.0f && HitMontage)
         {
+            // 공격 중일 때 맞으면 공격을 캔슬 (경직 효과)
+            UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+            if (AnimInstance && AnimInstance->IsAnyMontagePlaying())
+            {
+                // 현재 공격 몽타주가 재생 중인지 확인 후 정지
+                AnimInstance->Montage_Stop(0.2f, AttackMontage);
+            }
+
             PlayAnimMontage(HitMontage);
         }
     }
@@ -151,39 +235,5 @@ void ALA_EnemyCharacter::Die()
 	}
 
 	SetLifeSpan(5.0f);
-}
-
-
-void ALA_EnemyCharacter::BeginPlay()
-{
-    Super::BeginPlay();
-
-    if (HealthComp && HealthWidgetComp)
-    {
-        // 위젯 인스턴스 가져오기
-        if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
-        {
-            // 바인딩
-            HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
-
-            // 초기화
-            HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
-        }
-    }
-
-    if (!HealthComp)
-    {
-        UE_LOG(LogTemp, Error, TEXT("[%s] HealthComponent를 찾을 수 없습니다!"), *GetName());
-    }
-
-}
-
-void ALA_EnemyCharacter::PostInitializeComponents()
-{
-    Super::PostInitializeComponents();
-
-    // 컴포넌트 찾기
-    HealthComp = FindComponentByClass<ULA_HealthComponent>();
-
 }
 
