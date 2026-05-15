@@ -21,6 +21,7 @@ EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& Owner
         APawn* OwnerPawn = OwnerComp.GetAIOwner()->GetPawn();
         if (!OwnerPawn) return EBTNodeResult::Failed;
         FVector Start = OwnerPawn->GetActorForwardVector() * 50.f + OwnerPawn->GetActorLocation();
+        Start.Z += 50.f;
         FVector End = OwnerPawn->GetActorForwardVector() * 500.f + Start;
 
         DrawDebugLine(GetWorld(), Start, End, FColor::Red, false, 1.f, 0, 2.f);
@@ -42,13 +43,13 @@ EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& Owner
         );
 
         DrawDebugSphere(GetWorld(), HitResult.Location, 10.f, 16, FColor::Red, false, 2.f, 0, 1.f);
-        UE_LOG(LogTemp, Warning, TEXT("Debug Start"));
+        // UE_LOG(LogTemp, Warning, TEXT("Debug Start"));
 
         if (ALA_BaseCharacter* HitTarget = Cast<ALA_BaseCharacter>(HitResult.GetActor()))
         {
             // 맞은 대상에 대미지 적용 로직
             UE_LOG(LogTemp, Warning, TEXT("Attack Succeeded"));
-            
+
             HitTarget->TakeDamageCustom(AttackPower);
             GEngine->AddOnScreenDebugMessage(-1, 0.0f, FColor::Green, FString::Printf(TEXT("Enemy Health : % f / % f"), HitTarget->CurrentHealth, HitTarget->MaxHealth));
 
@@ -58,7 +59,7 @@ EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& Owner
                 {
                     Blackboard->ClearValue(GetSelectedBlackboardKey());
                 }
-                
+
             }
 
 
@@ -72,7 +73,7 @@ EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& Owner
         }
     }
 
-    
+
 
 
     UE_LOG(LogTemp, Warning, TEXT("Failed"));

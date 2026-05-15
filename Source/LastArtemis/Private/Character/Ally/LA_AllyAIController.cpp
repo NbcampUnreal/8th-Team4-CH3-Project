@@ -18,7 +18,7 @@ ALA_AllyAIController::ALA_AllyAIController()
 
     SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
     SightConfig->SightRadius = 1000.f;
-    SightConfig->PeripheralVisionAngleDegrees = 65.f;
+    SightConfig->PeripheralVisionAngleDegrees = 80.f;
     SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
     SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
     SightConfig->DetectionByAffiliation.bDetectEnemies = true;
@@ -26,7 +26,7 @@ ALA_AllyAIController::ALA_AllyAIController()
     NewPerception->ConfigureSense(*SightConfig);
     NewPerception->SetDominantSense(SightConfig->GetSenseImplementation());
 
-  
+
 }
 
 void ALA_AllyAIController::BeginPlay()
@@ -49,7 +49,7 @@ void ALA_AllyAIController::BeginPlay()
     if (GetBlackboardComponent())
     {
         GetBlackboardComponent()->SetValueAsObject(FName("PlayerActor"), Player);
-       
+
     }
 
     if (GetPerceptionComponent())

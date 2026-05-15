@@ -18,7 +18,8 @@ protected:
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Move")
     float WanderRadius;
-
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Move")
+    float BehindDistance;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Move")
     float MinDistance;
 

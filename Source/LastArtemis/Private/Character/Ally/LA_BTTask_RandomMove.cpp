@@ -9,7 +9,9 @@
 ULA_BTTask_RandomMove::ULA_BTTask_RandomMove()
 {
     NodeName = TEXT("Random Move");
-    WanderRadius = 500.f;
+
+    BehindDistance = 300.f;
+    WanderRadius = 300.f;
     MinDistance = 300.f;
 }
 
@@ -21,26 +23,41 @@ EBTNodeResult::Type ULA_BTTask_RandomMove::ExecuteTask(UBehaviorTreeComponent& O
         {
             if (AActor* Player = Cast<AActor>(OwnerComp.GetBlackboardComponent()->GetValueAsObject(FName("PlayerActor"))))
             {
-                FNavLocation RandomLocation;
+                // 플레이어 뒤쪽 기준점 계산
+                FVector PlayerBackOffset = Player->GetActorLocation()
+                - (Player->GetActorForwardVector() * BehindDistance);
+
+
+                float RandomAngle = FMath::RandRange(-45.f, 45.f);
+                FVector PatrolLocation = PlayerBackOffset.RotateAngleAxis(RandomAngle, FVector::UpVector);
+
+                // NavMesh 위 유효한 위치 찾기
+                FNavLocation NavLocation;
                 UNavigationSystemV1* NavSystem = UNavigationSystemV1::GetCurrent(GetWorld());
-                if (NavSystem && NavSystem->GetRandomReachablePointInRadius(Player->GetActorLocation(), WanderRadius, RandomLocation))
+                if (NavSystem && NavSystem->ProjectPointToNavigation(PatrolLocation, NavLocation))
                 {
-                    if (FVector::Dist(RandomLocation.Location, Player->GetActorLocation()) < MinDistance)
+                    AIController->MoveToLocation(NavLocation.Location);
+                    UE_LOG(LogTemp, Warning, TEXT("PlayerFollow Succeeded"));
+                    return EBTNodeResult::Succeeded;
+
+                    /*if (FVector::Dist(RandomLocation.Location, Player->GetActorLocation()) < MinDistance)
                     {
                         return EBTNodeResult::Failed;
                     }
                     else
                     {
+
+
                         AIController->MoveToLocation(RandomLocation.Location);
                         UE_LOG(LogTemp, Warning, TEXT("RandomMove Succeeded"));
                         return EBTNodeResult::Succeeded;
-                    }
+                    }*/
 
                 }
             }
         }
     }
-    
+
 
     return EBTNodeResult::Failed;
 
