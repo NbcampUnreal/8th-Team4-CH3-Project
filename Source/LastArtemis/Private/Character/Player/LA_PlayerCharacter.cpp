@@ -787,15 +787,33 @@ void ALA_PlayerCharacter::PauseAction()
     }
 }
 
-void ALA_PlayerCharacter::UseQuickSlot(int32 SlotIndex)
+void ALA_PlayerCharacter::InventoryInputAction()
 {
-    if (!InventoryComponent)
-        return;
+    if (Controller == nullptr) return;
+    // 게임 일시정지 로직 실행
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        GM->PauseGame();
+    }
 
-    if (SlotIndex < 0)
-        return;
+    // 인벤토리 UI 생성 및 출력
+    if (InventoryWidgetClass)
+    {
+        UUserWidget* Inventory = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
+        if (Inventory)
+        {
+            Inventory->AddToViewport();
 
-    InventoryComponent->UseQuickItem(SlotIndex, this);
+            // 입력 모드 전환
+            if (APlayerController* PC = Cast<APlayerController>(Controller))
+            {
+                FInputModeUIOnly InputMode;
+                InputMode.SetWidgetToFocus(Inventory->TakeWidget());
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true;
+            }
+        }
+    }
 }
 
 #pragma endregion

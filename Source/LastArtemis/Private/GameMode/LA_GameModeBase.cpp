@@ -55,9 +55,9 @@ void ALA_GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
 
-ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
+    ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
 
-    // Game Instance에 선택된 미션 데이터가 존재하는지 확인 (새 게임 혹은 컨티뉴 공통)
+    // Game Instance에 선택된 미션 데이터가 존재하는지 확인
     if (LA_GameInstance && LA_GameInstance->GetSelectedMission())
     {
         MissionDataAsset = LA_GameInstance->GetSelectedMission();
@@ -80,17 +80,16 @@ ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
 
         UGameplayStatics::SetGamePaused(GetWorld(), false);
         
-        // 미션 시작 (내부에서 체크포인트 MissionId 비교 후 세이브 지점 Phase로 분기함)
+        // 미션 시작
         StartMission();
 
-        // ★ [핵심 추가]: 컨티뉴 처리인 경우 플레이어의 위치와 회전값을 체크포인트로 복구
+        // 컨티뉴
         if (LA_GameInstance->CheckPointData.IsValid() && 
             LA_GameInstance->CheckPointData.MissionId == LA_GameInstance->GetSelectedMissionId())
         {
             APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
             if (PlayerPawn)
             {
-                // 바닥 뚫림 방지 및 물리 크래시 방지를 위해 TeleportPhysics 플래그 세팅 필수
                 PlayerPawn->SetActorLocationAndRotation(
                     LA_GameInstance->CheckPointData.PlayerLocation,
                     LA_GameInstance->CheckPointData.PlayerRotation,
@@ -99,7 +98,6 @@ ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
                     ETeleportType::TeleportPhysics
                 );
 
-                // 카메라 에임 방향도 세이브 시점 방향으로 일치화
                 if (PC)
                 {
                     PC->SetControlRotation(LA_GameInstance->CheckPointData.PlayerRotation);
@@ -192,6 +190,26 @@ void ALA_GameModeBase::OnGameOver()
     if (ALA_GameStateBase* LA_GameState = GetLAGameState())
     {
         LA_GameState->SetGameFlowState(ELA_GameFlowState::GameOver);
+    }
+
+    if (GameOverWidgetClass)
+    {
+        APlayerController* PC = GetWorld() ? GetWorld()->GetFirstPlayerController() : nullptr;
+        if (PC)
+        {
+            CurrentGameOverWidget = CreateWidget<UUserWidget>(GetWorld(), GameOverWidgetClass);
+            if (CurrentGameOverWidget)
+            {
+                CurrentGameOverWidget->AddToViewport();
+
+                FInputModeUIOnly InputMode;
+                InputMode.SetWidgetToFocus(CurrentGameOverWidget->TakeWidget());
+                InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+                
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true; // 마우스 커서 활성화
+            }
+        }
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), true);

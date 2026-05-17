@@ -8,6 +8,7 @@
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedDelegate, float, float);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShieldChangedDelegate, float, float);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnContaminationDelegate, float, float);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -35,6 +36,8 @@ public:
 
 	// 실드량 변화 이벤트
 	FOnShieldChangedDelegate OnShieldChanged;
+
+    FOnContaminationDelegate OnContaminationChanged;
 
 	// 캐릭터 사망 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "Events")
@@ -95,6 +98,16 @@ protected:
 
 #pragma endregion
 
+#pragma region Contamination
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+    float CurrentContamination;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+    float MaxContamination;
+
+#pragma endregion
+
 public:
 	/// <summary>
 	/// 액터의 TakeDamage에서 호출하여 피해를 적용하는 함수
@@ -135,6 +148,17 @@ public:
     float GetMaxShield() const
     {
         return MaxShield;
+    }
+    UFUNCTION(BlueprintCallable)
+    float GetCurrentContamination() const
+    {
+        return CurrentContamination;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    float GetMaxContamination() const
+    {
+        return MaxContamination;
     }
 
     UFUNCTION(BlueprintCallable)
