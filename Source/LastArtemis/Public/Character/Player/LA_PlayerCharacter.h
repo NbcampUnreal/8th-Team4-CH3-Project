@@ -29,9 +29,6 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 // 속도가 변경되었을 경우 호출되는 이벤트의 타입
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
 
-/*
-*
-*/
 UCLASS()
 class LASTARTEMIS_API ALA_PlayerCharacter : public ACharacter, public ILA_Holder
 {
@@ -132,6 +129,10 @@ protected:
     // 앉은 상태의 속도
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "3_General Settings")
     float CrouchSpeed = 150;
+
+    // 블루프린트에서 설정할 일시정지 위젯 클래스
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UUserWidget> PauseMenuWidgetClass;
 
 #pragma endregion
 
@@ -318,6 +319,10 @@ protected:
     void CommandTargetStartedAction();
     // 타겟 명령 키 입력 종료 시 호출되는 함수
     void CommandTargetCompletedAction();
+
+    // 일시정지 키에 입력 시 호출되는  함수
+    void PauseAction();
+
 
 #pragma endregion
 

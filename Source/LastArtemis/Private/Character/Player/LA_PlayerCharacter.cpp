@@ -12,6 +12,8 @@
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
 #include "GameMode/LA_GameInstance.h"                           // ULA_GameInstance
+#include "GameMode/LA_GameModeBase.h"                           // ULA_GameModeBase
+#include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Object/LA_Interactable.h"
 
@@ -189,6 +191,7 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->InteractInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InteractStartedAction);
             }
+<<<<<<< HEAD
 		    // CommandTarget
 		    if (LA_Controller->CommandTargetAction != nullptr)
 		    {
@@ -196,6 +199,13 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CommandTargetCompletedAction);
 
 		    }
+=======
+            // Pause
+            if (LA_Controller->PauseInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->PauseInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::PauseAction);
+            }
+>>>>>>> main
 		}
 	}
 
@@ -834,6 +844,7 @@ void ALA_PlayerCharacter::InteractStartedAction()
     }
 }
 
+<<<<<<< HEAD
 void ALA_PlayerCharacter::CommandTargetStartedAction()
 {
     // V 누르는 순간 실행
@@ -856,6 +867,35 @@ void ALA_PlayerCharacter::CommandTargetCompletedAction()
         // TODO:  아군 AI 타겟 변경
     }
 
+=======
+void ALA_PlayerCharacter::PauseAction()
+{
+    if (Controller == nullptr) return;
+    // 게임 일시정지 로직 실행
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        GM->PauseGame();
+    }
+
+    // 일시정지 UI 생성 및 출력
+    if (PauseMenuWidgetClass)
+    {
+        UUserWidget* PauseMenu = CreateWidget<UUserWidget>(GetWorld(), PauseMenuWidgetClass);
+        if (PauseMenu)
+        {
+            PauseMenu->AddToViewport();
+
+            // 입력 모드 전환
+            if (APlayerController* PC = Cast<APlayerController>(Controller))
+            {
+                FInputModeUIOnly InputMode;
+                InputMode.SetWidgetToFocus(PauseMenu->TakeWidget());
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true;
+            }
+        }
+    }
+>>>>>>> main
 }
 
 #pragma endregion
