@@ -30,7 +30,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
 
 /*
-* 
+*
 */
 UCLASS()
 class LASTARTEMIS_API ALA_PlayerCharacter : public ACharacter, public ILA_Holder
@@ -45,7 +45,7 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
-public:	
+public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
@@ -152,7 +152,7 @@ protected:
     // Key : 무기 데이터 클래스
     // Value : CDO와 비교하여 달라진 부분을 관리하는 구조체 또는 클래스
     //TMap<TSubclassOf<ULA_WeaponData>, FLA_WeaponDeltaProperty*> OwnedWeapons;
-    
+
     // 현재 장착중인 무기를 저장하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     ALA_WeaponBase* EquipedWeapon;
@@ -250,6 +250,21 @@ public:
 
 #pragma endregion
 
+#pragma region Select Enemy
+
+    // 적군 클래스
+    UPROPERTY(EditAnywhere, Category = "Command")
+    TSubclassOf<AActor> EnemyClass;
+    // 현재 선택된 타겟 적군
+    UPROPERTY()
+    AActor* CurrentTargetEnemy;
+    // 화면에 보이는 적군 목록 반환
+    TArray<AActor*> GetVisibleEnemies();
+    // 크로스헤어에 가장 가까운 적군 반환
+    AActor* GetCrosshairTarget(const TArray<AActor*>& Enemies);
+
+#pragma endregion
+
 protected:
     // 액터의 이동 속도를 갱신하는 함수
     UFUNCTION()
@@ -270,7 +285,7 @@ protected:
 
 	// 카메라 회전에 대한 InputAction에 적용되는 함수
 	void LookAction(const FInputActionValue& value);
-	
+
 	// 달리기 키 입력 시작 시 호출되는 함수
 	void SprintStartedAction();
     // 이동 입력 중단 시 호출되는 함수
@@ -298,6 +313,11 @@ protected:
 
     // 상호작용 키 입력 시작 시 호출되는 함수
     void InteractStartedAction();
+
+    // 타겟 명령 키 입력 시작 시 호출되는 함수
+    void CommandTargetStartedAction();
+    // 타겟 명령 키 입력 종료 시 호출되는 함수
+    void CommandTargetCompletedAction();
 
 #pragma endregion
 

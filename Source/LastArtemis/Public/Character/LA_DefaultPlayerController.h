@@ -10,34 +10,34 @@ class UInputMappingContext;
 class UInputAction;
 
 /**
- * 
+ *
  */
 UCLASS()
 class LASTARTEMIS_API ALA_DefaultPlayerController : public APlayerController
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	virtual void BeginPlay() override;
+    virtual void BeginPlay() override;
 
 public:
 #pragma region Enhanced Input
 
-	// InputMappingContext
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
-	TObjectPtr<UInputMappingContext> MappingContext;
+    // InputMappingContext
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputMappingContext> MappingContext;
 
-	// Move (W, A, S, D)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
-	TObjectPtr<UInputAction> MoveInputAction;
+    // Move (W, A, S, D)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> MoveInputAction;
 
-	// Jump (Space)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
-	TObjectPtr<UInputAction> JumpInputAction;
+    // Jump (Space)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> JumpInputAction;
 
-	// Look (Mouse XY Axis)
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
-	TObjectPtr<UInputAction> LookInputAction;
+    // Look (Mouse XY Axis)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> LookInputAction;
 
     // Sprint InputAction (Shift);
     // Triggers 옵션에서 Chorded Action을 추가하여 MoveInputAction이 활성화된 상태에서만 동작하도록 설정
@@ -84,6 +84,8 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
     TObjectPtr<UInputAction> InteractInputAction;
 
+    // CommandTarget InputAction
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
+    TObjectPtr<UInputAction> CommandTargetAction;
 #pragma endregion
-
 };
