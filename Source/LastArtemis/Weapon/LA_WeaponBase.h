@@ -5,8 +5,6 @@
 #include "LA_WeaponData.h"
 #include "LA_WeaponBase.generated.h"
 
-//class ULA_WeaponData;
-
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
 {
@@ -56,8 +54,11 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     virtual void Reload();
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Aim")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Action")
     bool bIsAiming;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
+    EWeaponState CurrentState;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
@@ -71,9 +72,6 @@ protected:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     USkeletalMeshComponent* Mesh;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
-    EWeaponState CurrentState;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
     ULA_WeaponData* WeaponData;

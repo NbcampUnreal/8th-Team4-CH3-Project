@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
+#include "Curves/CurveVector.h"
 #include "LastArtemis/Character/LA_Holder.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 
@@ -116,8 +117,6 @@ void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
 
 void ALA_WeaponBase::Draw()
 {
-    if (CurrentState != EWeaponState::Idle) return;
-
     CurrentState = EWeaponState::Draw;
 
     if (UAnimMontage* AnimMontage = WeaponData->DrawMontage)
