@@ -22,6 +22,10 @@ ULA_HealthComponent::ULA_HealthComponent()
 	MaxShield = 50.0f;
 	CurrentShield = MaxShield;
 
+    // 초기 오염도 0으로 설정
+    MaxContamination = 100.0f;
+    CurrentContamination = 0.0f;
+
 	// 기본 공격력 및 방어력 설정
 	AttackPower = 10.0f;
 	Defense = 5.0f;
@@ -141,4 +145,27 @@ void ULA_HealthComponent::Die()
 	{
 		OnDeath.Broadcast();
 	}
+}
+
+
+void ULA_HealthComponent::AddContamination(float Amount)
+{
+    if (Amount <= 0.0f)
+        return;
+
+    if (CurrentContamination >= MaxContamination)
+        return;
+
+    CurrentContamination = FMath::Clamp(CurrentContamination + Amount, 0.0f, MaxContamination);
+}
+
+void ULA_HealthComponent::Decontaminate(float Amount)
+{
+    if (Amount <= 0.0f)
+        return;
+
+    if (CurrentContamination <= 0.0f)
+        return;
+
+    CurrentContamination = FMath::Clamp(CurrentContamination - Amount, 0.0f, MaxContamination);
 }

@@ -87,6 +87,10 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "1_Input")
     TObjectPtr<UInputAction> PauseInputAction;
 
+    // Consumable Item QuickSlot InputAction
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "1_Input")
+    TArray<class UInputAction*> ItemQuickSlotActions;
+
 #pragma endregion
 
 };
