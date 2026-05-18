@@ -2,7 +2,7 @@
 
 
 #include "Item/LA_DecontaminationItemEffect.h"
-#include "Character/LA_BaseCharacter.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
 
 bool ULA_DecontaminationItemEffect::ApplyEffect(AActor* UseTarget)
 {
@@ -16,13 +16,13 @@ bool ULA_DecontaminationItemEffect::ApplyEffect(AActor* UseTarget)
         return false;
     }
 
-    ALA_BaseCharacter* BaseCharacter = Cast<ALA_BaseCharacter>(UseTarget);
-    if (!BaseCharacter)
+    ULA_HealthComponent* HealthComponent = UseTarget->FindComponentByClass<ULA_HealthComponent>();
+    if (!HealthComponent)
     {
         return false;
     }
 
-    BaseCharacter->Decontaminate(DecontaminationAmount);
+    HealthComponent->Decontaminate(DecontaminationAmount);
 
     return true;
 }

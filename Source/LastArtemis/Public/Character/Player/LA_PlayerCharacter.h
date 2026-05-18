@@ -306,6 +306,9 @@ protected:
     // 일시정지 키에 입력 시 호출되는  함수
     void PauseAction();
 
+    // 퀵 슬롯에서 아이템 사용 시 호출되는 함수
+    void UseQuickSlot(int32 SlotIndex);
+
 #pragma endregion
 
 	/// <summary>
