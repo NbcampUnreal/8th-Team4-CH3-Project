@@ -16,12 +16,13 @@ public:
     void BeginPlay() override;
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
+	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
 	float AttackRange;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
 	float HealAmount;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
-	float DeContaminateAmount;
+	float DeContaminateAmount;*/
 
-
+    UFUNCTION(BlueprintCallable)
+    void SetTargetEnemy(AActor* TargetEnemy);
 };
