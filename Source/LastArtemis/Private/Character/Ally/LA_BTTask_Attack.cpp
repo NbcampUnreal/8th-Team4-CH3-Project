@@ -8,9 +8,10 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "DrawDebugHelpers.h"
 #include "PhysicsAssetRenderUtils.h"
+#include "Character/Ally/LA_AllyAI.h"
 #include "Character/Ally/LA_AllyAIController.h"
 #include "Character/Enemy/LA_EnemyCharacter.h"
-
+#include "Kismet/GameplayStatics.h"
 
 
 ULA_BTTask_Attack::ULA_BTTask_Attack()
@@ -219,6 +220,13 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
     Memory->ElapsedTime = 0.f;
     Memory->CurrentAmmo--;
 
+    // 공격 몽타주 재생
+    ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(OwnerPawn);
+    if (AllyAI && AllyAI->AttackMontage)
+    {
+        AllyAI->PlayAttackMontage();
+    }
+
     if (Memory->CurrentAmmo <= 0)
     {
         Memory->bIsReloading = true;
@@ -252,7 +260,7 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
         {
             // 타격 이펙트 및 대미지 적용
             DrawDebugBox(GetWorld(), HitResult.Location, FVector(5.f), FColor::Green, false, 0.2f);
-            HitTarget->TakeDamageCustom(Damage);
+            UGameplayStatics::ApplyDamage(HitTarget, Damage, AIController, OwnerPawn, nullptr);
             UE_LOG(LogTemp, Warning, TEXT("Hit! Ammo Left: %d, Target: %s"), Memory->CurrentAmmo, *HitTarget->GetName());
 
             // 적 사망 처리
