@@ -25,6 +25,10 @@ public:
     // --- 인터페이스 구현 ---
     virtual void GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const override;
 
+    void PlayAttackMontage();
+
+    FORCEINLINE bool IsAttacking() const { return bIsAttacking; }
+
 protected:
     virtual void BeginPlay() override;
     virtual void PostInitializeComponents() override;
@@ -47,6 +51,9 @@ protected:
 
     float AccumulatedDamage = 0.0f;
     FTimerHandle DamageDisplayTimer;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Attack")
+    bool bIsAttacking = false;
 
     // --- 애니메이션 에셋 ---
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
