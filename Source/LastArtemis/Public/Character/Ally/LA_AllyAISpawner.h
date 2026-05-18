@@ -26,6 +26,5 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Spawn Settings")
     TSubclassOf<class ALA_AllyAI> AllyClass;
 
-public:
 
 };
