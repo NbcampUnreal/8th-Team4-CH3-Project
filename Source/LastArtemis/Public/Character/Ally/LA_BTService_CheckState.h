@@ -20,4 +20,6 @@ public:
 
     void TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds);
 
+    UPROPERTY(EditAnywhere, Category = "Config")
+    float AbandonDistance;
 };

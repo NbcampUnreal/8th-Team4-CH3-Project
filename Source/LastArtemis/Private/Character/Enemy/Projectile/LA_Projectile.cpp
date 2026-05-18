@@ -33,7 +33,13 @@ ALA_Projectile::ALA_Projectile()
 
 void ALA_Projectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    // 베이스에서는 공통적인 충돌 소멸 로직만 작성하거나 비워둡니다.
+    if (OtherActor && OtherActor != this && OtherActor != GetOwner())
+    {
+        if (OtherComp && OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
+        {
+            Destroy();
+        }
+    }
 }
 
 void ALA_Projectile::BeginPlay()

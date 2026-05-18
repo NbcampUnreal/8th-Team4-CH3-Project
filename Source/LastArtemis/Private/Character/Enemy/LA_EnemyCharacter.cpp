@@ -5,11 +5,11 @@
 #include "Blueprint/UserWidget.h"
 #include "UI/LA_EnemyDamageTextWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Kismet/GameplayStatics.h"
 #include "UI/LA_EnemyHealthWidget.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
@@ -25,6 +25,16 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     AttackPower = 15.0f;
     Defense = 3.0f;
 
+    bUseControllerRotationYaw = false;
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationRoll = false;
+
+    if (GetCharacterMovement())
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = true;
+        GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+    }
+
     // 팀 태그 설정
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     if (EnemyTag.IsValid())
@@ -36,6 +46,8 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     HealthWidgetComp->SetupAttachment(RootComponent);
     HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
     HealthWidgetComp->SetVisibility(false);
+
+    bIsAttacking = false;
 }
 
 void ALA_EnemyCharacter::PostInitializeComponents()
@@ -63,17 +75,46 @@ void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContaine
     TagContainer.AppendTags(GameplayTags);
 }
 
+void ALA_EnemyCharacter::PlayAttackMontage()
+{
+    if (bIsAttacking || bIsDead) return;
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && AttackMontage)
+    {
+        bIsAttacking = true;
+
+        float Duration = PlayAnimMontage(AttackMontage);
+
+        if (Duration > 0.0f)
+        {
+            FTimerHandle AttackTimerHandle;
+            GetWorld()->GetTimerManager().SetTimer(
+                AttackTimerHandle,
+                [this]() { bIsAttacking = false; },
+                Duration,
+                false
+            );
+        }
+        else
+        {
+            bIsAttacking = false;
+        }
+    }
+}
+
 void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 {
-    // 공격 판정 로직 (기존 유지)
+    // 공격 판정 범위 설정
     FVector StartLocation = GetActorLocation() + GetActorForwardVector() * 40.f;
     FVector EndLocation = StartLocation + GetActorForwardVector() * MeleeAttackRange;
 
     TArray<AActor*> ActorsToIgnore;
-    ActorsToIgnore.Add(this);
+    ActorsToIgnore.Add(this); // 나 자신은 당연히 공격에서 제외
 
     FHitResult HitResult;
 
+    // ECC_Pawn 채널을 탐색하는 스피어 트레이스 실행
     bool bHit = UKismetSystemLibrary::SphereTraceSingle(
          GetWorld(), StartLocation, EndLocation, MeleeAttackRadius,
          UEngineTypes::ConvertToTraceType(ECC_Pawn), false, ActorsToIgnore,
@@ -82,7 +123,17 @@ void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 
     if (bHit && HitResult.GetActor())
     {
-        UGameplayStatics::ApplyDamage(HitResult.GetActor(), AttackPower, GetController(), this, nullptr);
+        AActor* HitActor = HitResult.GetActor();
+
+        if (HitActor->ActorHasTag(FName("Team.Enemy")))
+        {
+            return;
+        }
+
+        if (HitActor->ActorHasTag(FName("Team.Ally")))
+        {
+            UGameplayStatics::ApplyDamage(HitActor, AttackPower, GetController(), this, nullptr);
+        }
     }
 }
 
@@ -91,34 +142,29 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 {
     if (bIsDead) return 0.0f;
 
-    // 1. 부모의 데미지 계산 로직 호출
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-    if (HealthComp)
-    {
-        HealthComp->TakeDamage(ActualDamage);
-    }
+    if (ActualDamage <= 0.0f) return 0.0f;
 
-    // 2. 데미지 텍스트 누적 표시
     AccumulatedDamage += ActualDamage;
     if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
     {
         GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
     }
 
-    // 3. 상태 피드백 (사망 시 처리는 Die()에서 하므로 여기선 피격 리액션만)
-    if (!bIsDead && ActualDamage > 0.0f)
+    if (CurrentHealth > 0.0f)
     {
         if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
 
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-        if (AnimInstance && AnimInstance->IsAnyMontagePlaying())
-        {
-            // [정리] 특정 몽타주가 아닌 '현재 재생 중인 모든 몽타주'를 정지하여 확실히 경직시킴
-            AnimInstance->Montage_Stop(0.2f);
-        }
 
-        if (HitMontage) PlayAnimMontage(HitMontage);
+        if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
+        {
+            if (HitMontage)
+            {
+                PlayAnimMontage(HitMontage);
+            }
+        }
     }
 
     return ActualDamage;
