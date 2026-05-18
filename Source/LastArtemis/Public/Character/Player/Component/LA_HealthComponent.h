@@ -73,6 +73,18 @@ protected:
 
 #pragma endregion
 
+#pragma region Contamination
+
+    // 최대 오염도
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
+    float MaxContamination;
+
+    // 현재 오염도
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
+    float CurrentContamination;
+
+#pragma endregion
+
 	// 기본 공격력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float AttackPower;
@@ -132,4 +144,31 @@ public:
     }
 
 	void Die();
+
+    // 오염도 관련 함수 추가
+
+    UFUNCTION(BlueprintCallable)
+    void AddContamination(float Amount);
+
+    UFUNCTION(BlueprintCallable)
+    void Decontaminate(float Amount);
+
+    UFUNCTION(BlueprintCallable)
+    float GetCurrentContamination() const
+    {
+        return CurrentContamination;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    float GetMaxContamination() const
+    {
+        return MaxContamination;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    float GetContaminationPercent() const
+    {
+        if (MaxContamination <= 0.0f) return 0.0f;
+        return CurrentContamination / MaxContamination;
+    }
 };

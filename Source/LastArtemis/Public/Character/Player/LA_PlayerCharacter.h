@@ -56,7 +56,7 @@ public:
 
 public:
 #pragma region General Settings
-
+     
     // 달리기 키 입력에 대한 처리 방식을 결정하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
     EMovementInputMode SprintInputMode = EMovementInputMode::Toggle;
@@ -325,6 +325,8 @@ protected:
     // 일시정지 키에 입력 시 호출되는  함수
     void PauseAction();
 
+    // 퀵 슬롯에서 아이템 사용 시 호출되는 함수
+    void UseQuickSlot(int32 SlotIndex);
 
 #pragma endregion
 

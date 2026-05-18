@@ -55,17 +55,9 @@ void ALA_GameModeBase::BeginPlay()
 {
     Super::BeginPlay();
 
-    ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
+ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
 
-    //////////////////////////
-    ///// 테스트용 불러오기
-    //////////////////////////
-    //if (LA_GameInstance)
-    //{
-    //    LA_GameInstance->LoadGameData();
-    //}
-
-    // Game Instance에서 Mission 선택
+    // Game Instance에 선택된 미션 데이터가 존재하는지 확인 (새 게임 혹은 컨티뉴 공통)
     if (LA_GameInstance && LA_GameInstance->GetSelectedMission())
     {
         MissionDataAsset = LA_GameInstance->GetSelectedMission();
@@ -79,7 +71,6 @@ void ALA_GameModeBase::BeginPlay()
         APlayerController* PC = GetWorld()->GetFirstPlayerController();
         if (PC && HUDClass)
         {
-            // 위젯 생성
             ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDClass);
             if (NewHUD)
             {
@@ -88,21 +79,35 @@ void ALA_GameModeBase::BeginPlay()
         }
 
         UGameplayStatics::SetGamePaused(GetWorld(), false);
+        
+        // 미션 시작 (내부에서 체크포인트 MissionId 비교 후 세이브 지점 Phase로 분기함)
         StartMission();
 
-        //////////////////////////
-        ///// 테스트용 세이브 데이터 복구
-        //////////////////////////
-        //if (LA_GameInstance->SavedPhaseIndex >= 0)
-        //{
-        //    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+        // ★ [핵심 추가]: 컨티뉴 처리인 경우 플레이어의 위치와 회전값을 체크포인트로 복구
+        if (LA_GameInstance->CheckPointData.IsValid() && 
+            LA_GameInstance->CheckPointData.MissionId == LA_GameInstance->GetSelectedMissionId())
+        {
+            APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+            if (PlayerPawn)
+            {
+                // 바닥 뚫림 방지 및 물리 크래시 방지를 위해 TeleportPhysics 플래그 세팅 필수
+                PlayerPawn->SetActorLocationAndRotation(
+                    LA_GameInstance->CheckPointData.PlayerLocation,
+                    LA_GameInstance->CheckPointData.PlayerRotation,
+                    false,
+                    nullptr,
+                    ETeleportType::TeleportPhysics
+                );
 
-        //    if (PlayerPawn)
-        //    {
-        //        PlayerPawn->SetActorLocation(LA_GameInstance->SavedPlayerLocation);
-        //        PlayerPawn->SetActorRotation(LA_GameInstance->SavedPlayerRotation);
-        //    }
-        //}
+                // 카메라 에임 방향도 세이브 시점 방향으로 일치화
+                if (PC)
+                {
+                    PC->SetControlRotation(LA_GameInstance->CheckPointData.PlayerRotation);
+                }
+                
+                UE_LOG(LogTemp, Log, TEXT("GameMode: 세이브 데이터 위치로 플레이어 복구 완료."));
+            }
+        }
 
         return;
     }

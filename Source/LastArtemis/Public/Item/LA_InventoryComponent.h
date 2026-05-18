@@ -48,13 +48,44 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     void GetAllItemSlots(TArray<FLA_ItemSlot>& OutItemSlots) const;
 
+    // 인벤토리 내 아이템 출력
     UFUNCTION(BlueprintCallable, Category = "Inventory")
     void PrintInventory() const;
 
+    // 퀵 슬롯 등록 함수
+    UFUNCTION(BlueprintCallable, Category = "Inventory|QuickSlot")
+    bool SetQuickItemSlot(int32 QuickSlotIndex, int32 ItemSlotIndex);
+    // 퀵 슬롯 아이템 사용
+    UFUNCTION(BlueprintCallable, Category = "Inventory|QuickSlot")
+    bool UseQuickItem(int32 QuickSlotIndex, AActor* UseTarget);
+    // 퀵슬롯 아이템 초기화
+    UFUNCTION(BlueprintCallable, Category = "Inventory|QuickSlot")
+    bool ClearQuickItemSlot(int32 QuickSlotIndex);
+
+    UFUNCTION(BlueprintCallable, Category = "Inventory|QuickSlot")
+    void PrintQuickSlots() const;
+
 protected:
+    bool UseItemByAssetId(const FPrimaryAssetId& ItemAssetId, AActor* UseTarget);
+    // 아이템 획득 시 퀵슬롯 빈칸에 자동 등록
+    bool AutoAssignToQuickSlot(const FPrimaryAssetId& ItemAssetId);
+
+protected:
+    ///////////////////////////
+    // 일반 슬롯
+    ///////////////////////////
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory")
     int32 MaxSlotCount;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory")
     TArray<FLA_ItemSlot> ItemSlots;
+
+    ///////////////////////////
+    // 퀵 슬롯
+    ///////////////////////////
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Inventory|QuickSlot")
+    int32 MaxQuickSlotCount;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Inventory|QuickSlot")
+    TArray<FPrimaryAssetId> QuickSlots;
 };

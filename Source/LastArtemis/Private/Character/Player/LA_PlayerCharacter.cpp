@@ -206,6 +206,14 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->PauseInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::PauseAction);
             }
+            // Item QuickSlot InputAction
+            for (int32 i = 0; i < LA_Controller->ItemQuickSlotActions.Num(); ++i)
+            {
+                if (LA_Controller->ItemQuickSlotActions[i] != nullptr)
+                {
+                    enhancedInputComponent->BindAction(LA_Controller->ItemQuickSlotActions[i], ETriggerEvent::Started, this, &ALA_PlayerCharacter::UseQuickSlot, i);
+                }
+            }
 		}
 	}
 
@@ -926,6 +934,17 @@ void ALA_PlayerCharacter::PauseAction()
             }
         }
     }
+}
+
+void ALA_PlayerCharacter::UseQuickSlot(int32 SlotIndex)
+{
+    if (!InventoryComponent)
+        return;
+
+    if (SlotIndex < 0)
+        return;
+
+    InventoryComponent->UseQuickItem(SlotIndex, this);
 }
 
 #pragma endregion
