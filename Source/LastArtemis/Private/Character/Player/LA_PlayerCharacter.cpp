@@ -965,6 +965,18 @@ void ALA_PlayerCharacter::InventoryInputAction()
     }
 }
 
+void ALA_PlayerCharacter::UseQuickSlot(int32 SlotIndex)
+{
+    if (!InventoryComponent)
+        return;
+
+    if (SlotIndex < 0)
+        return;
+
+    InventoryComponent->UseQuickItem(SlotIndex, this);
+}
+
+
 #pragma endregion
 
 float ALA_PlayerCharacter::TakeDamage(float Damage, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
