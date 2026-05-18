@@ -145,6 +145,10 @@ void ULA_HUD::BindContamination()
     }
 }
 
+void ULA_HUD::BindQuickSlot()
+{
+}
+
 void ULA_HUD::BindAmmo()
 {
     ALA_PlayerCharacter* PlayerCharacter =

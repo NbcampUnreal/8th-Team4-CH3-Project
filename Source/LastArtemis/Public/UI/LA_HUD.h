@@ -37,6 +37,9 @@ public:
     void UpdateContamination(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
+    void UpdateQuickSlot(float Current, float Max);
+
+    UFUNCTION(BlueprintImplementableEvent)
     void UpdateAmmo(int32 CurrentMagazineAmmo, int32 MaxMagazineSize);
 
     UFUNCTION(BlueprintImplementableEvent)
@@ -47,6 +50,8 @@ public:
     void BindHealth();
 
     void BindContamination();
+
+    void BindQuickSlot();
 
     void BindAmmo();
 

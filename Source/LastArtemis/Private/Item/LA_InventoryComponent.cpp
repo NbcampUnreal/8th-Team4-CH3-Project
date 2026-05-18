@@ -353,6 +353,14 @@ bool ULA_InventoryComponent::SetQuickItemSlot(int32 QuickSlotIndex, int32 ItemSl
     return true;
 }
 
+FPrimaryAssetId ULA_InventoryComponent::GetQuickSlot(int32 QuickSlotIndex) const
+{
+    if (!QuickSlots.IsValidIndex(QuickSlotIndex))
+        return FPrimaryAssetId();
+
+    return QuickSlots[QuickSlotIndex];
+}
+
 // 퀵 슬롯 아이템 사용
 bool ULA_InventoryComponent::UseQuickItem(int32 QuickSlotIndex, AActor* UseTarget)
 {
