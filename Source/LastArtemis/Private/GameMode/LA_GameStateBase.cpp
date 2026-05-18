@@ -8,10 +8,10 @@ ALA_GameStateBase::ALA_GameStateBase()
     :
     CurrentGameFlowState(ELA_GameFlowState::None),
     CurrentMissionType(ELA_MissionType::None),
+    bCurrentPhaseCompleted(false), 
     CurrentPhaseIndex(-1),
     CurrentPhaseType(ELA_PhaseType::None),
     CurrentProgressCount(0),       
-    bCurrentPhaseCompleted(false), 
     RequiredProgressCount(0),
     ElapsedGameTime(0)
 {
