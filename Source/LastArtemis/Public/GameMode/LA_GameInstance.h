@@ -102,6 +102,14 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Save")
     void LoadGameData();
 
+    // 세이브 파일이 실제로 디스크에 존재하는지 여부를 리턴하는 함수
+    UFUNCTION(BlueprintPure, Category = "Save")
+    bool DoesSaveGameSlotExist() const;
+
+    // 메인 메뉴에서 Continue시 호출할 함수
+    UFUNCTION(BlueprintCallable, Category = "Save")
+    void ContinueGame();
+
 private:
     // 기존 SaveGame이 있으면 불러오고, 없으면 새로 생성
     ULA_SaveGame* LoadOrCreateSaveGameObject() const;

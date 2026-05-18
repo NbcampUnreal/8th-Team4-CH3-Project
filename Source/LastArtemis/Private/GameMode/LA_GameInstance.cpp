@@ -285,5 +285,56 @@ void ULA_GameInstance::LoadGameData()
     );
 }
 
+bool ULA_GameInstance::DoesSaveGameSlotExist() const
+{
+    return UGameplayStatics::DoesSaveGameExist(SaveSlotName, 0);
+}
+
+void ULA_GameInstance::ContinueGame()
+{
+    // 1. 디스크에서 세이브 파일을 읽어 CheckPointData 변수를 채웁니다.
+    LoadGameData();
+
+    // 2. 불러온 체크포인트 데이터의 MissionId가 유효한지 검증합니다.
+    if (bSaveSuccess && CheckPointData.IsValid())
+    {
+        // 3. AssetManager를 통해 PrimaryAssetId로부터 MissionDataAsset 포인터를 찾아옵니다.
+        UAssetManager& AssetManager = UAssetManager::Get();
+        ULA_MissionDataAsset* LoadedMission = Cast<ULA_MissionDataAsset>(
+            AssetManager.GetPrimaryAssetObject(CheckPointData.MissionId)
+        );
+
+        // 만약 메모리에 로드되어 있지 않다면 동기식 강제 로드 시도
+        if (!LoadedMission)
+        {
+            FSoftObjectPath AssetPath = AssetManager.GetPrimaryAssetPath(CheckPointData.MissionId);
+            LoadedMission = Cast<ULA_MissionDataAsset>(AssetPath.TryLoad());
+        }
+
+        if (LoadedMission)
+        {
+            // 4. 기존 변수 SelectedMissionDataAsset에 로드된 미션을 지정합니다.
+            SetSelectedMission(LoadedMission);
+
+            // 5. MissionDataAsset에 들어있는 타겟 맵(레벨)을 엽니다.
+            // ※ 데이터 에셋 내부에 맵 이름을 가지는 FName 변수(예: MapName)가 있다고 전제합니다.
+            FName TargetMapName = SelectedMissionDataAsset->LevelName; 
+            
+            if (!TargetMapName.IsNone())
+            {
+                UGameplayStatics::OpenLevel(this, TargetMapName);
+            }
+            else
+            {
+                UE_LOG(LogTemp, Error, TEXT("Continue Error: MissionDataAsset에 MapName이 지정되지 않았습니다."));
+            }
+        }
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Continue 취소: 유효한 세이브 파일이 슬롯에 없습니다."));
+    }
+}
+
 
 
