@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"		                        // UCameraComponent
 #include "Item/LA_InventoryComponent.h"                         // ULA_InventoryComponent
 #include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
+#include "BehaviorTree/BlackboardComponent.h"
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
@@ -16,6 +17,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Object/LA_Interactable.h"
+#include "Character/Ally/LA_AllyAI.h"
+#include "Character/Ally/LA_AllyAIController.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -191,6 +194,13 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->InteractInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InteractStartedAction);
             }
+		    // CommandTarget
+		    if (LA_Controller->CommandTargetAction != nullptr)
+		    {
+		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CommandTargetStartedAction);
+		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CommandTargetCompletedAction);
+
+		    }
             // Pause
             if (LA_Controller->PauseInputAction != nullptr)
             {
@@ -495,6 +505,116 @@ void ALA_PlayerCharacter::UpdateCameraBoomRotation(FVector Value)
     SpringArmComponent->SetWorldRotation(FRotator::MakeFromEuler(Value));
 }
 
+#pragma region Select Enemy
+
+// 화면에 보이는 적군 목록 반환
+TArray<AActor*> ALA_PlayerCharacter::GetVisibleEnemies()
+{
+    // Team.Enemy 태그 가진 액터만 가져오기
+    TArray<AActor*> AllActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), AllActors);
+
+
+
+    // AllActor Actor 개수 확인
+    UE_LOG(LogTemp, Warning, TEXT("AllActors Count: %d"), AllActors.Num());
+
+
+    FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
+    // 보이는 적 저장
+    TArray<AActor*> VisibleEnemies;
+
+    APlayerController* PC = Cast<APlayerController>(GetWorld()->GetFirstPlayerController());
+    if (!PC) return VisibleEnemies;
+
+    for (AActor* Actor : AllActors)
+    {
+        // GameplayTag 인터페이스 확인
+        IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(Actor);
+        if (!TagInterface) continue;
+
+        FGameplayTagContainer OwnedTags;
+        TagInterface->GetOwnedGameplayTags(OwnedTags);
+        // 태그 확인용 로그
+        UE_LOG(LogTemp, Warning, TEXT("Actor: %s, Tags: %s"), *Actor->GetName(), *OwnedTags.ToString());
+        // Team.Enemy 태그 가진 액터만 필터링
+        if (!TagInterface->HasMatchingGameplayTag(EnemyTag)) continue;
+
+        FVector2D ScreenPos;
+        // 화면 안에 위치가 투영되는 적군만 필터링
+        if (PC->ProjectWorldLocationToScreen(Actor->GetActorLocation(), ScreenPos))
+        {
+            VisibleEnemies.Add(Actor);
+        }
+    }
+    return VisibleEnemies;
+
+
+
+}
+
+// 크로스헤어(화면 중앙)에 가장 가까운 적군 반환
+AActor* ALA_PlayerCharacter::GetCrosshairTarget(const TArray<AActor*>& Enemies)
+{
+    APlayerController* PC = Cast<APlayerController>(GetWorld()->GetFirstPlayerController());
+    if (!PC) return nullptr;
+
+    // 화면 해상도 가져오기
+    int32 SizeX, SizeY;
+    PC->GetViewportSize(SizeX, SizeY);
+
+    // 화면 중앙 좌표 계산
+    FVector2D ScreenCenter(SizeX / 2.f, SizeY / 2.f);
+
+    AActor* ClosestEnemy = nullptr;
+    float MinDistance = FLT_MAX;
+
+    for (AActor* Enemy : Enemies)
+    {
+        FVector2D ScreenPos;
+        if (PC->ProjectWorldLocationToScreen(Enemy->GetActorLocation(), ScreenPos))
+        {
+            // 화면 중앙과 적군 스크린 좌표 사이의 거리 계산
+            float Distance = FVector2D::Distance(ScreenPos, ScreenCenter);
+
+            // 더 가까운 적군이면 업데이트
+            if (Distance < MinDistance)
+            {
+                MinDistance = Distance;
+                ClosestEnemy = Enemy;
+            }
+        }
+    }
+    return ClosestEnemy;
+
+
+}
+
+void ALA_PlayerCharacter::SetTarget(AActor* Target)
+{
+    TArray<AActor*> AllActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_AllyAI::StaticClass(), AllActors);
+
+    for (AActor* Ally : AllActors)
+    {
+        ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(Ally);
+        if (!AllyAI) continue;
+
+        if (ALA_AllyAIController* AIController = Cast<ALA_AllyAIController>(AllyAI->GetController()))
+        {
+            if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
+            {
+                Blackboard->SetValueAsObject(FName("TargetActor"), Target);
+                Blackboard->SetValueAsBool(FName("IsCommandedTarget"), true);
+                UE_LOG(LogTemp, Warning, TEXT("Command Complete: Target - %s"), *Target->GetName());
+            }
+        }
+
+
+    }
+}
+#pragma endregion
+
 #pragma region Input Action
 
 void ALA_PlayerCharacter::MoveAction(const FInputActionValue& value)
@@ -755,6 +875,35 @@ void ALA_PlayerCharacter::InteractStartedAction()
             // 상호작용 함수 호출
             ILA_Interactable::Execute_Interact(HitActor, this);
         }
+    }
+}
+
+
+void ALA_PlayerCharacter::CommandTargetStartedAction()
+{
+    // V 누르는 순간 실행
+    // TODO: UI 표시 로직 추가 예정
+    UE_LOG(LogTemp, Warning, TEXT("CommandTarget Started!"));
+
+
+}
+
+void ALA_PlayerCharacter::CommandTargetCompletedAction()
+{
+
+
+    // 화면에 보이는 적군 목록 가져오기
+    TArray<AActor*> Enemies = GetVisibleEnemies();
+
+    // 크로스헤어에 가장 가까운 적군 선택
+    CurrentTargetEnemy = GetCrosshairTarget(Enemies);
+
+    if (CurrentTargetEnemy)
+    {
+        UE_LOG(LogTemp, Warning, TEXT("Target: %s"), *CurrentTargetEnemy->GetName());
+        // TODO:  아군 AI 타겟 변경
+
+        SetTarget(CurrentTargetEnemy);
     }
 }
 

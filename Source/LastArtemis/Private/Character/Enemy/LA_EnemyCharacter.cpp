@@ -5,11 +5,11 @@
 #include "Blueprint/UserWidget.h"
 #include "UI/LA_EnemyDamageTextWidget.h"
 #include "Kismet/KismetSystemLibrary.h"
-#include "Kismet/GameplayStatics.h"
 #include "UI/LA_EnemyHealthWidget.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
@@ -46,6 +46,8 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     HealthWidgetComp->SetupAttachment(RootComponent);
     HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
     HealthWidgetComp->SetVisibility(false);
+
+    bIsAttacking = false;
 }
 
 void ALA_EnemyCharacter::PostInitializeComponents()
@@ -73,9 +75,36 @@ void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContaine
     TagContainer.AppendTags(GameplayTags);
 }
 
+void ALA_EnemyCharacter::PlayAttackMontage()
+{
+    if (bIsAttacking || bIsDead) return;
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && AttackMontage)
+    {
+        bIsAttacking = true;
+
+        float Duration = PlayAnimMontage(AttackMontage);
+
+        if (Duration > 0.0f)
+        {
+            FTimerHandle AttackTimerHandle;
+            GetWorld()->GetTimerManager().SetTimer(
+                AttackTimerHandle,
+                [this]() { bIsAttacking = false; },
+                Duration + 0.5f,
+                false
+            );
+        }
+        else
+        {
+            bIsAttacking = false;
+        }
+    }
+}
+
 void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 {
-    // 공격 판정 로직 (기존 유지)
     FVector StartLocation = GetActorLocation() + GetActorForwardVector() * 40.f;
     FVector EndLocation = StartLocation + GetActorForwardVector() * MeleeAttackRange;
 
@@ -92,7 +121,35 @@ void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 
     if (bHit && HitResult.GetActor())
     {
-        UGameplayStatics::ApplyDamage(HitResult.GetActor(), AttackPower, GetController(), this, nullptr);
+        AActor* HitActor = HitResult.GetActor();
+
+        // 상대방의 게임플레이 태그 컨테이너 안전하게 추출
+        IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(HitActor);
+        FGameplayTagContainer TargetTags;
+        if (TagInterface)
+        {
+            TagInterface->GetOwnedGameplayTags(TargetTags);
+        }
+
+        // 같은 에너미 팀("Team.Enemy") 게임플레이 태그나 일반 태그가 있다면 공격 생략 (얼리 리턴)
+        if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy"))) || HitActor->ActorHasTag(FName("Team.Enemy")))
+        {
+            return;
+        }
+
+        // 타격 대상이 플레이어 진영("Team.Ally")인지 교차 검증
+        bool bIsAlly = false;
+        if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally"))) || HitActor->ActorHasTag(FName("Team.Ally")))
+        {
+            bIsAlly = true;
+        }
+
+        // 확실하게 아군 진영임이 확인되면 시원하게 데미지를 꽂아버립니다.
+        if (bIsAlly)
+        {
+            UGameplayStatics::ApplyDamage(HitActor, AttackPower, GetController(), this, nullptr);
+            UE_LOG(LogTemp, Warning, TEXT("[에너미 공격] 타겟 데미지 전달 성공! 대상: %s, 데미지: %f"), *HitActor->GetName(), AttackPower);
+        }
     }
 }
 
@@ -101,34 +158,29 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 {
     if (bIsDead) return 0.0f;
 
-    // 부모의 데미지 계산 로직 호출
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-    if (HealthComp)
-    {
-        HealthComp->TakeDamage(ActualDamage);
-    }
+    if (ActualDamage <= 0.0f) return 0.0f;
 
-    //  데미지 텍스트 누적 표시
     AccumulatedDamage += ActualDamage;
     if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
     {
         GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
     }
 
-    // 상태 피드백 (사망 시 처리는 Die()에서 하므로 여기선 피격 리액션만)
-    if (!bIsDead && ActualDamage > 0.0f)
+    if (CurrentHealth > 0.0f)
     {
         if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
 
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
-        if (AnimInstance && AnimInstance->IsAnyMontagePlaying())
-        {
-            // [정리] 특정 몽타주가 아닌 '현재 재생 중인 모든 몽타주'를 정지하여 확실히 경직시킴
-            AnimInstance->Montage_Stop(0.2f);
-        }
 
-        if (HitMontage) PlayAnimMontage(HitMontage);
+        if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())
+        {
+            if (HitMontage)
+            {
+                PlayAnimMontage(HitMontage);
+            }
+        }
     }
 
     return ActualDamage;
