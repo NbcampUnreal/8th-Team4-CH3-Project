@@ -92,7 +92,7 @@ void ALA_EnemyCharacter::PlayAttackMontage()
             GetWorld()->GetTimerManager().SetTimer(
                 AttackTimerHandle,
                 [this]() { bIsAttacking = false; },
-                Duration,
+                Duration + 0.5f,
                 false
             );
         }
@@ -105,16 +105,14 @@ void ALA_EnemyCharacter::PlayAttackMontage()
 
 void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 {
-    // 공격 판정 범위 설정
     FVector StartLocation = GetActorLocation() + GetActorForwardVector() * 40.f;
     FVector EndLocation = StartLocation + GetActorForwardVector() * MeleeAttackRange;
 
     TArray<AActor*> ActorsToIgnore;
-    ActorsToIgnore.Add(this); // 나 자신은 당연히 공격에서 제외
+    ActorsToIgnore.Add(this);
 
     FHitResult HitResult;
 
-    // ECC_Pawn 채널을 탐색하는 스피어 트레이스 실행
     bool bHit = UKismetSystemLibrary::SphereTraceSingle(
          GetWorld(), StartLocation, EndLocation, MeleeAttackRadius,
          UEngineTypes::ConvertToTraceType(ECC_Pawn), false, ActorsToIgnore,
@@ -125,14 +123,32 @@ void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
     {
         AActor* HitActor = HitResult.GetActor();
 
-        if (HitActor->ActorHasTag(FName("Team.Enemy")))
+        // 상대방의 게임플레이 태그 컨테이너 안전하게 추출
+        IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(HitActor);
+        FGameplayTagContainer TargetTags;
+        if (TagInterface)
+        {
+            TagInterface->GetOwnedGameplayTags(TargetTags);
+        }
+
+        // 같은 에너미 팀("Team.Enemy") 게임플레이 태그나 일반 태그가 있다면 공격 생략 (얼리 리턴)
+        if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy"))) || HitActor->ActorHasTag(FName("Team.Enemy")))
         {
             return;
         }
 
-        if (HitActor->ActorHasTag(FName("Team.Ally")))
+        // 타격 대상이 플레이어 진영("Team.Ally")인지 교차 검증
+        bool bIsAlly = false;
+        if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally"))) || HitActor->ActorHasTag(FName("Team.Ally")))
+        {
+            bIsAlly = true;
+        }
+
+        // 확실하게 아군 진영임이 확인되면 시원하게 데미지를 꽂아버립니다.
+        if (bIsAlly)
         {
             UGameplayStatics::ApplyDamage(HitActor, AttackPower, GetController(), this, nullptr);
+            UE_LOG(LogTemp, Warning, TEXT("[에너미 공격] 타겟 데미지 전달 성공! 대상: %s, 데미지: %f"), *HitActor->GetName(), AttackPower);
         }
     }
 }
