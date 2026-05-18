@@ -18,7 +18,7 @@ ALA_AllyAIController::ALA_AllyAIController()
 
     SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
     SightConfig->SightRadius = 1000.f;
-    SightConfig->PeripheralVisionAngleDegrees = 80.f;
+    SightConfig->PeripheralVisionAngleDegrees = 90.f;
     SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
     SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
     SightConfig->DetectionByAffiliation.bDetectEnemies = true;
@@ -73,7 +73,17 @@ void ALA_AllyAIController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
             if (DetectedCharacter->CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")))) {
                 return;
             }
-            GetBlackboardComponent()->SetValueAsObject(FName("TargetActor"), DetectedCharacter);
+            UBlackboardComponent* BlackboardComp = GetBlackboardComponent();
+            if (BlackboardComp)
+            {
+                ALA_BaseCharacter* CurrentTarget = Cast<ALA_BaseCharacter>(BlackboardComp->GetValueAsObject(FName("TargetActor")));
+
+                if (CurrentTarget && !CurrentTarget -> bIsDead)
+                {
+                    return;
+                }
+                BlackboardComp->SetValueAsObject(FName("TargetActor"), DetectedCharacter);
+            }
         }
     }
 }

@@ -251,7 +251,7 @@ public:
 
 #pragma endregion
 
-#pragma region Select Enemy
+#pragma region Command Target
 
     // 적군 클래스
     UPROPERTY(EditAnywhere, Category = "Command")
@@ -263,6 +263,8 @@ public:
     TArray<AActor*> GetVisibleEnemies();
     // 크로스헤어에 가장 가까운 적군 반환
     AActor* GetCrosshairTarget(const TArray<AActor*>& Enemies);
+    // 타겟 명령
+    void SetTarget(AActor* Target);
 
 #pragma endregion
 

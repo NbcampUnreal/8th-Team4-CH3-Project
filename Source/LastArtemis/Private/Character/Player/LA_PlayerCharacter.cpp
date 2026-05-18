@@ -8,6 +8,7 @@
 #include "Camera/CameraComponent.h"		                        // UCameraComponent
 #include "Item/LA_InventoryComponent.h"                         // ULA_InventoryComponent
 #include "EnhancedInputComponent.h"		                        // UEnhancedInputComponent, FInputActionValue
+#include "BehaviorTree/BlackboardComponent.h"
 #include "Character/LA_DefaultPlayerController.h"		        // ALA_DefaultPlayerController
 #include "Character/Player/Component/LA_HealthComponent.h"      // ULA_HealthComponent
 #include "LastArtemis/Weapon/LA_WeaponBase.h"                   // ALA_WeaponBase
@@ -16,6 +17,8 @@
 #include "Blueprint/UserWidget.h"
 #include "Kismet/GameplayStatics.h"
 #include "Object/LA_Interactable.h"
+#include "Character/Ally/LA_AllyAI.h"
+#include "Character/Ally/LA_AllyAIController.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -191,7 +194,6 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->InteractInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InteractStartedAction);
             }
-<<<<<<< HEAD
 		    // CommandTarget
 		    if (LA_Controller->CommandTargetAction != nullptr)
 		    {
@@ -199,13 +201,11 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CommandTargetCompletedAction);
 
 		    }
-=======
             // Pause
             if (LA_Controller->PauseInputAction != nullptr)
             {
                 enhancedInputComponent->BindAction(LA_Controller->PauseInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::PauseAction);
             }
->>>>>>> main
 		}
 	}
 
@@ -506,6 +506,8 @@ TArray<AActor*> ALA_PlayerCharacter::GetVisibleEnemies()
     TArray<AActor*> AllActors;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), AllActors);
 
+
+
     // AllActor Actor 개수 확인
     UE_LOG(LogTemp, Warning, TEXT("AllActors Count: %d"), AllActors.Num());
 
@@ -515,7 +517,7 @@ TArray<AActor*> ALA_PlayerCharacter::GetVisibleEnemies()
     TArray<AActor*> VisibleEnemies;
 
     APlayerController* PC = Cast<APlayerController>(GetWorld()->GetFirstPlayerController());
-    if (!PC) return
+    if (!PC) return VisibleEnemies;
 
     for (AActor* Actor : AllActors)
     {
@@ -578,6 +580,30 @@ AActor* ALA_PlayerCharacter::GetCrosshairTarget(const TArray<AActor*>& Enemies)
     return ClosestEnemy;
 
 
+}
+
+void ALA_PlayerCharacter::SetTarget(AActor* Target)
+{
+    TArray<AActor*> AllActors;
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_AllyAI::StaticClass(), AllActors);
+
+    for (AActor* Ally : AllActors)
+    {
+        ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(Ally);
+        if (!AllyAI) continue;
+
+        if (ALA_AllyAIController* AIController = Cast<ALA_AllyAIController>(AllyAI->GetController()))
+        {
+            if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
+            {
+                Blackboard->SetValueAsObject(FName("TargetActor"), Target);
+                Blackboard->SetValueAsBool(FName("IsCommandedTarget"), true);
+                UE_LOG(LogTemp, Warning, TEXT("Command Complete: Target - %s"), *Target->GetName());
+            }
+        }
+
+
+    }
 }
 #pragma endregion
 
@@ -844,17 +870,20 @@ void ALA_PlayerCharacter::InteractStartedAction()
     }
 }
 
-<<<<<<< HEAD
+
 void ALA_PlayerCharacter::CommandTargetStartedAction()
 {
     // V 누르는 순간 실행
     // TODO: UI 표시 로직 추가 예정
+    UE_LOG(LogTemp, Warning, TEXT("CommandTarget Started!"));
 
 
 }
 
 void ALA_PlayerCharacter::CommandTargetCompletedAction()
 {
+
+
     // 화면에 보이는 적군 목록 가져오기
     TArray<AActor*> Enemies = GetVisibleEnemies();
 
@@ -865,9 +894,11 @@ void ALA_PlayerCharacter::CommandTargetCompletedAction()
     {
         UE_LOG(LogTemp, Warning, TEXT("Target: %s"), *CurrentTargetEnemy->GetName());
         // TODO:  아군 AI 타겟 변경
-    }
 
-=======
+        SetTarget(CurrentTargetEnemy);
+    }
+}
+
 void ALA_PlayerCharacter::PauseAction()
 {
     if (Controller == nullptr) return;
@@ -895,7 +926,6 @@ void ALA_PlayerCharacter::PauseAction()
             }
         }
     }
->>>>>>> main
 }
 
 #pragma endregion

@@ -16,6 +16,7 @@ ULA_BTService_CheckState::ULA_BTService_CheckState()
     NodeName = TEXT("Check Player State");
     Interval = 0.5f;
     RandomDeviation = 0.1f;
+    AbandonDistance = 1000.f;
 }
 
 void ULA_BTService_CheckState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory, float DeltaSeconds)
@@ -23,67 +24,59 @@ void ULA_BTService_CheckState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
     Super::TickNode(OwnerComp, NodeMemory, DeltaSeconds);
 
 
-    if (APawn* ControllingPawn = OwnerComp.GetAIOwner()->GetPawn())
+    APawn* OwnerPawn = OwnerComp.GetAIOwner()->GetPawn();
+    if (!OwnerPawn) return;
+
+    bool bIsSupportMode = false;
+
+    // 플레이어 캐릭터 체력 상태 체크
+    ALA_PlayerCharacter* Player = Cast<ALA_PlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+    if (!Player) return;
+
+    ULA_HealthComponent* HealthComponent = Player->FindComponentByClass<ULA_HealthComponent>();
+    if (!HealthComponent) return;
+
+    /*UE_LOG(LogTemp, Warning, TEXT("HP: %f / %f (Percent: %f)"),
+    HealthComponent->GetCurrentHealth(),
+    HealthComponent->GetMaxHealth(),
+    HealthComponent->GetHealthPercent());*/
+
+    if (!HealthComponent->IsDead())
     {
-
-
-
-        bool bIsSupportMode = false;
-
-        // 플레이어 캐릭터 체력 상태 체크
-        if (ALA_PlayerCharacter* Player = Cast<ALA_PlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0)))
+        // 체력 50 이하 -> 서포트 모드 true
+        bIsSupportMode = HealthComponent->GetHealthPercent() <= 0.5;
+        if (bIsSupportMode)
         {
-            if (ULA_HealthComponent* HealthComponent = Player->FindComponentByClass<ULA_HealthComponent>())
-            {
-
-                UE_LOG(LogTemp, Warning, TEXT("HP: %f / %f (Percent: %f)"),
-                HealthComponent->GetCurrentHealth(),
-                HealthComponent->GetMaxHealth(),
-                HealthComponent->GetHealthPercent());
-
-                if (!HealthComponent->IsDead())
-                {
-                    // 체력 50 이하 -> 서포트 모드 true
-                    bIsSupportMode = HealthComponent->GetHealthPercent() <= 0.5;
-                    if (bIsSupportMode)
-                    {
-                        GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Support Mode Activated"));
-                    }
-
-
-                }
-
-            }
-
-
-
+            GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green, TEXT("Support Mode Activated"));
         }
-
-
-
-
-
-        // 블랙보드 값 업데이트
-        if (UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent())
-        {
-            if (ALA_BaseCharacter* Target = Cast<ALA_BaseCharacter>(
-                Blackboard->GetValueAsObject(FName("TargetActor"))
-            ))
-            {
-                if (Target->bIsDead)
-                {
-                    Blackboard->ClearValue(FName("TargetActor"));
-                }
-            }
-            Blackboard->SetValueAsBool(FName("bIsSupportMode"), bIsSupportMode);
-        }
-
-
-
     }
 
 
 
+
+    // 블랙보드 값 업데이트
+    UBlackboardComponent* Blackboard = OwnerComp.GetBlackboardComponent();
+    if (!Blackboard) return;
+
+    Blackboard->SetValueAsBool(FName("bIsSupportMode"), bIsSupportMode);
+
+    ALA_BaseCharacter* Target = Cast<ALA_BaseCharacter>(Blackboard->GetValueAsObject(FName("TargetActor")));
+    if (!Target) return;
+
+    float DistToPlayer = FVector::Dist(OwnerPawn->GetActorLocation(), Player->GetActorLocation());
+
+    // 플레이어가 너무 멀면 TargetActor 클리어
+    if (DistToPlayer > AbandonDistance)
+    {
+        Blackboard->ClearValue(FName("TargetActor"));
+
+        return;
+    }
+
+    if (Target->bIsDead)
+    {
+        Blackboard->ClearValue(FName("TargetActor"));
+    }
 
 }
 

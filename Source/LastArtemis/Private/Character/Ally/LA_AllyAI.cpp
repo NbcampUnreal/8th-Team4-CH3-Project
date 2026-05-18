@@ -30,9 +30,14 @@ void ALA_AllyAI::BeginPlay()
 void ALA_AllyAI::SetTargetEnemy(AActor* TargetEnemy)
 {
     ALA_AllyAIController* AllyAIController = Cast<ALA_AllyAIController>(GetController());
-    if (AllyAIController) return;
+    if (!AllyAIController) return;
 
     UBlackboardComponent* Blackboard = AllyAIController->GetBlackboardComponent();
+    if (!Blackboard) return;
+
+    Blackboard->SetValueAsObject(FName("TargetActor"), TargetEnemy);
+    Blackboard->SetValueAsBool(FName("IsCommandedTarget"), true);
+    UE_LOG(LogTemp, Warning, TEXT("Target Set"));
 }
 
 
