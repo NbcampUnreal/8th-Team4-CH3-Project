@@ -15,14 +15,24 @@ public:
 
     void BeginPlay() override;
 
-
-	/*UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
-	float AttackRange;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
-	float HealAmount;
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Property")
-	float DeContaminateAmount;*/
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
+    UAnimMontage* HitMontage;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Animation")
+    UAnimMontage* DeathMontage;
 
     UFUNCTION(BlueprintCallable)
     void SetTargetEnemy(AActor* TargetEnemy);
+
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+    virtual void Die() override;
+
+    void ResetHitState();
+
+protected:
+    UPROPERTY(BlueprintReadOnly, Category = "Character State")
+    bool bIsHitAnimationPlaying = false;
+
+    UFUNCTION()
+    void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
 };
