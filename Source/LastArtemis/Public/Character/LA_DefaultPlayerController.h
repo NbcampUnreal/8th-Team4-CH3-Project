@@ -89,7 +89,7 @@ public:
 
     // Consumable Item QuickSlot InputAction
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "1_Input")
-    TArray<class UInputAction*> ItemQuickSlotActions;
+    TArray<TObjectPtr<UInputAction>> ItemQuickSlotActions;
 
 #pragma endregion
 
