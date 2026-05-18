@@ -17,6 +17,7 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+
     virtual void Tick(float DeltaTime) override;
 
     // 포탑 헤드 (회전할 부분)
@@ -42,6 +43,7 @@ protected:
     // 타겟 탐색 및 공격 로직
     void FindTarget();
     void FireProjectile();
+    bool CheckLineOfSight(AActor* TargetActor);
     void SwitchTeam(FGameplayTag NewTeamTag);
 
     UPROPERTY()

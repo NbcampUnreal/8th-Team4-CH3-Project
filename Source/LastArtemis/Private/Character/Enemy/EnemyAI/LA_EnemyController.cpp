@@ -5,6 +5,18 @@
 #include "Perception/AISenseConfig_Sight.h"
 #include "GameplayTagAssetInterface.h"
 
+
+void ALA_EnemyController::BeginPlay()
+{
+    Super::BeginPlay();
+
+    // 퍼셉션 컴포넌트가 존재한다면 업데이트 이벤트 연결
+    if (GetAIPerceptionComponent())
+    {
+        GetAIPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ALA_EnemyController::OnTargetDetected);
+    }
+}
+
 ALA_EnemyController::ALA_EnemyController()
 {
     // AIPerception 컴포넌트 초기화
@@ -13,15 +25,20 @@ ALA_EnemyController::ALA_EnemyController()
 
     if (SightConfig)
     {
+
         // 헤더에서 설정한 변수값 적용 (블루프린트 수정 가능)
         SightConfig->SightRadius = 1500.0f;
         SightConfig->LoseSightRadius = 2000.0f;
-        SightConfig->PeripheralVisionAngleDegrees = 60.0f;
+        SightConfig->PeripheralVisionAngleDegrees = 45.0f;
+        SightConfig->SetMaxAge(5.0f);
 
         // 감지 대상 설정 (아군/적군/중립 모두)
         SightConfig->DetectionByAffiliation.bDetectEnemies = true;
         SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
         SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
+
+        SightConfig->PointOfViewBackwardOffset = 0.0f;
+        SightConfig->NearClippingRadius = 0.0f;
 
         EnemyPerceptionComponent->ConfigureSense(*SightConfig);
         EnemyPerceptionComponent->SetDominantSense(SightConfig->GetSenseImplementation());
@@ -52,33 +69,22 @@ void ALA_EnemyController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
 {
     if (!Actor) return;
 
-    // 1. GameplayTag 인터페이스 확인
-    IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(Actor);
-    if (TagInterface)
+    if (Actor->ActorHasTag(FName("Team.Ally")) || Actor->IsA(APawn::StaticClass()))
     {
-        FGameplayTagContainer TargetTags;
-        TagInterface->GetOwnedGameplayTags(TargetTags);
+        UBlackboardComponent* BB = GetBlackboardComponent();
+        if (!BB) return;
 
-        // 2. Team.Ally (플레이어 팀) 태그 확인
-        FGameplayTag AllyTag = FGameplayTag::RequestGameplayTag(FName("Team.Ally"));
-
-        if (TargetTags.HasTag(AllyTag))
+        // 시야에 들어왔는지 확인
+        if (Stimulus.WasSuccessfullySensed())
         {
-            UBlackboardComponent* BB = GetBlackboardComponent();
-            if (!BB) return;
-
-            if (Stimulus.WasSuccessfullySensed())
-            {
-                // 플레이어 감지 성공: 블랙보드에 타겟 설정
-                BB->SetValueAsObject(TEXT("TargetActor"), Actor);
-                UE_LOG(LogTemp, Log, TEXT("[AI] Target Found: %s"), *Actor->GetName());
-            }
-            else
-            {
-                // 플레이어를 놓침: 블랙보드 타겟 제거 -> BT가 자동으로 순찰/대기 상태로 전환
-                BB->ClearValue(TEXT("TargetActor"));
-                UE_LOG(LogTemp, Log, TEXT("[AI] Target Lost"));
-            }
+            // 블랙보드에 직접 때려박기
+            BB->SetValueAsObject(TEXT("TargetActor"), Actor);
+            UE_LOG(LogTemp, Warning, TEXT("!!! [성공] 플레이어 포착 완료 !!!"));
+        }
+        else
+        {
+            BB->ClearValue(TEXT("TargetActor"));
+            UE_LOG(LogTemp, Warning, TEXT("!!! [알림] 플레이어 놓침 !!!"));
         }
     }
 }

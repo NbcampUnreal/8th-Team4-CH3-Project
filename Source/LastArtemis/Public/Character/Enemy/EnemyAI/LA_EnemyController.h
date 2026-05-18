@@ -11,6 +11,7 @@ class LASTARTEMIS_API ALA_EnemyController : public AAIController
     GENERATED_BODY()
 
 public:
+    void BeginPlay();
     ALA_EnemyController();
 
 protected:
