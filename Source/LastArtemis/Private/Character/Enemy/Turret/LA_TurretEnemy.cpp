@@ -14,6 +14,8 @@ ALA_TurretEnemy::ALA_TurretEnemy()
     DetectionRange = 2000.0f;
     RotationSpeed = 5.0f;
     FireRate = 1.5f;
+
+    CurrentTarget = nullptr;
 }
 
 // Called when the game starts or when spawned
@@ -27,36 +29,89 @@ void ALA_TurretEnemy::BeginPlay()
 void ALA_TurretEnemy::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
+
     FindTarget();
 
     if (CurrentTarget && TurretHead)
     {
-        // 타겟을 향한 회전값 계산
         FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(TurretHead->GetComponentLocation(), CurrentTarget->GetActorLocation());
-        FRotator SmoothedRot = FMath::RInterpTo(TurretHead->GetComponentRotation(), TargetRot, DeltaTime, RotationSpeed);
 
-        // 포탑 헤드만 타겟을 바라보게 회전
+        // 포탑 특성상 Pitch(상하)와 Yaw(좌우)만 회전하고 Roll(정크 회전)은 막는 것이 자연스럽습니다.
+        TargetRot.Roll = 0.0f;
+
+        FRotator SmoothedRot = FMath::RInterpTo(TurretHead->GetComponentRotation(), TargetRot, DeltaTime, RotationSpeed);
         TurretHead->SetWorldRotation(SmoothedRot);
     }
 }
 
 void ALA_TurretEnemy::FindTarget()
 {
-    APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
-    if (PlayerPawn && GetDistanceTo(PlayerPawn) <= DetectionRange)
+    // 팀 기반 동적 타겟팅 구현
+    // 터렛 본인의 태그를 검사합니다. (부모 클래스나 본인에게 구현된 CharacterTags 활용)
+    bool bIsOriginallyEnemy = CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
+
+    if (bIsOriginallyEnemy)
     {
-        CurrentTarget = PlayerPawn;
+        // 적군 상태일 때: 플레이어(Team.Ally)를 타겟으로 잡음
+        APawn* PlayerPawn = UGameplayStatics::GetPlayerPawn(GetWorld(), 0);
+        if (PlayerPawn && GetDistanceTo(PlayerPawn) <= DetectionRange && CheckLineOfSight(PlayerPawn))
+        {
+            CurrentTarget = PlayerPawn;
+            return;
+        }
     }
     else
     {
-        CurrentTarget = nullptr;
+        // 아군(해킹됨) 상태일 때: 주변의 몬스터(Team.Enemy)들을 탐색함
+        TArray<AActor*> OverlappingActors;
+        // 터렛 위치 기준 DetectionRange 반경 내의 모든 에너미 캐릭터를 스캔하는 로직을 돌리거나,
+        // 가장 간단하게는 가까운 에너미 액터를 타겟팅하도록 구현합니다.
+
+        // (이해를 돕기 위한 예시: 타겟 수색 자동화)
+        TArray<AActor*> FoundEnemies;
+        UGameplayStatics::GetAllActorsWithTag(GetWorld(), FName("Team.Enemy"), FoundEnemies);
+
+        AActor* ClosestEnemy = nullptr;
+        float ClosestDistance = DetectionRange;
+
+        for (AActor* Enemy : FoundEnemies)
+        {
+            float Dist = GetDistanceTo(Enemy);
+            if (Dist <= ClosestDistance && CheckLineOfSight(Enemy))
+            {
+                ClosestDistance = Dist;
+                ClosestEnemy = Enemy;
+            }
+        }
+
+        if (ClosestEnemy)
+        {
+            CurrentTarget = ClosestEnemy;
+            return;
+        }
     }
+
+    // 조건에 만족하는 타겟이 없으면 널 처리
+    CurrentTarget = nullptr;
 }
 
 void ALA_TurretEnemy::FireProjectile()
 {
-    if (CurrentTarget && ProjectileClass)
+    if (CurrentTarget && ProjectileClass && TurretHead)
     {
+        // 조준 각도 안전장치 추가
+        // 현재 포탑 정면 벡터와 타겟을 향한 벡터 사이의 각도를 구합니다.
+        FVector Forward = TurretHead->GetForwardVector();
+        FVector ToTarget = (CurrentTarget->GetActorLocation() - TurretHead->GetComponentLocation()).GetSafeNormal();
+
+        float AngleDot = FVector::DotProduct(Forward, ToTarget); // 내적 계산
+
+        // 두 벡터의 사잇각이 약 15도 이내일 때만 총알을 발사합니다. (cos(15도) ≒ 0.96)
+        if (AngleDot < 0.96f)
+        {
+            return; // 아직 고개가 다 안 돌아갔으면 사격 스킵!
+        }
+
         PlayAttackMontage();
 
         FVector SpawnLocation = TurretHead->GetSocketLocation(TEXT("Muzzle"));
@@ -70,20 +125,39 @@ void ALA_TurretEnemy::FireProjectile()
     }
 }
 
+bool ALA_TurretEnemy::CheckLineOfSight(AActor* TargetActor)
+{
+    if (!TargetActor || !GetWorld()) return false;
+
+    FHitResult HitResult;
+    FVector StartLocation = TurretHead->GetComponentLocation();
+    FVector EndLocation = TargetActor->GetActorLocation();
+
+    FCollisionQueryParams QueryParams;
+    QueryParams.AddIgnoredActor(this); // 나 자신은 무시
+    QueryParams.AddIgnoredActor(TargetActor); // 조준 대상도 통과 (그 사이의 벽만 체크하기 위함)
+
+    // Visibility 채널로 레이를 쏴서 도중에 막히는 벽(Static)이 있는지 검사
+    bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
+
+    // 가로막은 벽이 없다면 true 반환
+    return !bHit;
+}
+
 void ALA_TurretEnemy::SwitchTeam(FGameplayTag NewTeamTag)
 {
+    //  부모의 팀 변경 기능 호출
     UpdateTeamTag(NewTeamTag);
 
-    // 2. 현재 조준 중인 타겟 초기화
+    //  현재 조준 중인 타겟 즉시 초기화 (다음 FindTarget 때 새 진영 기준으로 찾음)
     CurrentTarget = nullptr;
 
-    // 3. AI가 이전에 공격하던 적(플레이어)에 대한 정보를 지우도록 함
+    //  AI 컨트롤러 제어
     AAIController* AIC = Cast<AAIController>(GetController());
     if (AIC)
     {
-        AIC->StopMovement(); // 조준 초기화 역할
+        AIC->StopMovement();
     }
 
 }
-
 
