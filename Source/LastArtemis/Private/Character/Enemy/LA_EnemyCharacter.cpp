@@ -25,6 +25,16 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     AttackPower = 15.0f;
     Defense = 3.0f;
 
+    bUseControllerRotationYaw = false;
+    bUseControllerRotationPitch = false;
+    bUseControllerRotationRoll = false;
+
+    if (GetCharacterMovement())
+    {
+        GetCharacterMovement()->bOrientRotationToMovement = true;
+        GetCharacterMovement()->RotationRate = FRotator(0.f, 540.f, 0.f);
+    }
+
     // 팀 태그 설정
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     if (EnemyTag.IsValid())
@@ -91,7 +101,7 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 {
     if (bIsDead) return 0.0f;
 
-    // 1. 부모의 데미지 계산 로직 호출
+    // 부모의 데미지 계산 로직 호출
     float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
     if (HealthComp)
@@ -99,14 +109,14 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
         HealthComp->TakeDamage(ActualDamage);
     }
 
-    // 2. 데미지 텍스트 누적 표시
+    //  데미지 텍스트 누적 표시
     AccumulatedDamage += ActualDamage;
     if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
     {
         GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
     }
 
-    // 3. 상태 피드백 (사망 시 처리는 Die()에서 하므로 여기선 피격 리액션만)
+    // 상태 피드백 (사망 시 처리는 Die()에서 하므로 여기선 피격 리액션만)
     if (!bIsDead && ActualDamage > 0.0f)
     {
         if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);

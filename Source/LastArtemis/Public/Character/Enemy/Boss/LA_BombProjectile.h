@@ -34,6 +34,9 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Effects")
     class UParticleSystem* ExplosionEffect;
 
+    UPROPERTY(EditAnywhere, Category = "Effects")
+    class USoundBase* ExplosionSound;
+
     // 폭탄은 직접 부딪혀서 터지기보다 타이머로 터지는 경우가 많으므로 오버라이드해서 비워둡니다.
     virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 };
