@@ -125,6 +125,12 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
                 return;
 
             HandleObjectiveProgress(1);
+
+            if (GameState->IsCurrentPhaseCompleted())
+            {
+                AdvanceToNextPhase();
+            }
+
             break;
         }
 

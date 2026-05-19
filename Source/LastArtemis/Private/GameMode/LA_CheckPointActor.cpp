@@ -186,12 +186,11 @@ void ALA_CheckPointActor::Decontaminate(APawn* InteractingPawn)
     if (DecontaminationAmount <= 0.0f)
         return;
 
-
-    ALA_BaseCharacter* BaseCharacter = Cast<ALA_BaseCharacter>(InteractingPawn);
-    if (!BaseCharacter)
+    ULA_HealthComponent* HealthComponent = InteractingPawn->FindComponentByClass<ULA_HealthComponent>();
+    if (!HealthComponent)
         return;
 
-    BaseCharacter->Decontaminate(DecontaminationAmount);
+    HealthComponent->Decontaminate(DecontaminationAmount);
 }
 
 void ALA_CheckPointActor::RefillItems(APawn* InteractingPawn)
