@@ -6,18 +6,19 @@
 ULA_BTTask_EnemyAttack::ULA_BTTask_EnemyAttack()
 {
     NodeName = TEXT("Attack");
-    bNotifyTick = true;
+    bNotifyTick = false;
 }
 
 EBTNodeResult::Type ULA_BTTask_EnemyAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
 {
     AAIController* Controller = OwnerComp.GetAIOwner();
-    if (!Controller)return EBTNodeResult::Failed;
+    if (!Controller) return EBTNodeResult::Failed;
 
     ALA_EnemyCharacter* Enemy = Cast<ALA_EnemyCharacter>(Controller->GetPawn());
     if (!Enemy) return EBTNodeResult::Failed;
 
-    Enemy->PlayAttackMontage();
+    // [수정] OwnerComp 주소와 함께, 현재 실행 중인 테스크 자신인 'this'를 매개변수로 같이 넘깁니다!
+    Enemy->PlayAttackMontageWithComp(&OwnerComp, this);
 
     return EBTNodeResult::InProgress;
 }

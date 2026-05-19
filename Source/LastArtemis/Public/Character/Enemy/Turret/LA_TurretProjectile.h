@@ -12,9 +12,11 @@ class LASTARTEMIS_API ALA_TurretProjectile : public ALA_Projectile
     GENERATED_BODY()
 
 public:
-    // Sets default values for this actor's properties
     ALA_TurretProjectile();
 
 protected:
+    virtual void BeginPlay() override;
+
+    // 🎯 부모의 OnOverlapBegin을 완벽하게 덮어쓰기 위해 virtual과 override를 정확히 명시합니다.
     virtual void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult) override;
 };
