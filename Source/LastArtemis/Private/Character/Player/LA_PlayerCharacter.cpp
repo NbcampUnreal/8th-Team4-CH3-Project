@@ -2,6 +2,7 @@
 
 
 #include "Character/Player/LA_PlayerCharacter.h"
+#include "Engine/StreamableManager.h"
 #include "GameFramework/CharacterMovementComponent.h"	        // UCharacterMovementComponent
 #include "GameFramework/SpringArmComponent.h"                   // USpringArmComponent
 #include "Components/CapsuleComponent.h"                        // UCapsuleComponent
@@ -82,7 +83,7 @@ void ALA_PlayerCharacter::BeginPlay()
     SpawnWeaponActor();
 
     // 초기 무기의 유효성 확인 획득
-    if (IsValid(initialWeaponData) == true)
+    if (initialWeaponData.IsValid() == true)
     {
         // 초기 무기 획득
         ILA_Holder::Execute_AddWeaponToPawn(this, initialWeaponData);
@@ -325,35 +326,22 @@ void ALA_PlayerCharacter::OnPlayerDeath()
 
 #pragma region Derived From ILA_Holder
 
-void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(ULA_WeaponData* WeaponData)
+void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(FPrimaryAssetId WeaponDataID)
 {
-    if (IsValid(WeaponData) == false)
+    // DataAsset의 ID가 유효한지 확인
+    if (WeaponDataID.IsValid() == false)
     {
         return;
     }
 
-    // 획득한 무기 데이터의 고유 값 얻기
-    FName WeaponUID = WeaponData->WeaponName;
+    // DataAsset의 ID를 통하여 데이터 비동기 로드
+    UAssetManager& AssetManager = UAssetManager::Get();
+    TArray<FName> Bundles;
+    DataAssetLoadingHandler = AssetManager.LoadPrimaryAsset(WeaponDataID, Bundles,
+        FStreamableDelegate::CreateUObject(this, &ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset, WeaponDataID)
 
-    // 중복 무기 획득 검사
-    if (OwnedWeapons.Contains(WeaponUID) == true)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("이미 소유하고 있는 무기입니다. - %s"), *WeaponUID.ToString()));
-        ULA_WeaponData* DuplicatedData = OwnedWeapons[WeaponUID];
-
-        // 무기의 총알 채워넣기
-        //Weapon->
-        return;
-    }
-    else
-    {
-        // 보유한 무기 목록에 추가
-        OwnedWeapons.Add(WeaponUID, WeaponData);
-        WeaponNameIndexer.Add(WeaponUID);
-
-        // 획득한 무기 비활성화 처리
-        ILA_Holder::Execute_DeactivateWeapon(this);
-    }
+    );
+    GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Orange, TEXT("아이템 로드 시작"));
 }
 
 void ALA_PlayerCharacter::ActivateWeapon_Implementation(ULA_WeaponData* WeaponData)
@@ -518,6 +506,40 @@ void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
 void ALA_PlayerCharacter::UpdateCameraBoomRotation(FVector Value)
 {
     SpringArmComponent->SetWorldRotation(FRotator::MakeFromEuler(Value));
+}
+
+void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId WeaponDataID)
+{
+    UObject* WeaponDataObject = UAssetManager::Get().GetPrimaryAssetObject(WeaponDataID);
+    ULA_WeaponData* WeaponDataAsset = Cast<ULA_WeaponData>(WeaponDataObject);
+
+    if (WeaponDataAsset == nullptr)
+    {
+        return;
+    }
+
+    // 획득한 무기 데이터의 고유 값 얻기
+    FName WeaponUID = WeaponDataAsset->WeaponName;
+
+    // 중복 무기 획득 검사
+    if (OwnedWeapons.Contains(WeaponUID) == true)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("이미 소유하고 있는 무기입니다. - %s"), *WeaponUID.ToString()));
+        ULA_WeaponData* DuplicatedData = OwnedWeapons[WeaponUID];
+
+        // 무기의 총알 채워넣기
+        //EquipedWeapon->
+        return;
+    }
+    else
+    {
+        // 보유한 무기 목록에 추가
+        OwnedWeapons.Add(WeaponUID, WeaponDataAsset);
+        WeaponNameIndexer.Add(WeaponUID);
+
+        // 획득한 무기 비활성화 처리
+        ILA_Holder::Execute_DeactivateWeapon(this);
+    }
 }
 
 #pragma region Select Enemy
