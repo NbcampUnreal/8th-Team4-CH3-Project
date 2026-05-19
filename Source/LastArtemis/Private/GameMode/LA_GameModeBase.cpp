@@ -226,9 +226,14 @@ void ALA_GameModeBase::OnGameClear()
     // 미션 결과 데이터 SaveGame에 저장
     if (LA_GameInstance && LA_GameState)
     {
-        const int32 FinalTime = LA_GameState->GetElapsedGameTime();
-        const int32 FinalScore = LA_GameInstance->TotalScore;
-        const FString FinalRank = TEXT("S");
+        const int32 FinalTime = LA_GameState->GetElapsedGameTime(); // 플레이 시간
+        const int32 TargetClearTime = 1000;
+        const int32 TimeBonus = FMath::Max(0, TargetClearTime - FinalTime) / 3;
+
+        LA_GameInstance->AddScore(TimeBonus);
+
+        const int32 FinalScore = LA_GameInstance->TotalScore;       // 최종 점수
+        const FString FinalRank = TEXT("S");                        // 최종 랭크
 
         LA_GameInstance->SaveMissionResultData(FinalTime, FinalScore, FinalRank);
 

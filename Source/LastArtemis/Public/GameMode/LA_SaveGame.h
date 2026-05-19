@@ -29,6 +29,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
     int32 ElapsedGameTime = 0;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Check Point")
+    int32 SavedScore = 0;
+
     bool IsValid() const
     {
         return MissionId.IsValid() && PhaseIndex >= 0;

@@ -5,6 +5,7 @@
 #include "GameMode/LA_InvasionMissionDataAsset.h"
 #include "GameMode/LA_GameStateBase.h"
 #include "GameMode/LA_GameModeBase.h"
+#include "GameMode/LA_GameInstance.h"
 #include "Character/Enemy/LA_EnemyCharacter.h"
 #include "Character/Enemy/Boss/LA_BossCharacter.h"
 #include "UI/LA_GameType.h"
@@ -113,7 +114,9 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
             if (!bIsEnemyTag)
                 return;
 
+            AddScore(10);
             HandleObjectiveProgress(1);
+
             break;
         }
 
@@ -124,6 +127,7 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
             if (!bIsBossTag)
                 return;
 
+            AddScore(100);
             HandleObjectiveProgress(1);
 
             if (GameState->IsCurrentPhaseCompleted())
@@ -174,4 +178,19 @@ void ULA_InvasionMissionLogic::HandleInvasionObjective(const FLA_InvasionPhaseDa
     //default:
     //    break;
     //}
+}
+
+void ULA_InvasionMissionLogic::AddScore(int32 ScoreAmount)
+{
+    if (ScoreAmount <= 0)
+        return;
+
+    if (!GameMode)
+        return;
+
+    ULA_GameInstance* LA_GameInstance = GameMode->GetGameInstance<ULA_GameInstance>();
+    if (!LA_GameInstance)
+        return;
+
+    LA_GameInstance->AddScore(ScoreAmount);
 }
