@@ -216,23 +216,42 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
         return;
     }
 
-    UE_LOG(LogTemp, Error, TEXT("FIRE! AttackInterval: %f / ElapsedTime: %f"), AttackInterval, Memory->ElapsedTime);
-    Memory->ElapsedTime = 0.f;
-    Memory->CurrentAmmo--;
-
-    // 공격 몽타주 재생
-    ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(OwnerPawn);
-    if (AllyAI && AllyAI->AttackMontage)
-    {
-        AllyAI->PlayAttackMontage();
-    }
-
     if (Memory->CurrentAmmo <= 0)
     {
         Memory->bIsReloading = true;
         Memory->ReloadTimer = 0.f;
         UE_LOG(LogTemp, Warning, TEXT("Out of Ammo! Reloading..."));
+        return;
     }
+
+
+    UE_LOG(LogTemp, Error, TEXT("FIRE! AttackInterval: %f / ElapsedTime: %f"), AttackInterval, Memory->ElapsedTime);
+    Memory->ElapsedTime = 0.f;
+    Memory->CurrentAmmo--;
+
+
+    // 공격 몽타주 재생
+    ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(OwnerPawn);
+    if (AllyAI && AllyAI->AttackMontage)
+    {
+        if (!AllyAI->bIsFiring)
+        {
+            AllyAI->bIsFiring = true;
+
+            float MontageLength = AllyAI->PlayAnimMontage(AllyAI->AttackMontage);
+
+            FTimerHandle FireTimerHandle;
+            AllyAI->GetWorldTimerManager().SetTimer(FireTimerHandle, AllyAI, &ALA_AllyAI::ResetFiringState, MontageLength, false);
+        }
+        UE_LOG(LogTemp, Warning, TEXT("몽타주 재생 코드 진입"));
+        // AllyAI->PlayAttackMontage();
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("AllyAI가 NULL이거나 AttackMontage가 비어있음"));
+    }
+
+
 
     // ---------------------------------------------------------
     // 7. 충돌 판정 (콜리전 기반 LineTrace)

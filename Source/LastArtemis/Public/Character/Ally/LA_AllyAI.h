@@ -19,6 +19,8 @@ public:
     UAnimMontage* HitMontage;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Animation")
     UAnimMontage* DeathMontage;
+    UPROPERTY(BlueprintReadOnly, Category = "Character State")
+    bool bIsFiring = false;
 
     UFUNCTION(BlueprintCallable)
     void SetTargetEnemy(AActor* TargetEnemy);
@@ -27,6 +29,9 @@ public:
     virtual void Die() override;
 
     void ResetHitState();
+    // 타이머가 끝났을 때 사격 상태를 풀어주는 함수
+    void ResetFiringState();
+
 
 protected:
     UPROPERTY(BlueprintReadOnly, Category = "Character State")
