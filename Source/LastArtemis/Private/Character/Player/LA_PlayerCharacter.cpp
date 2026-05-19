@@ -198,6 +198,7 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		    if (LA_Controller->CommandTargetAction != nullptr)
 		    {
 		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CommandTargetStartedAction);
+		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::CommandTargetTriggeredAction);
 		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CommandTargetCompletedAction);
 
 		    }
@@ -897,28 +898,71 @@ void ALA_PlayerCharacter::CommandTargetStartedAction()
 {
     // V 누르는 순간 실행
     // TODO: UI 표시 로직 추가 예정
-    UE_LOG(LogTemp, Warning, TEXT("CommandTarget Started!"));
+
+
+    //UE_LOG(LogTemp, Warning, TEXT("CommandTarget Started!"));
 
 
 }
 
+void ALA_PlayerCharacter::CommandTargetTriggeredAction()
+{
+    TArray<AActor*> Enemies = GetVisibleEnemies();
+    AActor* NewAimedEnemy = GetCrosshairTarget(Enemies);
+
+
+
+    if (CurrentAimedEnemy != NewAimedEnemy)
+    {
+        if (CurrentAimedEnemy.IsValid())
+        {
+            if (USkeletalMeshComponent* OldMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+            {
+                OldMesh->SetOverlayMaterial(nullptr);
+            }
+        }
+    }
+
+    if (NewAimedEnemy && OutlineMaterial)
+    {
+        if (USkeletalMeshComponent* NewMesh = NewAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+        {
+            NewMesh->SetOverlayMaterial(OutlineMaterial);
+        }
+    }
+
+    CurrentAimedEnemy = NewAimedEnemy;
+
+}
+
+
+
 void ALA_PlayerCharacter::CommandTargetCompletedAction()
 {
 
+    AActor* FinalTarget = CurrentAimedEnemy.Get();
 
-    // 화면에 보이는 적군 목록 가져오기
-    TArray<AActor*> Enemies = GetVisibleEnemies();
 
-    // 크로스헤어에 가장 가까운 적군 선택
-    CurrentTargetEnemy = GetCrosshairTarget(Enemies);
-
-    if (CurrentTargetEnemy)
+    if (FinalTarget)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Target: %s"), *CurrentTargetEnemy->GetName());
-        // TODO:  아군 AI 타겟 변경
-
-        SetTarget(CurrentTargetEnemy);
+        UE_LOG(LogTemp, Warning, TEXT("Target: %s"), *FinalTarget->GetName());
+        SetTarget(FinalTarget);
     }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("공격 명령 취소"));
+    }
+
+    if (CurrentAimedEnemy.IsValid())
+    {
+        if (USkeletalMeshComponent* AimedMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+        {
+            AimedMesh->SetOverlayMaterial(nullptr);
+        }
+    }
+    CurrentAimedEnemy = nullptr;
+
+    // TODO: 조준 UI 끄기
 }
 
 void ALA_PlayerCharacter::PauseAction()
