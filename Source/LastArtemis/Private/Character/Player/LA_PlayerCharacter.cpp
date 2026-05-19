@@ -968,28 +968,47 @@ void ALA_PlayerCharacter::CommandTargetCompletedAction()
 void ALA_PlayerCharacter::PauseAction()
 {
     if (Controller == nullptr) return;
-    // 게임 일시정지 로직 실행
-    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+
+    APlayerController* PC = Cast<APlayerController>(Controller);
+    if (!PC)
+        return;
+
+    ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (!GM)
+        return;
+
+    // 일시 정지 상태면 게임 재개
+    if (UGameplayStatics::IsGamePaused(GetWorld()))
     {
-        GM->PauseGame();
+        if (CurrentPauseMenu)
+        {
+            CurrentPauseMenu->RemoveFromParent();
+            CurrentPauseMenu = nullptr;
+        }
+
+        GM->ResumeGame();
+
+        return;
     }
+
+    // 일시 정지 로직 실행
+    GM->PauseGame();
 
     // 일시정지 UI 생성 및 출력
     if (PauseMenuWidgetClass)
     {
-        UUserWidget* PauseMenu = CreateWidget<UUserWidget>(GetWorld(), PauseMenuWidgetClass);
-        if (PauseMenu)
+        CurrentPauseMenu = CreateWidget<UUserWidget>(PC, PauseMenuWidgetClass);
+        if (CurrentPauseMenu)
         {
-            PauseMenu->AddToViewport();
+            CurrentPauseMenu->AddToViewport();
 
             // 입력 모드 전환
-            if (APlayerController* PC = Cast<APlayerController>(Controller))
-            {
-                FInputModeUIOnly InputMode;
-                InputMode.SetWidgetToFocus(PauseMenu->TakeWidget());
-                PC->SetInputMode(InputMode);
-                PC->bShowMouseCursor = true;
-            }
+            FInputModeGameAndUI InputMode;
+            InputMode.SetWidgetToFocus(CurrentPauseMenu->TakeWidget());
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
         }
     }
 }
