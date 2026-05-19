@@ -5,6 +5,8 @@
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "Character/Ally/LA_AllyAIController.h"
+#include "Character/Enemy/LA_EnemyCharacter.h"
+#include "Kismet/GameplayStatics.h"
 
 ULA_BTService_CheckTargetDistance::ULA_BTService_CheckTargetDistance()
 {
@@ -40,17 +42,53 @@ void ULA_BTService_CheckTargetDistance::TickNode(UBehaviorTreeComponent& OwnerCo
             return;
         }
 
-        float Distance = FVector::Dist(OwnerPawn->GetActorLocation(), Target->GetActorLocation());
 
-        if (Distance > LoseSightDistance)
+        // 기존 타겟 거리 검사 및 놓침 처리
+        float CurrentTargetDistanceSq = 99999999.f;
+        float LoseSightDistSq = FMath::Square(LoseSightDistance);
+
+        if (Target)
         {
-            Blackboard->ClearValue(FName("TargetActor"));
+            CurrentTargetDistanceSq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Target->GetActorLocation());
 
-            AIController->ClearFocus(EAIFocusPriority::Gameplay);
-            AIController->ClearFocus(EAIFocusPriority::Move);
-            AIController->ClearFocus(EAIFocusPriority::Default);
+            if (CurrentTargetDistanceSq > LoseSightDistSq)
+            {
+                Blackboard->ClearValue(FName("TargetActor"));
+                AIController->ClearFocus(EAIFocusPriority::Gameplay);
+                AIController->ClearFocus(EAIFocusPriority::Move);
+                AIController->ClearFocus(EAIFocusPriority::Default);
+                Target = nullptr;
+                CurrentTargetDistanceSq = 99999999.f;
+                UE_LOG(LogTemp, Warning, TEXT("적 타겟을 놓쳤습니다! 거리가 너무 멉니다."));
+            }
+        }
 
-            UE_LOG(LogTemp, Warning, TEXT("Target Lost! Too far away"));
+        TArray<ALA_EnemyCharacter*> AllEnemies;
+        UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_EnemyCharacter::StaticClass(), AllEnemies);
+
+        ALA_EnemyCharacter* BestTarget = Target;
+        float MinDistSq = CurrentTargetDistanceSq;
+
+        // 타겟 전환에 필요한 최소 거리 차이
+        float SwitchThresholdSq = FMath::Square(150.f);
+
+        for (ALA_EnemyCharacter* Enemy : AllEnemies)
+        {
+            if (Enemy->bIsDead) continue;
+
+            float DistToEnemySq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Enemy->GetActorLocation());
+
+            if (DistToEnemySq < LoseSightDistSq)
+            {
+                if (Target == nullptr)
+                {
+                    if (DistToEnemySq < MinDistSq)
+                    {
+                        MinDistSq = DistToEnemySq;
+                        BestTarget = Enemy;
+                    }
+                }
+            }
         }
     }
 

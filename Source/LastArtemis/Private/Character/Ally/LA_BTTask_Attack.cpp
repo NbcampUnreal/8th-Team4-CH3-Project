@@ -18,6 +18,11 @@ ULA_BTTask_Attack::ULA_BTTask_Attack()
 {
     bNotifyTick = true;
     NodeName = TEXT("Attack");
+
+    AttackRange = 500.f;
+    AttackInterval = 1.f;
+    Damage = 10.f;
+    TotalAmmo = 30;
 }
 
 EBTNodeResult::Type ULA_BTTask_Attack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
