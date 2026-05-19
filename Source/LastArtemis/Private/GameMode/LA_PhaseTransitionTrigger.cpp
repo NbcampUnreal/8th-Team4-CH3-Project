@@ -76,6 +76,11 @@ void ALA_PhaseTransitionTrigger::OnTriggerBeginOverlap(
     if (!LA_GameState)
         return;
 
+    // 이 트리거가 담당하는 Phase가 아니면 작동 X
+    if (LA_GameState->GetCurrentPhaseIndex() != RequiredPhaseIndex)
+        return;
+
+    // 현재 Phase가 완료되지 않으면 다음 Phase 진입 불가
     if (!LA_GameState->IsCurrentPhaseCompleted())
         return;
 

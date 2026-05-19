@@ -178,6 +178,10 @@ protected:
     // 캐릭터 사망 시 재생되는 Timeline
     FTimeline DeathCameraTimeline;
 
+    // 사망 카메라 타임라인 종료 후 GameOver 호출
+    UFUNCTION()
+    void OnDeathCameraTimelineFinished();
+
 #pragma endregion
 
 public:
