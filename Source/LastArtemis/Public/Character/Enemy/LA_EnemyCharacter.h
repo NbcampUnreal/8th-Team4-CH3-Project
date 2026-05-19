@@ -27,6 +27,8 @@ public:
 
     void PlayAttackMontage();
 
+    void PlayAttackMontageWithComp(class UBehaviorTreeComponent* OwnerComp, const class UBTTaskNode* ActionNode);
+
     FORCEINLINE bool IsAttacking() const { return bIsAttacking; }
 
 protected:

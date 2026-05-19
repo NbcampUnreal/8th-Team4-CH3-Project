@@ -6,6 +6,7 @@
 #include "Character/LA_BaseCharacter.h"
 #include "LA_TurretEnemy.generated.h"
 
+
 UCLASS()
 class LASTARTEMIS_API ALA_TurretEnemy : public ALA_BaseCharacter
 {
@@ -19,6 +20,9 @@ protected:
     virtual void BeginPlay() override;
 
     virtual void Tick(float DeltaTime) override;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    class UParticleSystem* DeathExplosionEffect;
 
     // 포탑 헤드 (회전할 부분)
     UPROPERTY(VisibleAnywhere, Category = "Components")
@@ -45,6 +49,9 @@ protected:
     void FireProjectile();
     bool CheckLineOfSight(AActor* TargetActor);
     void SwitchTeam(FGameplayTag NewTeamTag);
+
+    virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
+    virtual void Die() override;
 
     UPROPERTY()
     AActor* CurrentTarget;
