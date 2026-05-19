@@ -11,6 +11,7 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameMode/LA_GameModeBase.h"
 
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
@@ -300,6 +301,13 @@ void ALA_EnemyCharacter::Die()
     GetWorldTimerManager().ClearTimer(DamageDisplayTimer);
 
     Super::Die(); // 여기서 bIsDead가 true가 됨
+
+    // 적 사망 시 GameMode에 전달
+    if (ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("NotifyEnemyKilled Called"));
+        LA_GameMode->NotifyEnemyKilled(this);
+    }
 
     if (DeathMontage) PlayAnimMontage(DeathMontage);
 

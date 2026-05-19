@@ -228,6 +228,16 @@ void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResul
     return Camera->GetCameraView(DeltaTime, OutResult);
 }
 
+void ALA_PlayerCharacter::OnDeathCameraTimelineFinished()
+{
+    ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+
+    if (!LA_GameMode)
+        return;
+
+    LA_GameMode->OnGameOver();
+}
+
 UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
 {
     return EquipedWeapon == nullptr ? DeathCamera.Get() : EquipedWeapon->GetFirstPersonCamera();
@@ -294,14 +304,18 @@ void ALA_PlayerCharacter::OnPlayerDeath()
 
     // Timeline에서 호출될 함수 설정
     FOnTimelineFloat TargetArmLengthCallback;
-    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));  // TargetArmLength 길이 조정
+    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));      // TargetArmLength 길이 조정
 
     FOnTimelineVector CameraBoomRotationEulerCallback;
-    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation")); // Rotation 조정
+    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation"));     // Rotation 조정
+
+    FOnTimelineEvent DeathCameraFinishedCallback;
+    DeathCameraFinishedCallback.BindUFunction(this, FName("OnDeathCameraTimelineFinished"));    // 타임라인 종료 시 호출될 함수 바인딩
 
     // 타임라인 커브 추가
     DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
     DeathCameraTimeline.AddInterpVector(CameraBoomRotationEulerCurve, CameraBoomRotationEulerCallback);
+    DeathCameraTimeline.SetTimelineFinishedFunc(DeathCameraFinishedCallback);
 
     // 타임라인 재생
     DeathCameraTimeline.SetTimelineLength(DeathCameraDuration);
