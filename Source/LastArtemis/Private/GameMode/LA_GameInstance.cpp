@@ -236,6 +236,7 @@ void ULA_GameInstance::SaveGameData()
     }
 
     LA_SaveGame->CheckPointData = CheckPointData;
+    bSaveSuccess = UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
 
     UE_LOG(LogTemp, Warning, TEXT("CheckPoint Save - MissionId: %s, PhaseIndex: %d, Location: %s, ElapsedTime: %d"),
         *CheckPointData.MissionId.ToString(),
@@ -259,6 +260,20 @@ void ULA_GameInstance::LoadGameData()
         return;
 
     CheckPointData = LA_SaveGame->CheckPointData;
+
+    // 미션 ID까지 복구
+    if (CheckPointData.MissionId.IsValid())
+    {
+        UObject* MissionObject = UAssetManager::Get().GetPrimaryAssetObject(CheckPointData.MissionId);
+
+        if (!MissionObject)
+        {
+            const FSoftObjectPath MissionPath = UAssetManager::Get().GetPrimaryAssetPath(CheckPointData.MissionId);
+            MissionObject = MissionPath.TryLoad();
+        }
+
+        SelectedMissionDataAsset = Cast<ULA_MissionDataAsset>(MissionObject);
+    }
 
     bSaveSuccess = true;
 

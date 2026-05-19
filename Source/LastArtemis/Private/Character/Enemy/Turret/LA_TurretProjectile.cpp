@@ -2,87 +2,107 @@
 
 
 #include "Character/Enemy/Turret/LA_TurretProjectile.h"
-
 #include "GameplayTagAssetInterface.h"
 #include "GameplayTagContainer.h"
 #include "Kismet/GameplayStatics.h"
+#include "Components/SphereComponent.h"
 
 
-class IGameplayTagAssetInterface;
-// Sets default values
 ALA_TurretProjectile::ALA_TurretProjectile()
 {
-    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-    PrimaryActorTick.bCanEverTick = true;
+    // 생성자에서는 아무것도 만들 필요 없습니다. 부모가 이미 다 만들어 놨습니다!
+    // 원한다면 부모 변수인 Damage의 기본값만 터렛에 맞게 튜닝합니다.
+    Damage = 25.0f;
 }
 
+void ALA_TurretProjectile::BeginPlay()
+{
+    //  [초특급 중요] 이걸 호출해야 부모의 BeginPlay 안에 있는
+    // CollisionComp->OnComponentBeginOverlap.AddDynamic(...) 코드가 정상 가동됩니다!
+    Super::BeginPlay();
+}
+
+// 🎯 부모의 함수를 완벽하게 가로챈 자식만의 대미지 정산 함수
 void ALA_TurretProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-    // 유효성 검사 및 자폭 방지 (나 자신이나 나를 생성한 포탑은 맞추지 않음)
+    // 기초 예외 처리 (나 자신이나 나를 쏜 포탑 무시)
     if (!OtherActor || OtherActor == this || OtherActor == GetOwner() || OtherActor == GetInstigator()) return;
 
-    // 나를 쏜 포탑(Instigator)과 맞은 대상(OtherActor)의 팀 정보를 담을 컨테이너
     FGameplayTagContainer MyTeamTags;
     FGameplayTagContainer TargetTeamTags;
+    FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
+    FGameplayTag AllyTag = FGameplayTag::RequestGameplayTag(FName("Team.Ally"));
 
-    bool bMyTeamFound = false;
-    bool bTargetTeamFound = false;
+    // 발사대(터렛) 팀 추출
+    AActor* MyLauncher = GetInstigator();
+    if (!MyLauncher) MyLauncher = GetOwner();
 
-    //  포탑(Instigator)의 팀 태그 추출
-    IGameplayTagAssetInterface* InstigatorTags = Cast<IGameplayTagAssetInterface>(GetInstigator());
-    if (InstigatorTags)
+    if (MyLauncher)
     {
-        InstigatorTags->GetOwnedGameplayTags(MyTeamTags);
-        bMyTeamFound = true;
-    }
-    else if (GetInstigator())
-    {
-        // 인터페이스 실패 시 일반 액터 태그 검사 (안전장치)
-        if (GetInstigator()->ActorHasTag(FName("Team.Enemy"))) MyTeamTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
-        if (GetInstigator()->ActorHasTag(FName("Team.Ally"))) MyTeamTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")));
-        bMyTeamFound = !MyTeamTags.IsEmpty();
-    }
+        IGameplayTagAssetInterface* InstigatorTags = Cast<IGameplayTagAssetInterface>(MyLauncher);
+        if (InstigatorTags) InstigatorTags->GetOwnedGameplayTags(MyTeamTags);
 
-    //  맞은 대상(Target)의 팀 태그 추출
-    IGameplayTagAssetInterface* TargetTags = Cast<IGameplayTagAssetInterface>(OtherActor);
-    if (TargetTags)
-    {
-        TargetTags->GetOwnedGameplayTags(TargetTeamTags);
-        bTargetTeamFound = true;
-    }
-    else
-    {
-        // 인터페이스 실패 시 일반 액터 태그 검사 (안전장치)
-        if (OtherActor->ActorHasTag(FName("Team.Enemy"))) TargetTeamTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
-        if (OtherActor->ActorHasTag(FName("Team.Ally"))) TargetTeamTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")));
-        bTargetTeamFound = !TargetTeamTags.IsEmpty();
-    }
-
-    //  둘 다 팀 정보가 확실히 확인되었을 때만 비교 연산 작동
-    if (bMyTeamFound && bTargetTeamFound)
-    {
-        //  작성하신 핵심 로직 유지: 포탑과 타겟의 팀이 다를 때만 공격!
-        if (!MyTeamTags.HasAny(TargetTeamTags))
+        if (MyTeamTags.IsEmpty())
         {
-            UGameplayStatics::ApplyDamage(
-                OtherActor,
-                Damage, // 부모 클래스의 Damage 변수 활용
-                GetInstigatorController(),
-                this,
-                UDamageType::StaticClass()
-            );
-
-            UE_LOG(LogTemp, Log, TEXT("[터렛 투사체] 적 진영 타격 성공! 대상: %s"), *OtherActor->GetName());
-
-            // 명중했으므로 투사체 소멸
-            Destroy();
+            if (FProperty* TagProp = MyLauncher->GetClass()->FindPropertyByName(FName("CharacterTags")))
+            {
+                if (FGameplayTagContainer* PropValue = TagProp->ContainerPtrToValuePtr<FGameplayTagContainer>(MyLauncher))
+                {
+                    MyTeamTags = *PropValue;
+                }
+            }
         }
     }
-    //  예외 처리: 만약 아군/적군 캐릭터가 아니라 일반 벽(Static)에 부딪힌 거라면 소멸시킵니다.
-    else if (OtherComp && OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
+
+    // 맞은 대상(플레이어 등) 팀 추출
+    IGameplayTagAssetInterface* TargetTags = Cast<IGameplayTagAssetInterface>(OtherActor);
+    if (TargetTags) TargetTags->GetOwnedGameplayTags(TargetTeamTags);
+
+    if (TargetTeamTags.IsEmpty())
+    {
+        if (FProperty* TagProp = OtherActor->GetClass()->FindPropertyByName(FName("CharacterTags")))
+        {
+            if (FGameplayTagContainer* PropValue = TagProp->ContainerPtrToValuePtr<FGameplayTagContainer>(OtherActor))
+            {
+                TargetTeamTags = *PropValue;
+            }
+        }
+    }
+
+    // 플레이어 인터페이스 누락 예외 우회 치트키
+    if (TargetTeamTags.IsEmpty())
+    {
+        if (OtherActor->ActorHasTag(FName("Team.Ally")) || OtherActor->GetName().ToLower().Contains(TEXT("player")) || (Cast<APawn>(OtherActor) && Cast<APawn>(OtherActor)->IsPlayerControlled()))
+        {
+            TargetTeamTags.AddTag(AllyTag);
+        }
+    }
+
+    // 다른 팀일 때만 대미지 폭격 수행 (피아식별 교차 검증)
+    if (!MyTeamTags.IsEmpty() && !TargetTeamTags.IsEmpty())
+    {
+        if (!MyTeamTags.HasAny(TargetTeamTags))
+        {
+            // 부모가 물려준 Damage 변수의 값을 그대로 사용합니다.
+            UGameplayStatics::ApplyDamage(OtherActor, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
+
+            UE_LOG(LogTemp, Warning, TEXT(" [터렛 자식 투사체] %s 타격 대미지 주입 완료! 대미지: %f"), *OtherActor->GetName(), Damage);
+
+            Destroy();
+            return;
+        }
+        else
+        {
+            // 같은 팀이면 총알만 삭제 (팀킬 방지)
+            Destroy();
+            return;
+        }
+    }
+
+    // 캐릭터가 아닌 벽(WorldStatic)에 부딪힌 경우 소멸 (부모의 원래 기능 수행)
+    if (OtherComp && OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
     {
         Destroy();
     }
 }
-
 

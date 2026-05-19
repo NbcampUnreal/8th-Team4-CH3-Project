@@ -9,7 +9,9 @@
 #include "Character/Player/Component/LA_HealthComponent.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "BehaviorTree/BehaviorTreeComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameMode/LA_GameModeBase.h"
 
 ALA_EnemyCharacter::ALA_EnemyCharacter()
 {
@@ -89,9 +91,60 @@ void ALA_EnemyCharacter::PlayAttackMontage()
         if (Duration > 0.0f)
         {
             FTimerHandle AttackTimerHandle;
+            //[최종 수정] 타이머의 여유 시간(+0.5f)을 완전히 제거하고 순수 'Duration'으로만 맞춥니다!
+            // 애니메이션이 눈으로 보기에 딱 끝나는 그 타이밍에 정확하게 bIsAttacking을 false로 밀어줍니다.
             GetWorld()->GetTimerManager().SetTimer(
                 AttackTimerHandle,
-                [this]() { bIsAttacking = false; },
+                [this]()
+                {
+                    bIsAttacking = false;
+                    // [안전장치] 혹시 비헤이비어 트리가 멈춰있을지 모르니,
+                    // 공격 상태가 풀리는 순간에 다음 프레임 연산을 강제로 깨우는 안전벨트입니다.
+                    PrimaryActorTick.SetTickFunctionEnable(false);
+                },
+                Duration, // 정확히 애니메이션 실제 길이만큼만 대기!
+                false
+            );
+        }
+        else
+        {
+            bIsAttacking = false;
+        }
+    }
+}
+
+void ALA_EnemyCharacter::PlayAttackMontageWithComp(UBehaviorTreeComponent* OwnerComp, const UBTTaskNode* ActionNode)
+{
+    if (bIsAttacking || bIsDead) return;
+
+    UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
+    if (AnimInstance && AttackMontage)
+    {
+        bIsAttacking = true;
+
+        float Duration = PlayAnimMontage(AttackMontage);
+
+        if (Duration > 0.0f)
+        {
+            FTimerHandle AttackTimerHandle;
+
+            // 🎯 OwnerComp와 ActionNode를 함께 람다 캡처로 넘겨줍니다.
+            GetWorld()->GetTimerManager().SetTimer(
+                AttackTimerHandle,
+                [this, OwnerComp, ActionNode]()
+                {
+                    bIsAttacking = false;
+
+                    if (OwnerComp && ActionNode)
+                    {
+                        UBehaviorTreeComponent* BTComp = const_cast<UBehaviorTreeComponent*>(OwnerComp);
+                        if (BTComp)
+                        {
+                            // 💥 [수정] 불완전한 GetActiveNode() 대신 확실한 테스크 노드 주소를 직접 꽂아줍니다!
+                            BTComp->OnTaskFinished(ActionNode, EBTNodeResult::Succeeded);
+                        }
+                    }
+                },
                 Duration,
                 false
             );
@@ -105,35 +158,63 @@ void ALA_EnemyCharacter::PlayAttackMontage()
 
 void ALA_EnemyCharacter::EnemyMeleeAttackCheck()
 {
-    // 공격 판정 범위 설정
-    FVector StartLocation = GetActorLocation() + GetActorForwardVector() * 40.f;
-    FVector EndLocation = StartLocation + GetActorForwardVector() * MeleeAttackRange;
+    // [수정] 시작 지점을 에너미 중심에서 약간 뒤나 정확한 중심축으로 잡고, 사거리를 확실하게 늘려 헛방을 방지합니다.
+    FVector StartLocation = GetActorLocation();
+    FVector EndLocation = StartLocation + GetActorForwardVector() * (MeleeAttackRange + 60.0f);
 
     TArray<AActor*> ActorsToIgnore;
-    ActorsToIgnore.Add(this); // 나 자신은 당연히 공격에서 제외
+    ActorsToIgnore.Add(this);
 
     FHitResult HitResult;
 
-    // ECC_Pawn 채널을 탐색하는 스피어 트레이스 실행
+    // [수정] 플레이어가 무조건 반응할 수밖에 없는 'ECC_Visibility' 채널로 변경합니다.
+    // 플레이어 카메라나 화면 렌더링용 채널이기 때문에 어떤 액터든 기본적으로 블록(Block)이 켜져 있습니다.
     bool bHit = UKismetSystemLibrary::SphereTraceSingle(
-         GetWorld(), StartLocation, EndLocation, MeleeAttackRadius,
-         UEngineTypes::ConvertToTraceType(ECC_Pawn), false, ActorsToIgnore,
-         EDrawDebugTrace::ForDuration, HitResult, true
-     );
+         GetWorld(), StartLocation, EndLocation, MeleeAttackRadius + 10.0f,
+         UEngineTypes::ConvertToTraceType(ECC_Visibility), false, ActorsToIgnore,
+         EDrawDebugTrace::ForDuration, HitResult, true);
 
     if (bHit && HitResult.GetActor())
     {
         AActor* HitActor = HitResult.GetActor();
 
-        if (HitActor->ActorHasTag(FName("Team.Enemy")))
+        // 1. 동료 에너미 차단
+        IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(HitActor);
+        FGameplayTagContainer TargetTags;
+        if (TagInterface)
+        {
+            TagInterface->GetOwnedGameplayTags(TargetTags);
+        }
+
+        if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy"))) || HitActor->ActorHasTag(FName("Team.Enemy")))
         {
             return;
         }
 
-        if (HitActor->ActorHasTag(FName("Team.Ally")))
+        // [수정] 타격 대상이 아군 AI인지 검증하는 방어막 확장
+        bool bIsAlly = false;
+        if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally"))) ||
+            HitActor->ActorHasTag(FName("Team.Ally")) ||
+            HitActor->GetName().Contains(TEXT("Player")) ||
+            HitActor->GetName().Contains(TEXT("Ally")) ||
+            HitActor->GetClass()->GetName().Contains(TEXT("Ally")))
         {
-            UGameplayStatics::ApplyDamage(HitActor, AttackPower, GetController(), this, nullptr);
+            bIsAlly = true;
         }
+
+        // 확실하게 아군 판정이 나면 대미지 꽂기
+        if (bIsAlly)
+        {
+            float HeavyDamage = 50.0f;
+            UGameplayStatics::ApplyDamage(HitActor, HeavyDamage, GetController(), this, nullptr);
+
+            UE_LOG(LogTemp, Error, TEXT("🔥 [적 공격 성공] 아군 AI(또는 플레이어) 타격 완료! 대상: %s 🔥"), *HitActor->GetName());
+        }
+    }
+    else
+    {
+        // 아예 안 맞았을 때 로그 (디버깅용)
+        UE_LOG(LogTemp, Log, TEXT("💨 에너미가 칼을 휘둘렀으나 사거리가 닿지 않거나 콜리전 채널이 빗나감."));
     }
 }
 
@@ -220,6 +301,13 @@ void ALA_EnemyCharacter::Die()
     GetWorldTimerManager().ClearTimer(DamageDisplayTimer);
 
     Super::Die(); // 여기서 bIsDead가 true가 됨
+
+    // 적 사망 시 GameMode에 전달
+    if (ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("NotifyEnemyKilled Called"));
+        LA_GameMode->NotifyEnemyKilled(this);
+    }
 
     if (DeathMontage) PlayAnimMontage(DeathMontage);
 

@@ -84,10 +84,6 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
     if (GameState->IsCurrentPhaseCompleted())
         return;
 
-    ALA_EnemyCharacter* DeadEnemyCharacter = Cast<ALA_EnemyCharacter>(DeadEnemy);
-    if (!DeadEnemyCharacter)
-        return;
-
     // 적 tag 검사
     const FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     const FGameplayTag BossTag = FGameplayTag::RequestGameplayTag(FName("Team.Boss"));
@@ -101,7 +97,7 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
         bIsEnemyTag = EnemyCharacter->CharacterTags.HasTagExact(EnemyTag);
     }
     // 처치한 적이 boss 태그를 가지고 있으면 true
-    else if (ALA_BossCharacter* BossCharacter = Cast<ALA_BossCharacter>(DeadEnemy))
+    if (ALA_BossCharacter* BossCharacter = Cast<ALA_BossCharacter>(DeadEnemy))
     {
         bIsBossTag = BossCharacter->CharacterTags.HasTagExact(BossTag);
     }
@@ -129,6 +125,12 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
                 return;
 
             HandleObjectiveProgress(1);
+
+            if (GameState->IsCurrentPhaseCompleted())
+            {
+                AdvanceToNextPhase();
+            }
+
             break;
         }
 
