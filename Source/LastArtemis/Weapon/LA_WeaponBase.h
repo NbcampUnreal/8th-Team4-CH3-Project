@@ -27,10 +27,8 @@ protected:
 
     virtual float GetDynamicSpreadAngle() const;
 
-    virtual bool CanFire() const;
     virtual void Fire();
     virtual void HitScan();
-
     virtual void ApplyRecoil();
     virtual void ResetRecoil();
     virtual void ResetState();
@@ -60,6 +58,9 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
     EWeaponState CurrentState;
 
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
+    int32 CurrentMagazineAmmo;
+
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     USceneComponent* Root;
@@ -80,8 +81,6 @@ private:
     float CameraPitch;
     float CameraYaw;
     float CurrentSpreadAngle;
-
-    int32 CurrentMagazineAmmo;
     int32 CurrentSpareAmmo;
 
     FRotator TargetSway;
