@@ -69,6 +69,17 @@ ULA_GameInstance* LA_GameInstance = GetGameInstance<ULA_GameInstance>();
 
         // HUD 생성
         APlayerController* PC = GetWorld()->GetFirstPlayerController();
+
+        if (PC)
+        {
+            FInputModeGameOnly InputMode;
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = false;
+
+            PC->SetIgnoreLookInput(false);
+            PC->SetIgnoreMoveInput(false);
+        }
+
         if (PC && HUDClass)
         {
             ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDClass);
@@ -180,6 +191,16 @@ void ALA_GameModeBase::ResumeGame()
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), false);
+
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        FInputModeGameOnly InputMode;
+        PC->SetInputMode(InputMode);
+        PC->bShowMouseCursor = false;
+
+        PC->SetIgnoreLookInput(false);
+        PC->SetIgnoreMoveInput(false);
+    }
 
     // 이어서 측정해야 되므로 false
     StartGameTimer(false);
