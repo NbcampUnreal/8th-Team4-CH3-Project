@@ -216,6 +216,32 @@ void ALA_GameModeBase::OnGameOver()
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+    ShowGameOverUI();
+}
+
+void ALA_GameModeBase::ShowGameOverUI()
+{
+    if (!GameOverWidgetClass)
+        return;
+
+    APlayerController* LA_PlayerController = GetWorld()->GetFirstPlayerController();
+    if (!LA_PlayerController)
+        return;
+
+    CurrentGameOverWidget = CreateWidget<UUserWidget>(LA_PlayerController, GameOverWidgetClass);
+    if (!CurrentGameOverWidget)
+        return;
+
+    CurrentGameOverWidget->AddToViewport();
+
+    FInputModeUIOnly InputMode;
+    InputMode.SetWidgetToFocus(CurrentGameOverWidget->TakeWidget());
+    LA_PlayerController->SetInputMode(InputMode);
+    LA_PlayerController->bShowMouseCursor = true;
+
+    LA_PlayerController->SetIgnoreLookInput(true);
+    LA_PlayerController->SetIgnoreMoveInput(true);
 }
 
 void ALA_GameModeBase::OnGameClear()

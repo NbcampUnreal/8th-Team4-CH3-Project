@@ -134,6 +134,9 @@ protected:
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PauseMenuWidgetClass;
 
+    UPROPERTY()
+    TObjectPtr<UUserWidget> CurrentPauseMenu;
+
 #pragma endregion
 
 #pragma region Weapons Settings
