@@ -62,7 +62,7 @@ void ALA_AllyAIController::BeginPlay()
 
 void ALA_AllyAIController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
 {
-    //UE_LOG(LogTemp, Warning, TEXT("OnTargetDetected Called!"));
+    UE_LOG(LogTemp, Warning, TEXT("OnTargetDetected Called!"));
 
 
     if (Stimulus.WasSuccessfullySensed())

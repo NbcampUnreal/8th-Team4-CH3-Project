@@ -15,9 +15,10 @@ ALA_AllyAISpawner::ALA_AllyAISpawner()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
+    USceneComponent* SceneComp = CreateDefaultSubobject<USceneComponent>(FName("SceneComponent"));
+    SetRootComponent(SceneComp);
     CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(FName("CapsuleComponent"));
-    SetRootComponent(CapsuleComp);
-
+    CapsuleComp->SetupAttachment(SceneComp);
     CapsuleComp->InitCapsuleSize(87.406487f, 30.018118f);
 
     SpawnDirection = CreateDefaultSubobject<UArrowComponent>("ArrowComponent");
@@ -33,7 +34,7 @@ void ALA_AllyAISpawner::BeginPlay()
     if (!World || !AllyClass) return;
 
     // 자기 자신의 위치와 회전값 저장
-    FVector Location = GetActorLocation();
+    FVector Location = CapsuleComp->GetComponentLocation();
     FRotator Rotation = GetActorRotation();
 
     // 스폰 파라미터
