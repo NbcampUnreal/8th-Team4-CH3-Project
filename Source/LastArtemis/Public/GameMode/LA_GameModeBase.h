@@ -78,12 +78,6 @@ public:
     UPROPERTY()
     class ULA_MissionResult* CurrentResultWidget;
 
-    // 게임 오버 UI
-    UPROPERTY(EditAnywhere, Category = "UI")
-    TSubclassOf<UUserWidget> GameOverWidgetClass;
-
-    UPROPERTY()
-    TObjectPtr<UUserWidget> CurrentGameOverWidget;
 
     void ShowGameOverUI();
 

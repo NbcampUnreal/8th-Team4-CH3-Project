@@ -1013,7 +1013,7 @@ void ALA_PlayerCharacter::PauseAction()
     }
 }
 
-void ALA_PlayerCharacter::InventoryInputAction()
+void ALA_PlayerCharacter::InventoryAction()
 {
     if (Controller == nullptr) return;
     // 게임 일시정지 로직 실행
