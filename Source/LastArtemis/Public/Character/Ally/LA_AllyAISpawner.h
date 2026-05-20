@@ -19,6 +19,8 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CapsuleComponent")
+    class UCapsuleComponent* CapsuleComp;
     // 방향 확인용 애로우 컴포넌트
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Display")
     class UArrowComponent* SpawnDirection;
