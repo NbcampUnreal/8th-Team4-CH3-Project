@@ -34,7 +34,6 @@ ALA_WeaponBase::ALA_WeaponBase()
     TargetSway = FRotator::ZeroRotator;
     CurrentSway = FRotator::ZeroRotator;
     CurrentSpareAmmo = 90;
-    CurrentMagazineAmmo = WeaponData->MaxMagazineSize;
     CurrentState = EWeaponState::Idle;
 }
 
@@ -84,9 +83,6 @@ void ALA_WeaponBase::Tick(float DeltaTime)
         CameraYaw += RecoilDeltaThisFrame.Yaw;
         Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
     }
-
-    // debug log current spare ammo count
-    GEngine->AddOnScreenDebugMessage(-1, 1.f, FColor::White, FString::Printf(TEXT("Spare Ammo: %d"), CurrentSpareAmmo));
 }
 
 void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
@@ -100,6 +96,7 @@ void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
 
     bIsAiming = false;
     CurrentState = EWeaponState::Idle;
+    CurrentMagazineAmmo = WeaponData->MaxMagazineSize;
     CurrentSpreadAngle = WeaponData->DefaultSpreadAngle;
     ResetRecoil();
 
