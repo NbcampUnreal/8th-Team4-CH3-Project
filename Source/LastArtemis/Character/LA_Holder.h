@@ -32,7 +32,7 @@ public:
     /// </summary>
     /// <param name="WeaponData">무기의 데이터</param>
     UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category = "ILA_Holder")
-    void AddWeaponToPawn(ULA_WeaponData* WeaponData);
+    void AddWeaponToPawn(FPrimaryAssetId WeaponDataID);
 
 	/// <summary>
 	/// 임의 무기를 장착(부착)하는 함수
