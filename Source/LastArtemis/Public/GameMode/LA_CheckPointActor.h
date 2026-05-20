@@ -13,6 +13,7 @@ class UStaticMeshComponent;
 class USphereComponent;
 class UWidgetComponent;
 class APawn;
+class ALA_AllyAISpawner;
 
 UCLASS(BlueprintType)
 class LASTARTEMIS_API ALA_CheckPointActor : public AActor, public ILA_Interactable
@@ -61,6 +62,8 @@ public:
 
     void RefillItems(APawn* InteractingPawn);
 
+    void RespawnAllies(APawn* InteractingPawn);
+
 protected:
     ////////////////////
     // 컴포넌트
@@ -103,4 +106,11 @@ protected:
     // 오염도 제거 아이템
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Item")
     TObjectPtr<ULA_ItemDataAsset> DecontaminationItemData;
+
+    ////////////////////
+    // 아군 AI
+    ////////////////////
+    // 아군 AI
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ally Spawn")
+    TObjectPtr<ALA_AllyAISpawner> AllySpawner;
 };

@@ -3,11 +3,12 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "Engine/AssetManager.h"
 #include "GameFramework/Character.h"
+#include "Components/TimelineComponent.h"
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
 #include "LastArtemis/Character/LA_Holder.h"
-#include "Components/TimelineComponent.h"
 #include "LA_PlayerCharacter.generated.h"
 
 // Forward Declaration
@@ -146,16 +147,16 @@ protected:
 
     // 초기에 사용하는 무기 데이터
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
-    TObjectPtr<ULA_WeaponData> initialWeaponData;
+    FPrimaryAssetId initialWeaponData;
 
     // 무기 퀵슬롯 (1, 2, 3)에 해당하는 OwnedWeapons의 Key 값을 관리하는 배열
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TArray<FName> WeaponNameIndexer;
+    TArray<FPrimaryAssetId> WeaponIDIndexer;
 
     // 보유한 무기 목록
     // { ULA_WeaponData::WeaponName, ULA_WeaponData* }
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TMap<FName, ULA_WeaponData*> OwnedWeapons;
+    TMap<FPrimaryAssetId, ULA_WeaponData*> OwnedWeapons;
     // Key : 무기 데이터 클래스
     // Value : CDO와 비교하여 달라진 부분을 관리하는 구조체 또는 클래스
     //TMap<TSubclassOf<ULA_WeaponData>, FLA_WeaponDeltaProperty*> OwnedWeapons;
@@ -183,6 +184,8 @@ protected:
     UPROPERTY()
     // 캐릭터 사망 시 재생되는 Timeline
     FTimeline DeathCameraTimeline;
+
+    TSharedPtr<FStreamableHandle> DataAssetLoadingHandler;
 
     // 사망 카메라 타임라인 종료 후 GameOver 호출
     UFUNCTION()
@@ -221,7 +224,7 @@ public:
     /// 중복된 무기 획득 시 총알 보충
     /// </summary>
     /// <param name="WeaponData">획득한 무기 데이터</param>
-    virtual void AddWeaponToPawn_Implementation(ULA_WeaponData* WeaponData) override;
+    virtual void AddWeaponToPawn_Implementation(FPrimaryAssetId WeaponDataID) override;
 
     /// <summary>
     /// 임의 무기를 장착(부착)하는 함수
@@ -303,6 +306,9 @@ protected:
     // SpringArmComponent의 Rotation 값을 조정하는 함수
     UFUNCTION()
     void UpdateCameraBoomRotation(FVector Value);
+
+    UFUNCTION()
+    void OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId WeaponDataID);
 
 #pragma region InputAction Binding
 

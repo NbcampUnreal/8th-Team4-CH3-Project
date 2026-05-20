@@ -2,8 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "Curves/CurveVector.h"
-#include "Animation/AnimMontage.h"
 #include "LA_WeaponData.generated.h"
 
 UCLASS(BlueprintType)
@@ -12,8 +10,12 @@ class LASTARTEMIS_API ULA_WeaponData : public UPrimaryDataAsset
     GENERATED_BODY()
 
 public:
+    // AssetManager에서 생성된 DataAsset을 인식하기 위하여 함수 오버라이딩
+    FORCEINLINE virtual FPrimaryAssetId GetPrimaryAssetId() const override { return FPrimaryAssetId(WeaponType, GetFName()); }
+
+public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    FName WeaponName;   // 서로 다른 ULA_WeaponData를 구분하는 고유값
+    FPrimaryAssetType WeaponType;
 
     // Visual
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
@@ -79,7 +81,7 @@ public:
 
     // Recoil
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Recoil")
-    UCurveVector* RecoilCurve = nullptr;
+    class UCurveVector* RecoilCurve = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Recoil")
     float RecoilSpeed = 20.0f;
@@ -104,11 +106,11 @@ public:
 
     // Animation
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-    UAnimMontage* DrawMontage = nullptr;
+    class UAnimMontage* DrawMontage = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-    UAnimMontage* FireMontage = nullptr;
+    class UAnimMontage* FireMontage = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-    UAnimMontage* ReloadMontage = nullptr;
+    class UAnimMontage* ReloadMontage = nullptr;
 };

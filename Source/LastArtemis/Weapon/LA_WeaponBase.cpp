@@ -6,6 +6,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
+#include "Curves/CurveVector.h"
 #include "LastArtemis/Character/LA_Holder.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 
@@ -82,6 +83,8 @@ void ALA_WeaponBase::Tick(float DeltaTime)
         CameraYaw += RecoilDeltaThisFrame.Yaw;
         Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
     }
+
+    GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Spare Ammo = %d"), CurrentSpareAmmo));
 }
 
 void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
@@ -116,8 +119,6 @@ void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
 
 void ALA_WeaponBase::Draw()
 {
-    if (CurrentState != EWeaponState::Idle) return;
-
     CurrentState = EWeaponState::Draw;
 
     if (UAnimMontage* AnimMontage = WeaponData->DrawMontage)
@@ -141,7 +142,7 @@ void ALA_WeaponBase::Look(FVector InputValue)
 
 void ALA_WeaponBase::StartFire()
 {
-    if (!CanFire()) return;
+    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo <= 0) return;
 
     Fire();
     GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &ALA_WeaponBase::Fire, WeaponData->FireRate, true);
@@ -184,11 +185,6 @@ float ALA_WeaponBase::GetDynamicSpreadAngle() const
 
     DynamicSpreadAngle += CurrentSpreadAngle; // 누적 합
     return FMath::Clamp(DynamicSpreadAngle, WeaponData->MinSpreadAngle, WeaponData->MaxSpreadAngle);
-}
-
-bool ALA_WeaponBase::CanFire() const
-{
-    return CurrentState == EWeaponState::Idle && CurrentMagazineAmmo > 0;
 }
 
 void ALA_WeaponBase::Fire()
