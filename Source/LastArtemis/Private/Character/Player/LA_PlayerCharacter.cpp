@@ -1013,6 +1013,35 @@ void ALA_PlayerCharacter::PauseAction()
     }
 }
 
+void ALA_PlayerCharacter::InventoryAction()
+{
+    if (Controller == nullptr) return;
+    // 게임 일시정지 로직 실행
+    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        GM->PauseGame();
+    }
+
+    // 인벤토리 UI 생성 및 출력
+    if (InventoryWidgetClass)
+    {
+        UUserWidget* Inventory = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
+        if (Inventory)
+        {
+            Inventory->AddToViewport();
+
+            // 입력 모드 전환
+            if (APlayerController* PC = Cast<APlayerController>(Controller))
+            {
+                FInputModeUIOnly InputMode;
+                InputMode.SetWidgetToFocus(Inventory->TakeWidget());
+                PC->SetInputMode(InputMode);
+                PC->bShowMouseCursor = true;
+            }
+        }
+    }
+}
+
 void ALA_PlayerCharacter::UseQuickSlot(int32 SlotIndex)
 {
     if (!InventoryComponent)
@@ -1023,6 +1052,7 @@ void ALA_PlayerCharacter::UseQuickSlot(int32 SlotIndex)
 
     InventoryComponent->UseQuickItem(SlotIndex, this);
 }
+
 
 #pragma endregion
 

@@ -64,19 +64,20 @@ public:
     // 위젯 클래스
     TSubclassOf<UUserWidget> HUDClass;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> GameOverWidgetClass;
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<class ULA_MissionResult> ResultWidgetClass;
 
-    // 결과 위젯 인스턴스를 보관할 포인터
+    // 게임 오버 위젯 인스턴스 포인터
+    UPROPERTY()
+    UUserWidget* CurrentGameOverWidget;
+
+    // 결과 위젯 인스턴스 포인터
     UPROPERTY()
     class ULA_MissionResult* CurrentResultWidget;
 
-    // 게임 오버 UI
-    UPROPERTY(EditAnywhere, Category = "UI")
-    TSubclassOf<UUserWidget> GameOverWidgetClass;
-
-    UPROPERTY()
-    TObjectPtr<UUserWidget> CurrentGameOverWidget;
 
     void ShowGameOverUI();
 
