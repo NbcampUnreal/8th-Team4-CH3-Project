@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "Character/Ally/LA_AllyAISpawner.h"
@@ -12,8 +12,8 @@
 // Sets default values
 ALA_AllyAISpawner::ALA_AllyAISpawner()
 {
- 	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+    // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
+    PrimaryActorTick.bCanEverTick = false;
 
     CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(FName("CapsuleComponent"));
     SetRootComponent(CapsuleComp);
@@ -24,57 +24,95 @@ ALA_AllyAISpawner::ALA_AllyAISpawner()
     SpawnDirection->SetupAttachment(RootComponent);
 }
 
-// Called when the game starts or when spawned
+// 게임 시작 시 bSpawnOnBeginPlay이 true일 경우,
+// 플레이어 주변에 Ally 자동 생성
 void ALA_AllyAISpawner::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
+
+    if (bSpawnOnBeginPlay)
+    {
+        APawn* PlayerPawn = GetWorld() && GetWorld()->GetFirstPlayerController()
+            ? GetWorld()->GetFirstPlayerController()->GetPawn()
+            : nullptr;
+
+        RespawnAlliesNearPlayer(PlayerPawn);
+    }
+}
+
+// 기존에 스포너가 만든 Ally를 제거
+// 플레이어 주변에 Ally를 새로 생성
+void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
+{
+    if (!PlayerPawn)
+        return;
+
+    if (!AllyClass)
+        return;
 
     UWorld* World = GetWorld();
-    if (!World || !AllyClass) return;
+    if (!World)
+        return;
 
-    // 자기 자신의 위치와 회전값 저장
-    FVector Location = GetActorLocation();
-    FRotator Rotation = GetActorRotation();
-
-    // 스폰 파라미터
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Owner = this;
-    SpawnParams.Instigator = Cast<APawn>(GetOwner());
-    SpawnParams.SpawnCollisionHandlingOverride =
-        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-    // 아군 소환
-    ALA_AllyAI* SpawnedAlly = World->SpawnActor<ALA_AllyAI>(AllyClass, Location, Rotation, SpawnParams);
-
-    if (SpawnedAlly)
+    // 기존에 이 스포너가 만든 Ally 제거
+    for (ALA_AllyAI* Ally : SpawnedAllies)
     {
-        // 스폰시 애니메이션 초기화
-        if (USkeletalMeshComponent* SkeletalMeshComp = SpawnedAlly->GetMesh())
+        if (IsValid(Ally))
         {
-            // 일시정지 해제
-            SkeletalMeshComp->SetComponentTickEnabled(true);
-            // 애니메이션 블루프린트 강제 재초기화
-            SkeletalMeshComp->InitializeAnimScriptInstance(true);
-            // 본 포즈 리프레시
-            SkeletalMeshComp->RefreshBoneTransforms();
-
+            Ally->Destroy();
         }
+    }
 
-        // 게임모드에 SpawnedAlly 저장
-        if (AGameModeBase* GM = UGameplayStatics::GetGameMode(World))
+    SpawnedAllies.Empty();
+
+    // 플레이어 뒤 쪽에 설정된 수만큼 Ally 생성
+    for (int32 Index = 0; Index < AllySpawnCount; ++Index)
+    {
+        const FVector SpawnLocation = GetAllySpawnLocation(PlayerPawn, Index);
+        const FRotator SpawnRotation = PlayerPawn->GetActorRotation();
+
+        FActorSpawnParameters SpawnParams;
+        SpawnParams.Owner = this;
+        SpawnParams.Instigator = PlayerPawn;
+        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+        ALA_AllyAI* NewAlly = World->SpawnActor<ALA_AllyAI>(
+            AllyClass,
+            SpawnLocation,
+            SpawnRotation,
+            SpawnParams
+        );
+
+        if (NewAlly)
         {
-            if (ALA_GameModeBase* MyGM = Cast<ALA_GameModeBase>(GM))
+            // 재스폰 시 제거할 수 있도록 생성된 Ally 저장
+            SpawnedAllies.Add(NewAlly);
+
+            // 스폰 직후 애니메이션 보정?
+            if (USkeletalMeshComponent* SkeletalMeshComp = NewAlly->GetMesh())
             {
-                // Todo : 게임모드에 스폰된 AllyAI 저장하는 함수 만들기
-                // void RegisterAlly(ALA_AllyAI* NewAlly) { SpawnedAllies.Add(NewAlly); }
-                // TArray<ALA_AllyAI*> SpawnedAllies;
-
-
-                // MyGM->RegisterAlly(SpawnedAlly);
+                SkeletalMeshComp->SetComponentTickEnabled(true);
+                SkeletalMeshComp->InitializeAnimScriptInstance(true);
+                SkeletalMeshComp->RefreshBoneTransforms();
             }
         }
     }
 }
 
+// 생성할 Ally의 위치 계산 
+FVector ALA_AllyAISpawner::GetAllySpawnLocation(APawn* PlayerPawn, int32 AllyIndex) const
+{
+    if (!PlayerPawn)
+    {
+        return GetActorLocation();
+    }
 
+    const FVector PlayerLocation = PlayerPawn->GetActorLocation();
+    const FVector Forward = PlayerPawn->GetActorForwardVector();
+    const FVector Right = PlayerPawn->GetActorRightVector();
 
+    // 오른쪽, 왼쪽에 하나씩 배치
+    const float SideSign = AllyIndex % 2 == 0 ? -1.0f : 1.0f;
+
+    return PlayerLocation - Forward * SpawnBackDistance + Right * SpawnSideDistance * SideSign;
+}
