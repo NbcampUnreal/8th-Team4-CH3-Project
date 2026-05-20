@@ -145,12 +145,12 @@ protected:
 
     // 무기 퀵슬롯 (1, 2, 3)에 해당하는 OwnedWeapons의 Key 값을 관리하는 배열
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TArray<FName> WeaponNameIndexer;
+    TArray<FPrimaryAssetId> WeaponIDIndexer;
 
     // 보유한 무기 목록
     // { ULA_WeaponData::WeaponName, ULA_WeaponData* }
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TMap<FName, ULA_WeaponData*> OwnedWeapons;
+    TMap<FPrimaryAssetId, ULA_WeaponData*> OwnedWeapons;
     // Key : 무기 데이터 클래스
     // Value : CDO와 비교하여 달라진 부분을 관리하는 구조체 또는 클래스
     //TMap<TSubclassOf<ULA_WeaponData>, FLA_WeaponDeltaProperty*> OwnedWeapons;

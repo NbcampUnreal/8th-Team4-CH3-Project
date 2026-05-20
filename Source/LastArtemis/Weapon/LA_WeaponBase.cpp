@@ -82,6 +82,8 @@ void ALA_WeaponBase::Tick(float DeltaTime)
         CameraYaw += RecoilDeltaThisFrame.Yaw;
         Camera->SetRelativeRotation(FRotator(CameraPitch, CameraYaw, 0.f));
     }
+
+    GEngine->AddOnScreenDebugMessage(-1, 0, FColor::Black, FString::Printf(TEXT("Spare Ammo = %d"), CurrentSpareAmmo));
 }
 
 void ALA_WeaponBase::SetWeaponData(ULA_WeaponData* NewWeaponData)
