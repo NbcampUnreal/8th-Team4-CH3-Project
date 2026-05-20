@@ -5,6 +5,7 @@
 
 #include "Components/ArrowComponent.h"
 #include "Character/Ally/LA_AllyAI.h"
+#include "Components/CapsuleComponent.h"
 #include "GameMode/LA_GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -14,8 +15,10 @@ ALA_AllyAISpawner::ALA_AllyAISpawner()
  	// Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = false;
 
-    USceneComponent* Scene = CreateDefaultSubobject<USceneComponent>("SceneComponent");
-    SetRootComponent(Scene);
+    CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(FName("CapsuleComponent"));
+    SetRootComponent(CapsuleComp);
+
+    CapsuleComp->InitCapsuleSize(87.406487f, 30.018118f);
 
     SpawnDirection = CreateDefaultSubobject<UArrowComponent>("ArrowComponent");
     SpawnDirection->SetupAttachment(RootComponent);

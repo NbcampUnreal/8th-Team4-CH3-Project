@@ -138,9 +138,7 @@ void ALA_AllyAI::Die()
         GetMesh()->SetCollisionProfileName(TEXT("Ragdoll"));
         GetMesh()->SetSimulatePhysics(true);
     }
-
     SetLifeSpan(5.0f);
-
 }
 
 void ALA_AllyAI::ResetHitState()
@@ -163,8 +161,12 @@ void ALA_AllyAI::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
             SkeletalMeshComp->SetComponentTickEnabled(false);
 
         }
-
     }
+}
+
+void ALA_AllyAI::ResetFiringState()
+{
+    bIsFiring = false;
 }
 
 

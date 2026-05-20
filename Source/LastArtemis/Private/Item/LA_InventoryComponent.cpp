@@ -181,7 +181,8 @@ bool ULA_InventoryComponent::UseItem(int32 SlotIndex, AActor* UseTarget)
 }
 
 // 아이템 수량 감소
-// 수량이 0 이하면 슬롯 자체를 제거
+// 고정 슬롯 구조
+// 수량이 0 이하면 해당 슬롯의 데이터만 비움
 bool ULA_InventoryComponent::RemoveItem(int32 SlotIndex, int32 RemoveCount)
 {
     if (!ItemSlots.IsValidIndex(SlotIndex))
@@ -351,6 +352,14 @@ bool ULA_InventoryComponent::SetQuickItemSlot(int32 QuickSlotIndex, int32 ItemSl
     QuickSlots[QuickSlotIndex] = ItemSlot.ItemAssetId;
 
     return true;
+}
+
+FPrimaryAssetId ULA_InventoryComponent::GetQuickSlot(int32 QuickSlotIndex) const
+{
+    if (!QuickSlots.IsValidIndex(QuickSlotIndex))
+        return FPrimaryAssetId();
+
+    return QuickSlots[QuickSlotIndex];
 }
 
 // 퀵 슬롯 아이템 사용

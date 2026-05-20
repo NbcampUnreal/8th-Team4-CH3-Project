@@ -2,8 +2,6 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "Curves/CurveVector.h"
-#include "Animation/AnimMontage.h"
 #include "LA_WeaponData.generated.h"
 
 UCLASS(BlueprintType)
@@ -83,7 +81,7 @@ public:
 
     // Recoil
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Recoil")
-    UCurveVector* RecoilCurve = nullptr;
+    class UCurveVector* RecoilCurve = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Recoil")
     float RecoilSpeed = 20.0f;
@@ -108,11 +106,11 @@ public:
 
     // Animation
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-    UAnimMontage* DrawMontage = nullptr;
+    class UAnimMontage* DrawMontage = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-    UAnimMontage* FireMontage = nullptr;
+    class UAnimMontage* FireMontage = nullptr;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Animation")
-    UAnimMontage* ReloadMontage = nullptr;
+    class UAnimMontage* ReloadMontage = nullptr;
 };

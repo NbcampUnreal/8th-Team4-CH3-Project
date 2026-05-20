@@ -135,6 +135,12 @@ protected:
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PauseMenuWidgetClass;
 
+    UPROPERTY()
+    TObjectPtr<UUserWidget> CurrentPauseMenu;
+
+    UPROPERTY(EditAnywhere, Category = "UI")
+    TSubclassOf<UUserWidget> InventoryWidgetClass;
+
 #pragma endregion
 
 #pragma region Weapons Settings
@@ -347,8 +353,11 @@ protected:
     // 타겟 명령 키 입력 종료 시 호출되는 함수
     void CommandTargetCompletedAction();
 
-    // 일시정지 키에 입력 시 호출되는  함수
+    // 일시정지 키 입력 시 호출되는  함수
     void PauseAction();
+
+    // 인벤토리 키 입력 시 호출되는  함수
+    void InventoryAction();
 
     // 퀵 슬롯에서 아이템 사용 시 호출되는 함수
     void UseQuickSlot(int32 SlotIndex);

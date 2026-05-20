@@ -58,6 +58,9 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Score")
     void ResetScore();
 
+    UFUNCTION(BlueprintCallable, Category = "Score")
+    int32 GetScore();
+
     ////////////////////////////////////////////////////////////////////////
     // 미션 로직
     // - UI에서 선택한 MissionDataAsset을 GameInstnace에서 보관
@@ -87,7 +90,7 @@ public:
     // 체크 포인트 상호 작용 시 메모리에 저장
     // SaveGameData()에서 저장
     UFUNCTION(BlueprintCallable, Category = "Save")
-    void SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime);
+    void SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime, int32 SaveScore);
 
     // 미션 클리어 시 결과 저장
     // 게임 오버는 UI로만 전달

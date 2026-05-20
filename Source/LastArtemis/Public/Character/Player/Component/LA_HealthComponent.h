@@ -8,6 +8,7 @@
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedDelegate, float, float);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShieldChangedDelegate, float, float);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnContaminationDelegate, float, float);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -35,6 +36,9 @@ public:
 
 	// 실드량 변화 이벤트
 	FOnShieldChangedDelegate OnShieldChanged;
+
+    // 오염도 변화 이벤트
+    FOnContaminationDelegate OnContaminationChanged;
 
 	// 캐릭터 사망 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "Events")
@@ -73,17 +77,7 @@ protected:
 
 #pragma endregion
 
-#pragma region Contamination
-
-    // 최대 오염도
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
-    float MaxContamination;
-
-    // 현재 오염도
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Stats")
-    float CurrentContamination;
-
-#pragma endregion
+#pragma region DefaultStatus
 
 	// 기본 공격력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
@@ -92,6 +86,16 @@ protected:
 	// 기본 방어력
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Stats")
 	float Defense;
+
+#pragma endregion
+
+#pragma region Contamination
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+    float CurrentContamination;
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Status")
+    float MaxContamination;
 
 #pragma endregion
 

@@ -268,6 +268,8 @@ FHitResult ALA_PlayerCharacter::LineTraceForward(float distance)
 
 void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
 {
+    if (EquipedWeapon->CurrentState != EWeaponState::Idle) return;
+
     // 인덱스 유효성 확인
     if (WeaponIDIndexer.IsValidIndex(WeaponIndex) == false)
     {
@@ -994,25 +996,73 @@ void ALA_PlayerCharacter::CommandTargetCompletedAction()
 void ALA_PlayerCharacter::PauseAction()
 {
     if (Controller == nullptr) return;
+
+    APlayerController* PC = Cast<APlayerController>(Controller);
+    if (!PC)
+        return;
+
+    ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (!GM)
+        return;
+
+    // 일시 정지 상태면 게임 재개
+    if (UGameplayStatics::IsGamePaused(GetWorld()))
+    {
+        if (CurrentPauseMenu)
+        {
+            CurrentPauseMenu->RemoveFromParent();
+            CurrentPauseMenu = nullptr;
+        }
+
+        GM->ResumeGame();
+
+        return;
+    }
+
+    // 일시 정지 로직 실행
+    GM->PauseGame();
+
+    // 일시정지 UI 생성 및 출력
+    if (PauseMenuWidgetClass)
+    {
+        CurrentPauseMenu = CreateWidget<UUserWidget>(PC, PauseMenuWidgetClass);
+        if (CurrentPauseMenu)
+        {
+            CurrentPauseMenu->AddToViewport();
+
+            // 입력 모드 전환
+            FInputModeGameAndUI InputMode;
+            InputMode.SetWidgetToFocus(CurrentPauseMenu->TakeWidget());
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
+        }
+    }
+}
+
+void ALA_PlayerCharacter::InventoryAction()
+{
+    if (Controller == nullptr) return;
     // 게임 일시정지 로직 실행
     if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
     {
         GM->PauseGame();
     }
 
-    // 일시정지 UI 생성 및 출력
-    if (PauseMenuWidgetClass)
+    // 인벤토리 UI 생성 및 출력
+    if (InventoryWidgetClass)
     {
-        UUserWidget* PauseMenu = CreateWidget<UUserWidget>(GetWorld(), PauseMenuWidgetClass);
-        if (PauseMenu)
+        UUserWidget* Inventory = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
+        if (Inventory)
         {
-            PauseMenu->AddToViewport();
+            Inventory->AddToViewport();
 
             // 입력 모드 전환
             if (APlayerController* PC = Cast<APlayerController>(Controller))
             {
                 FInputModeUIOnly InputMode;
-                InputMode.SetWidgetToFocus(PauseMenu->TakeWidget());
+                InputMode.SetWidgetToFocus(Inventory->TakeWidget());
                 PC->SetInputMode(InputMode);
                 PC->bShowMouseCursor = true;
             }
@@ -1030,6 +1080,7 @@ void ALA_PlayerCharacter::UseQuickSlot(int32 SlotIndex)
 
     InventoryComponent->UseQuickItem(SlotIndex, this);
 }
+
 
 #pragma endregion
 
