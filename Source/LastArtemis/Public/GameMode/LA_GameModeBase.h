@@ -58,18 +58,32 @@ public:
     void HandleMissionComplete(float FinalTime, int32 FinalScore, FString FinalRank);
 
     ////////////////////////
-    /// 미션 진행 제어
+    /// 위젯 
     ////////////////////////
 
     // 위젯 클래스
     TSubclassOf<UUserWidget> HUDClass;
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> GameOverWidgetClass;
+
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<class ULA_MissionResult> ResultWidgetClass;
 
-    // 결과 위젯 인스턴스를 보관할 포인터
+    // 게임 오버 위젯 인스턴스 포인터
+    UPROPERTY()
+    UUserWidget* CurrentGameOverWidget;
+
+    // 결과 위젯 인스턴스 포인터
     UPROPERTY()
     class ULA_MissionResult* CurrentResultWidget;
+
+
+    void ShowGameOverUI();
+
+    ////////////////////////
+    /// 미션 진행 제어
+    ////////////////////////
 
     // 현재 미션 데이터(MissionDataAsset)을 바탕으로 Phase 시작
     UFUNCTION(BlueprintCallable, Category = "Mission")

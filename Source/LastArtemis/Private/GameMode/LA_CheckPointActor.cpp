@@ -145,8 +145,9 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     const FVector SaveLocation = InteractingPawn->GetActorLocation();
     const FRotator SaveRotation = InteractingPawn->GetActorRotation();
     const int32 SaveElapsedGameTime = LA_GameState->GetElapsedGameTime();
+    const int32 CurrentScore = LA_GameInstance->GetScore();
 
-    LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation, SaveElapsedGameTime);
+    LA_GameInstance->SaveCheckPointData(CurrentPhaseIndex, SaveLocation, SaveRotation, SaveElapsedGameTime, CurrentScore);
     LA_GameInstance->SaveGameData();
 
     // 체력 회복 / 오염도 제거
