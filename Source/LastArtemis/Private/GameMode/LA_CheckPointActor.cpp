@@ -7,6 +7,7 @@
 #include "Character/LA_BaseCharacter.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
+#include "Character/Ally/LA_AllyAISpawner.h"
 #include "Components/SceneComponent.h"
 #include "Components/StaticMeshComponent.h"
 #include "Components/SphereComponent.h"
@@ -157,6 +158,9 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     // 아이템 보급
     RefillItems(InteractingPawn);
 
+    // 아군 AI 재생성
+    RespawnAllies(InteractingPawn);
+
     UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s, ElapsedGmeTime: %d"),
         CurrentPhaseIndex,
         *SaveLocation.ToString(),
@@ -225,4 +229,15 @@ void ALA_CheckPointActor::Interact_Implementation(AActor* InteractInstigator)
 
     // 세이브 포인트 저장 및 체력 회복
     InteractCheckPoint(InteractingPawn);
+}
+
+void ALA_CheckPointActor::RespawnAllies(APawn* InteractingPawn)
+{
+    if (!InteractingPawn)
+        return;
+
+    if (!AllySpawner)
+        return;
+
+    AllySpawner->RespawnAlliesNearPlayer(InteractingPawn);
 }
