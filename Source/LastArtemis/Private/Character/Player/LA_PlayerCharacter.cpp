@@ -198,6 +198,7 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
 		    if (LA_Controller->CommandTargetAction != nullptr)
 		    {
 		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::CommandTargetStartedAction);
+		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Triggered, this, &ALA_PlayerCharacter::CommandTargetTriggeredAction);
 		        enhancedInputComponent->BindAction(LA_Controller->CommandTargetAction, ETriggerEvent::Completed, this, &ALA_PlayerCharacter::CommandTargetCompletedAction);
 
 		    }
@@ -226,6 +227,16 @@ void ALA_PlayerCharacter::CalcCamera(float DeltaTime, FMinimalViewInfo& OutResul
     UCameraComponent* Camera = GetCameraComponent();
 
     return Camera->GetCameraView(DeltaTime, OutResult);
+}
+
+void ALA_PlayerCharacter::OnDeathCameraTimelineFinished()
+{
+    ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+
+    if (!LA_GameMode)
+        return;
+
+    LA_GameMode->OnGameOver();
 }
 
 UCameraComponent* ALA_PlayerCharacter::GetCameraComponent() const
@@ -294,14 +305,18 @@ void ALA_PlayerCharacter::OnPlayerDeath()
 
     // Timeline에서 호출될 함수 설정
     FOnTimelineFloat TargetArmLengthCallback;
-    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));  // TargetArmLength 길이 조정
+    TargetArmLengthCallback.BindUFunction(this, FName("UpdateCameraBoomTargetArmLength"));      // TargetArmLength 길이 조정
 
     FOnTimelineVector CameraBoomRotationEulerCallback;
-    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation")); // Rotation 조정
+    CameraBoomRotationEulerCallback.BindUFunction(this, FName("UpdateCameraBoomRotation"));     // Rotation 조정
+
+    FOnTimelineEvent DeathCameraFinishedCallback;
+    DeathCameraFinishedCallback.BindUFunction(this, FName("OnDeathCameraTimelineFinished"));    // 타임라인 종료 시 호출될 함수 바인딩
 
     // 타임라인 커브 추가
     DeathCameraTimeline.AddInterpFloat(TargetArmLengthCurve, TargetArmLengthCallback);
     DeathCameraTimeline.AddInterpVector(CameraBoomRotationEulerCurve, CameraBoomRotationEulerCallback);
+    DeathCameraTimeline.SetTimelineFinishedFunc(DeathCameraFinishedCallback);
 
     // 타임라인 재생
     DeathCameraTimeline.SetTimelineLength(DeathCameraDuration);
@@ -883,55 +898,117 @@ void ALA_PlayerCharacter::CommandTargetStartedAction()
 {
     // V 누르는 순간 실행
     // TODO: UI 표시 로직 추가 예정
-    UE_LOG(LogTemp, Warning, TEXT("CommandTarget Started!"));
+
+
+    //UE_LOG(LogTemp, Warning, TEXT("CommandTarget Started!"));
 
 
 }
 
+void ALA_PlayerCharacter::CommandTargetTriggeredAction()
+{
+    TArray<AActor*> Enemies = GetVisibleEnemies();
+    AActor* NewAimedEnemy = GetCrosshairTarget(Enemies);
+
+
+
+    if (CurrentAimedEnemy != NewAimedEnemy)
+    {
+        if (CurrentAimedEnemy.IsValid())
+        {
+            if (USkeletalMeshComponent* OldMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+            {
+                OldMesh->SetOverlayMaterial(nullptr);
+            }
+        }
+    }
+
+    if (NewAimedEnemy && OutlineMaterial)
+    {
+        if (USkeletalMeshComponent* NewMesh = NewAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+        {
+            NewMesh->SetOverlayMaterial(OutlineMaterial);
+        }
+    }
+
+    CurrentAimedEnemy = NewAimedEnemy;
+
+}
+
+
+
 void ALA_PlayerCharacter::CommandTargetCompletedAction()
 {
 
+    AActor* FinalTarget = CurrentAimedEnemy.Get();
 
-    // 화면에 보이는 적군 목록 가져오기
-    TArray<AActor*> Enemies = GetVisibleEnemies();
 
-    // 크로스헤어에 가장 가까운 적군 선택
-    CurrentTargetEnemy = GetCrosshairTarget(Enemies);
-
-    if (CurrentTargetEnemy)
+    if (FinalTarget)
     {
-        UE_LOG(LogTemp, Warning, TEXT("Target: %s"), *CurrentTargetEnemy->GetName());
-        // TODO:  아군 AI 타겟 변경
-
-        SetTarget(CurrentTargetEnemy);
+        UE_LOG(LogTemp, Warning, TEXT("Target: %s"), *FinalTarget->GetName());
+        SetTarget(FinalTarget);
     }
+    else
+    {
+        UE_LOG(LogTemp, Log, TEXT("공격 명령 취소"));
+    }
+
+    if (CurrentAimedEnemy.IsValid())
+    {
+        if (USkeletalMeshComponent* AimedMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+        {
+            AimedMesh->SetOverlayMaterial(nullptr);
+        }
+    }
+    CurrentAimedEnemy = nullptr;
+
+    // TODO: 조준 UI 끄기
 }
 
 void ALA_PlayerCharacter::PauseAction()
 {
     if (Controller == nullptr) return;
-    // 게임 일시정지 로직 실행
-    if (ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+
+    APlayerController* PC = Cast<APlayerController>(Controller);
+    if (!PC)
+        return;
+
+    ALA_GameModeBase* GM = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld()));
+    if (!GM)
+        return;
+
+    // 일시 정지 상태면 게임 재개
+    if (UGameplayStatics::IsGamePaused(GetWorld()))
     {
-        GM->PauseGame();
+        if (CurrentPauseMenu)
+        {
+            CurrentPauseMenu->RemoveFromParent();
+            CurrentPauseMenu = nullptr;
+        }
+
+        GM->ResumeGame();
+
+        return;
     }
+
+    // 일시 정지 로직 실행
+    GM->PauseGame();
 
     // 일시정지 UI 생성 및 출력
     if (PauseMenuWidgetClass)
     {
-        UUserWidget* PauseMenu = CreateWidget<UUserWidget>(GetWorld(), PauseMenuWidgetClass);
-        if (PauseMenu)
+        CurrentPauseMenu = CreateWidget<UUserWidget>(PC, PauseMenuWidgetClass);
+        if (CurrentPauseMenu)
         {
-            PauseMenu->AddToViewport();
+            CurrentPauseMenu->AddToViewport();
 
             // 입력 모드 전환
-            if (APlayerController* PC = Cast<APlayerController>(Controller))
-            {
-                FInputModeUIOnly InputMode;
-                InputMode.SetWidgetToFocus(PauseMenu->TakeWidget());
-                PC->SetInputMode(InputMode);
-                PC->bShowMouseCursor = true;
-            }
+            FInputModeGameAndUI InputMode;
+            InputMode.SetWidgetToFocus(CurrentPauseMenu->TakeWidget());
+            InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = true;
         }
     }
 }

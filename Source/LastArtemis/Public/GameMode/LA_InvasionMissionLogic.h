@@ -23,4 +23,6 @@ protected:
     // 침투 미션 세부 기능 구현
     void HandleInvasionObjective(const FLA_InvasionPhaseData& PhaseData);
     virtual void HandleEnemyKilled(AActor* DeadEnemy) override;
+    // 적 처치 시 보상 획득
+    void AddScore(int32 ScoreAmount);
 };

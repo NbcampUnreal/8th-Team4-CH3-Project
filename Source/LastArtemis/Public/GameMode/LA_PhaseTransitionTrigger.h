@@ -23,6 +23,17 @@ protected:
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 
+    UFUNCTION()
+    void OnTriggerBeginOverlap(
+        UPrimitiveComponent* OverlappedComponent,
+        AActor* OtherActor,
+        UPrimitiveComponent* OtherComp,
+        int32 OtherBodyIndex,
+        bool bFromSweep,
+        const FHitResult& SweepResult
+    );
+
+protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     USceneComponent* SceneComponent;
 
@@ -33,15 +44,9 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Phase")
     bool bTriggered = false;
 
-    UFUNCTION()
-    void OnTriggerBeginOverlap(
-        UPrimitiveComponent* OverlappedComponent,
-        AActor* OtherActor,
-        UPrimitiveComponent* OtherComp,
-        int32 OtherBodyIndex,
-        bool bFromSweep,
-        const FHitResult& SweepResult
-    );
+    // 이전 Phase 재진입 방지
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase")
+    int32 RequiredPhaseIndex = -1;
 
 public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Components")

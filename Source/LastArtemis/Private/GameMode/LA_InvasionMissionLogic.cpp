@@ -5,6 +5,7 @@
 #include "GameMode/LA_InvasionMissionDataAsset.h"
 #include "GameMode/LA_GameStateBase.h"
 #include "GameMode/LA_GameModeBase.h"
+#include "GameMode/LA_GameInstance.h"
 #include "Character/Enemy/LA_EnemyCharacter.h"
 #include "Character/Enemy/Boss/LA_BossCharacter.h"
 #include "UI/LA_GameType.h"
@@ -84,10 +85,6 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
     if (GameState->IsCurrentPhaseCompleted())
         return;
 
-    ALA_EnemyCharacter* DeadEnemyCharacter = Cast<ALA_EnemyCharacter>(DeadEnemy);
-    if (!DeadEnemyCharacter)
-        return;
-
     // 적 tag 검사
     const FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     const FGameplayTag BossTag = FGameplayTag::RequestGameplayTag(FName("Team.Boss"));
@@ -101,7 +98,7 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
         bIsEnemyTag = EnemyCharacter->CharacterTags.HasTagExact(EnemyTag);
     }
     // 처치한 적이 boss 태그를 가지고 있으면 true
-    else if (ALA_BossCharacter* BossCharacter = Cast<ALA_BossCharacter>(DeadEnemy))
+    if (ALA_BossCharacter* BossCharacter = Cast<ALA_BossCharacter>(DeadEnemy))
     {
         bIsBossTag = BossCharacter->CharacterTags.HasTagExact(BossTag);
     }
@@ -117,7 +114,9 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
             if (!bIsEnemyTag)
                 return;
 
+            AddScore(10);
             HandleObjectiveProgress(1);
+
             break;
         }
 
@@ -128,7 +127,14 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
             if (!bIsBossTag)
                 return;
 
+            AddScore(100);
             HandleObjectiveProgress(1);
+
+            if (GameState->IsCurrentPhaseCompleted())
+            {
+                AdvanceToNextPhase();
+            }
+
             break;
         }
 
@@ -172,4 +178,19 @@ void ULA_InvasionMissionLogic::HandleInvasionObjective(const FLA_InvasionPhaseDa
     //default:
     //    break;
     //}
+}
+
+void ULA_InvasionMissionLogic::AddScore(int32 ScoreAmount)
+{
+    if (ScoreAmount <= 0)
+        return;
+
+    if (!GameMode)
+        return;
+
+    ULA_GameInstance* LA_GameInstance = GameMode->GetGameInstance<ULA_GameInstance>();
+    if (!LA_GameInstance)
+        return;
+
+    LA_GameInstance->AddScore(ScoreAmount);
 }

@@ -56,7 +56,7 @@ public:
 
 public:
 #pragma region General Settings
-     
+
     // 달리기 키 입력에 대한 처리 방식을 결정하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
     EMovementInputMode SprintInputMode = EMovementInputMode::Toggle;
@@ -134,9 +134,8 @@ protected:
     UPROPERTY(EditAnywhere, Category = "UI")
     TSubclassOf<UUserWidget> PauseMenuWidgetClass;
 
-    // 블루프린트에서 설정할 인벤토리 위젯 클래스
-    UPROPERTY(EditAnywhere, Category = "UI")
-    TSubclassOf<UUserWidget> InventoryWidgetClass;
+    UPROPERTY()
+    TObjectPtr<UUserWidget> CurrentPauseMenu;
 
 #pragma endregion
 
@@ -181,6 +180,10 @@ protected:
     UPROPERTY()
     // 캐릭터 사망 시 재생되는 Timeline
     FTimeline DeathCameraTimeline;
+
+    // 사망 카메라 타임라인 종료 후 GameOver 호출
+    UFUNCTION()
+    void OnDeathCameraTimelineFinished();
 
 #pragma endregion
 
@@ -257,6 +260,7 @@ public:
 
 #pragma region Command Target
 
+public:
     // 적군 클래스
     UPROPERTY(EditAnywhere, Category = "Command")
     TSubclassOf<AActor> EnemyClass;
@@ -269,6 +273,18 @@ public:
     AActor* GetCrosshairTarget(const TArray<AActor*>& Enemies);
     // 타겟 명령
     void SetTarget(AActor* Target);
+
+protected:
+    UPROPERTY(EditDefaultsOnly, Category = "Targeting")
+    UMaterialInterface* OutlineMaterial;
+
+
+
+private:
+    // 현재 조준하고 있는 적 (외곽선이 켜져 있는 적)
+    TWeakObjectPtr<AActor> CurrentAimedEnemy;
+    // 최종적으로 타겟 명령을 내린 적
+    TWeakObjectPtr<AActor> CurrentTargetActor;
 
 #pragma endregion
 
@@ -323,15 +339,14 @@ protected:
 
     // 타겟 명령 키 입력 시작 시 호출되는 함수
     void CommandTargetStartedAction();
+    // 타겟 명령 키 입력 유지 중에 호출되는 함수
+    void CommandTargetTriggeredAction();
     // 타겟 명령 키 입력 종료 시 호출되는 함수
     void CommandTargetCompletedAction();
 
     // 일시정지 키에 입력 시 호출되는  함수
-    // 일시정지 키 입력 시 호출되는 함수
     void PauseAction();
 
-    // 인벤토리 키 입력 시 호출되는 함수
-    void InventoryInputAction();
     // 퀵 슬롯에서 아이템 사용 시 호출되는 함수
     void UseQuickSlot(int32 SlotIndex);
 

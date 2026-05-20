@@ -81,10 +81,10 @@ void ALA_EnemyController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
     if (!Actor) return;
 
     // [1단계 안전장치] 내가 나를 보거나, 내 동료 몬스터를 본 경우 무조건 0.001초 만에 칼차단
-    if (Actor == this || Actor == GetPawn() || Actor->ActorHasTag(FName("Team.Enemy")))
-    {
-        return;
-    }
+    if (Actor == this || Actor == GetPawn() || Actor->ActorHasTag(FName("Team.Enemy")) || Actor->IsA(ALA_EnemyCharacter::StaticClass()))
+        {
+            return;
+        }
 
     // [2단계 안전장치] 게임플레이 태그 검사
     IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(Actor);
@@ -100,7 +100,10 @@ void ALA_EnemyController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
     // 플레이어 캐릭터의 이름이나 태그 확인
     if (TargetTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally"))) ||
         Actor->ActorHasTag(FName("Team.Ally")) ||
-        Actor->GetName().Contains(TEXT("Player"))) // 혹시 모를 태그 누락 방지용 이름 검사 치트키
+        Actor->GetName().Contains(TEXT("Player")) ||
+        Actor->GetName().Contains(TEXT("Ally")) ||                         // 이름에 Ally가 포함되어 있거나
+        (Actor->GetClass()->GetName().Contains(TEXT("Ally"))) ||            // 블루프린트 클래스명에 Ally가 있거나
+        Actor->IsA(ACharacter::StaticClass()) && !Actor->ActorHasTag(FName("Team.Enemy"))) // 에너미가 아닌 모든 캐릭터 계열 강제 포함
     {
         bIsAlly = true;
     }
@@ -115,7 +118,6 @@ void ALA_EnemyController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
         {
             // 시야에 플레이어가 들어오면 정확하게 블랙보드에 장착
             BB->SetValueAsObject(TEXT("TargetActor"), Actor);
-            UE_LOG(LogTemp, Warning, TEXT("💥 [성공] 플레이어를 완벽하게 타겟으로 설정함: %s 💥"), *Actor->GetName());
         }
         else
         {
@@ -123,7 +125,6 @@ void ALA_EnemyController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
             if (BB->GetValueAsObject(TEXT("TargetActor")) == Actor)
             {
                 BB->ClearValue(TEXT("TargetActor"));
-                UE_LOG(LogTemp, Log, TEXT("💨 [알림] 플레이어를 시야에서 놓침"));
             }
         }
     }

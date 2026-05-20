@@ -89,6 +89,11 @@ void ULA_GameInstance::ResetScore()
     TotalScore = 0;
 }
 
+int32 ULA_GameInstance::GetScore()
+{
+    return TotalScore;
+}
+
 ////////////////////////////////////////////////////////////////////////
 /// 미션 로직
 ////////////////////////////////////////////////////////////////////////
@@ -141,7 +146,7 @@ ULA_SaveGame* ULA_GameInstance::LoadOrCreateSaveGameObject() const
 }
 
 
-void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime)
+void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation, FRotator SaveRotation, int32 ElapsedGameTime, int32 SaveScore)
 {
     const FPrimaryAssetId CurrentMissionId = GetSelectedMissionId();
     if (!CurrentMissionId.IsValid())
@@ -152,6 +157,7 @@ void ULA_GameInstance::SaveCheckPointData(int32 PhaseIndex, FVector SaveLocation
     CheckPointData.PlayerLocation = SaveLocation;
     CheckPointData.PlayerRotation = SaveRotation;
     CheckPointData.ElapsedGameTime = ElapsedGameTime;
+    CheckPointData.SavedScore = SaveScore;
 }
 
 void ULA_GameInstance::SaveMissionResultData(int32 ClearTime, int32 FinalScore, const FString& FinalRank)
@@ -236,6 +242,7 @@ void ULA_GameInstance::SaveGameData()
     }
 
     LA_SaveGame->CheckPointData = CheckPointData;
+    bSaveSuccess = UGameplayStatics::SaveGameToSlot(LA_SaveGame, SaveSlotName, 0);
 
     UE_LOG(LogTemp, Warning, TEXT("CheckPoint Save - MissionId: %s, PhaseIndex: %d, Location: %s, ElapsedTime: %d"),
         *CheckPointData.MissionId.ToString(),
@@ -259,6 +266,21 @@ void ULA_GameInstance::LoadGameData()
         return;
 
     CheckPointData = LA_SaveGame->CheckPointData;
+    TotalScore = CheckPointData.SavedScore;
+
+    // 미션 ID까지 복구
+    if (CheckPointData.MissionId.IsValid())
+    {
+        UObject* MissionObject = UAssetManager::Get().GetPrimaryAssetObject(CheckPointData.MissionId);
+
+        if (!MissionObject)
+        {
+            const FSoftObjectPath MissionPath = UAssetManager::Get().GetPrimaryAssetPath(CheckPointData.MissionId);
+            MissionObject = MissionPath.TryLoad();
+        }
+
+        SelectedMissionDataAsset = Cast<ULA_MissionDataAsset>(MissionObject);
+    }
 
     bSaveSuccess = true;
 

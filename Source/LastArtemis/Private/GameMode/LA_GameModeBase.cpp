@@ -69,6 +69,17 @@ void ALA_GameModeBase::BeginPlay()
 
         // HUD 생성
         APlayerController* PC = GetWorld()->GetFirstPlayerController();
+
+        if (PC)
+        {
+            FInputModeGameOnly InputMode;
+            PC->SetInputMode(InputMode);
+            PC->bShowMouseCursor = false;
+
+            PC->SetIgnoreLookInput(false);
+            PC->SetIgnoreMoveInput(false);
+        }
+
         if (PC && HUDClass)
         {
             ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDClass);
@@ -179,6 +190,16 @@ void ALA_GameModeBase::ResumeGame()
 
     UGameplayStatics::SetGamePaused(GetWorld(), false);
 
+    if (APlayerController* PC = GetWorld()->GetFirstPlayerController())
+    {
+        FInputModeGameOnly InputMode;
+        PC->SetInputMode(InputMode);
+        PC->bShowMouseCursor = false;
+
+        PC->SetIgnoreLookInput(false);
+        PC->SetIgnoreMoveInput(false);
+    }
+
     // 이어서 측정해야 되므로 false
     StartGameTimer(false);
 }
@@ -213,6 +234,32 @@ void ALA_GameModeBase::OnGameOver()
     }
 
     UGameplayStatics::SetGamePaused(GetWorld(), true);
+
+    ShowGameOverUI();
+}
+
+void ALA_GameModeBase::ShowGameOverUI()
+{
+    if (!GameOverWidgetClass)
+        return;
+
+    APlayerController* LA_PlayerController = GetWorld()->GetFirstPlayerController();
+    if (!LA_PlayerController)
+        return;
+
+    CurrentGameOverWidget = CreateWidget<UUserWidget>(LA_PlayerController, GameOverWidgetClass);
+    if (!CurrentGameOverWidget)
+        return;
+
+    CurrentGameOverWidget->AddToViewport();
+
+    FInputModeUIOnly InputMode;
+    InputMode.SetWidgetToFocus(CurrentGameOverWidget->TakeWidget());
+    LA_PlayerController->SetInputMode(InputMode);
+    LA_PlayerController->bShowMouseCursor = true;
+
+    LA_PlayerController->SetIgnoreLookInput(true);
+    LA_PlayerController->SetIgnoreMoveInput(true);
 }
 
 void ALA_GameModeBase::OnGameClear()
@@ -223,9 +270,14 @@ void ALA_GameModeBase::OnGameClear()
     // 미션 결과 데이터 SaveGame에 저장
     if (LA_GameInstance && LA_GameState)
     {
-        const int32 FinalTime = LA_GameState->GetElapsedGameTime();
-        const int32 FinalScore = LA_GameInstance->TotalScore;
-        const FString FinalRank = TEXT("S");
+        const int32 FinalTime = LA_GameState->GetElapsedGameTime(); // 플레이 시간
+        const int32 TargetClearTime = 1000;
+        const int32 TimeBonus = FMath::Max(0, TargetClearTime - FinalTime) / 3;
+
+        LA_GameInstance->AddScore(TimeBonus);
+
+        const int32 FinalScore = LA_GameInstance->TotalScore;       // 최종 점수
+        const FString FinalRank = TEXT("S");                        // 최종 랭크
 
         LA_GameInstance->SaveMissionResultData(FinalTime, FinalScore, FinalRank);
 
