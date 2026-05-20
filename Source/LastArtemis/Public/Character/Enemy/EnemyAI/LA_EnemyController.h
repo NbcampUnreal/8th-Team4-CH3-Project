@@ -12,7 +12,10 @@ class LASTARTEMIS_API ALA_EnemyController : public AAIController
 
 public:
     void BeginPlay();
+
     ALA_EnemyController();
+
+    virtual void Tick(float DeltaTime) override;
 
 protected:
     // --- 초기화 로직 ---
