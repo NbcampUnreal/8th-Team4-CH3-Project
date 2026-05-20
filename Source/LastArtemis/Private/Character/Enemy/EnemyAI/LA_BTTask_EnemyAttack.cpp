@@ -6,7 +6,7 @@
 ULA_BTTask_EnemyAttack::ULA_BTTask_EnemyAttack()
 {
     NodeName = TEXT("Attack");
-    bNotifyTick = false;
+    bNotifyTick = true;
 }
 
 EBTNodeResult::Type ULA_BTTask_EnemyAttack::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

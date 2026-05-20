@@ -35,6 +35,7 @@ void ULA_HUD::NativeConstruct()
     }
 
     BindHealth();
+    BindContamination();
     BindAmmo();
 
     if (HorizontalBox_Ally1) HorizontalBox_Ally1->SetVisibility(ESlateVisibility::Collapsed);
@@ -95,10 +96,10 @@ void ULA_HUD::BindHealth()
         HealthComp->OnHealthChanged.AddUObject(this, &ULA_HUD::UpdateHP);
         HealthComp->OnShieldChanged.AddUObject(this, &ULA_HUD::UpdateShield);
 
-        // 바인딩 직후 한번 실행해줌
+        // 바인딩 직후 초기화
         UpdateHP(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
         UpdateShield(HealthComp->GetCurrentShield(), HealthComp->GetMaxShield());
-        UE_LOG(LogTemp, Log, TEXT("HUD: Binding & Initial Update Success!"));
+
     }
 
     // 2. 아군 AI 바인딩
@@ -125,6 +126,27 @@ void ULA_HUD::BindHealth()
             UpdateAlly2HP(AllyHealth->GetCurrentHealth(), AllyHealth->GetMaxHealth());
         }
     }
+}
+
+void ULA_HUD::BindContamination()
+{
+    ACharacter* PlayerCharacter =
+    UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+
+    ULA_HealthComponent* HealthComp = PlayerCharacter->FindComponentByClass<ULA_HealthComponent>();
+
+    if (HealthComp)
+    {
+        HealthComp->OnContaminationChanged.AddUObject(this, &ULA_HUD::UpdateContamination);
+
+        // 바인딩 직후 초기화
+        UpdateContamination(HealthComp->GetCurrentContamination(), HealthComp->GetMaxContamination());
+
+    }
+}
+
+void ULA_HUD::BindQuickSlot()
+{
 }
 
 void ULA_HUD::BindAmmo()
