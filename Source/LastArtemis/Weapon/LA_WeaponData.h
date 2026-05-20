@@ -10,8 +10,12 @@ class LASTARTEMIS_API ULA_WeaponData : public UPrimaryDataAsset
     GENERATED_BODY()
 
 public:
+    // AssetManager에서 생성된 DataAsset을 인식하기 위하여 함수 오버라이딩
+    FORCEINLINE virtual FPrimaryAssetId GetPrimaryAssetId() const override { return FPrimaryAssetId(WeaponType, GetFName()); }
+
+public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon")
-    FName WeaponName;   // 서로 다른 ULA_WeaponData를 구분하는 고유값
+    FPrimaryAssetType WeaponType;
 
     // Visual
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
