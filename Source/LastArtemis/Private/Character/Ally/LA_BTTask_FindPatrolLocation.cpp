@@ -69,7 +69,11 @@ EBTNodeResult::Type ULA_BTTask_FindPatrolLocation::ExecuteTask(UBehaviorTreeComp
 
         FinalDestination = PlayerBackOffset + TacticalOffset;
 
-        if (NavSystem->ProjectPointToNavigation(FinalDestination, NavLocation))
+        // NavMesh 검사 범위
+        FVector Extent = FVector(10.f, 10.f, 250.f);
+
+        // 목적지가 빈 공간인지 확인
+        if (NavSystem->ProjectPointToNavigation(FinalDestination, NavLocation, Extent))
         {
             if (FVector::DistSquared(ExistingTargetLocation, NavLocation.Location)  < FMath::Square(100.f))
             {
@@ -84,7 +88,18 @@ EBTNodeResult::Type ULA_BTTask_FindPatrolLocation::ExecuteTask(UBehaviorTreeComp
         }
         else // 완벽하게 벽 속이라 보정이 불가할 때 -> 원본 좌표로 설정
         {
-            Blackboard->SetValueAsVector(FName("TargetLocation"), FinalDestination);
+            FVector SingleFileDestination;
+            // 플레이어 등 뒤가 막혀있는지 확인
+            if (NavSystem->ProjectPointToNavigation(PlayerBackOffset, NavLocation, FVector(50.f, 50.f, 250.f)))
+            {
+                SingleFileDestination = NavLocation.Location;
+            }
+            else
+            {
+                // 최악의 경우 플레이어 위치로 이동
+                SingleFileDestination = Player->GetActorLocation();
+            }
+            Blackboard->SetValueAsVector(FName("TargetLocation"), SingleFileDestination);
             DrawDebugSphere(GetWorld(), NavLocation.Location, 50.f, 12, FColor::Green, false, 1.f);
         }
         // 디버그 : 플레이어 등 뒤 기준점(파란색)부터 탐색 반경(빨간색)을 그려서 확인

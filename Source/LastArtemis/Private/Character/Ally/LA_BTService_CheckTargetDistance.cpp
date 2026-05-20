@@ -63,32 +63,37 @@ void ULA_BTService_CheckTargetDistance::TickNode(UBehaviorTreeComponent& OwnerCo
             }
         }
 
-        TArray<ALA_EnemyCharacter*> AllEnemies;
+        TArray<AActor*> AllEnemies;
         UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_EnemyCharacter::StaticClass(), AllEnemies);
 
-        ALA_EnemyCharacter* BestTarget = Target;
+        AActor* BestTarget = Target;
         float MinDistSq = CurrentTargetDistanceSq;
 
         // 타겟 전환에 필요한 최소 거리 차이
         float SwitchThresholdSq = FMath::Square(150.f);
 
-        for (ALA_EnemyCharacter* Enemy : AllEnemies)
+        for (AActor* Actor : AllEnemies)
         {
-            if (Enemy->bIsDead) continue;
-
-            float DistToEnemySq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Enemy->GetActorLocation());
-
-            if (DistToEnemySq < LoseSightDistSq)
+            ALA_EnemyCharacter* Enemy = Cast<ALA_EnemyCharacter>(Actor);
+            if (Enemy)
             {
-                if (Target == nullptr)
+                if (Enemy->bIsDead) continue;
+
+                float DistToEnemySq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Enemy->GetActorLocation());
+
+                if (DistToEnemySq < LoseSightDistSq)
                 {
-                    if (DistToEnemySq < MinDistSq)
+                    if (Target == nullptr)
                     {
-                        MinDistSq = DistToEnemySq;
-                        BestTarget = Enemy;
+                        if (DistToEnemySq < MinDistSq)
+                        {
+                            MinDistSq = DistToEnemySq;
+                            BestTarget = Enemy;
+                        }
                     }
                 }
             }
+
         }
     }
 
