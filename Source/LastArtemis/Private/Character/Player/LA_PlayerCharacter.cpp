@@ -264,6 +264,8 @@ FHitResult ALA_PlayerCharacter::LineTraceForward(float distance)
 
 void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
 {
+    if (EquipedWeapon->CurrentState != EWeaponState::Idle) return;
+
     // 인덱스 유효성 확인
     if (WeaponNameIndexer.IsValidIndex(WeaponIndex) == false)
     {

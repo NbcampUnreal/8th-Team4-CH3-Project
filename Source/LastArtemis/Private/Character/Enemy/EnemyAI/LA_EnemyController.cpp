@@ -55,10 +55,46 @@ ALA_EnemyController::ALA_EnemyController()
         EnemyPerceptionComponent->SetDominantSense(SightConfig->GetSenseImplementation());
     }
 
-    // 인식 업데이트 이벤트 연결
-    EnemyPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &ALA_EnemyController::OnTargetDetected);
+    PrimaryActorTick.bCanEverTick = true;
+}
 
-    PrimaryActorTick.bCanEverTick = false;
+void ALA_EnemyController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
+
+    UBlackboardComponent* BB = GetBlackboardComponent();
+    APawn* MyPawn = GetPawn();
+
+    if (BB && MyPawn)
+    {
+        // 1. 시야 감지 시스템이 찾아낸 타겟 액터를 블랙보드에서 긁어옵니다.
+        AActor* Target = Cast<AActor>(BB->GetValueAsObject(TEXT("TargetActor")));
+
+        if (Target)
+        {
+            // 2. 플레이어와 나 사이의 실제 거리를 계산합니다.
+            float Distance = FVector::Dist(MyPawn->GetActorLocation(), Target->GetActorLocation());
+
+            // 3. 에너미의 근접 공격 사거리 세팅 (기획 수치에 맞게 150~250 사이로 조절하세요!)
+            float EnemyAttackRange = 250.0f;
+
+            if (Distance <= EnemyAttackRange)
+            {
+                // ⚔️ 사거리 안이라면 비헤비어 트리가 기다리는 스위치를 'Is Set' 상태로 채워줍니다!
+                BB->SetValueAsObject(TEXT("IsTargetSpotted"), Target);
+            }
+            else
+            {
+                // 🏃 사거리 밖으로 도망치면 스위치를 꺼버려서(Not Set) 다시 쫓아가게 만듭니다.
+                BB->ClearValue(TEXT("IsTargetSpotted"));
+            }
+        }
+        else
+        {
+            // 타겟 자체가 사라지면 스위치도 당연히 청소합니다.
+            BB->ClearValue(TEXT("IsTargetSpotted"));
+        }
+    }
 }
 
 void ALA_EnemyController::OnPossess(APawn* InPawn)
