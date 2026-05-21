@@ -9,6 +9,7 @@
 #include "GameplayTagContainer.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BlackboardData.h"
+#include "Character/Enemy/Turret/LA_TurretEnemy.h"
 
 
 ALA_AllyAIController::ALA_AllyAIController()
@@ -17,7 +18,7 @@ ALA_AllyAIController::ALA_AllyAIController()
     SetPerceptionComponent(*NewPerception);
 
     SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
-    SightConfig->SightRadius = 1000.f;
+    SightConfig->SightRadius = 4000.f;
     SightConfig->PeripheralVisionAngleDegrees = 90.f;
     SightConfig->DetectionByAffiliation.bDetectFriendlies = true;
     SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
@@ -62,7 +63,7 @@ void ALA_AllyAIController::BeginPlay()
 
 void ALA_AllyAIController::OnTargetDetected(AActor* Actor, FAIStimulus Stimulus)
 {
-    UE_LOG(LogTemp, Warning, TEXT("OnTargetDetected Called!"));
+    // UE_LOG(LogTemp, Warning, TEXT("OnTargetDetected Called!"));
 
 
     if (Stimulus.WasSuccessfullySensed())
