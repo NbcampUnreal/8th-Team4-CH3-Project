@@ -4,6 +4,7 @@
 #include "Character/Enemy/Turret/LA_TurretProjectile.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameMode/LA_GameModeBase.h"
 
 // Sets default values
 ALA_TurretEnemy::ALA_TurretEnemy()
@@ -269,6 +270,13 @@ void ALA_TurretEnemy::Die()
 {
     // 부모의 Die() 기능을 먼저 실행시켜 공통 사망 처리(bIsDead = true 등)를 수행합니다.
     Super::Die();
+
+    // 적 사망 시 GameMode에 전달
+    if (ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("NotifyEnemyKilled Called"));
+        LA_GameMode->NotifyEnemyKilled(this);
+    }
 
     //  터렛 고유의 타이머 및 기능 정지
     GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
