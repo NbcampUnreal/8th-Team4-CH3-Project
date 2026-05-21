@@ -5,7 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "Components/CapsuleComponent.h"
 #include "GameMode/LA_GameModeBase.h"
-#include "Kismet/GameplayStatics.h" 
+#include "Kismet/GameplayStatics.h"
 
 ALA_BossCharacter::ALA_BossCharacter()
 {
@@ -35,9 +35,15 @@ void ALA_BossCharacter::BeginPlay()
 
     // 🎯 [태그 봉인 치트키] 블루프린트 세팅에 상관없이 게임 시작 시 무조건 적군으로 세팅!
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
+
     if (!CharacterTags.HasTag(EnemyTag))
     {
         CharacterTags.AddTag(EnemyTag);
+    }
+
+    if (!ActorHasTag(FName("Team.Enemy")))
+    {
+        Tags.Add(FName("Team.Enemy"));
     }
 }
 
