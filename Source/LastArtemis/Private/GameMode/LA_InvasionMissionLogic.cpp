@@ -92,15 +92,10 @@ void ULA_InvasionMissionLogic::HandleEnemyKilled(AActor* DeadEnemy)
     bool bIsEnemyTag = false;
     bool bIsBossTag = false;
 
-    // 처치한 적이 enemy 태그를 가지고 있으면 true
-    if (ALA_EnemyCharacter* EnemyCharacter = Cast<ALA_EnemyCharacter>(DeadEnemy))
+    if (ALA_BaseCharacter* BaseCharacter = Cast<ALA_BaseCharacter>(DeadEnemy))
     {
-        bIsEnemyTag = EnemyCharacter->CharacterTags.HasTagExact(EnemyTag);
-    }
-    // 처치한 적이 boss 태그를 가지고 있으면 true
-    if (ALA_BossCharacter* BossCharacter = Cast<ALA_BossCharacter>(DeadEnemy))
-    {
-        bIsBossTag = BossCharacter->CharacterTags.HasTagExact(BossTag);
+        bIsEnemyTag = BaseCharacter->CharacterTags.HasTag(EnemyTag);
+        bIsBossTag = BaseCharacter->CharacterTags.HasTag(BossTag);
     }
 
     const ELA_PhaseType CurrentPhaseType = GameState->GetCurrentPhaseType();
