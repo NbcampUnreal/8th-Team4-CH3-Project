@@ -4,6 +4,8 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameplayTagContainer.h"
 #include "Components/CapsuleComponent.h"
+#include "GameMode/LA_GameModeBase.h"
+#include "Kismet/GameplayStatics.h" 
 
 ALA_BossCharacter::ALA_BossCharacter()
 {
@@ -128,6 +130,12 @@ void ALA_BossCharacter::Die()
 
     // 시체가 맵에 머무르는 시간 (10초 뒤 소멸)
     SetLifeSpan(10.0f);
+
+    if (ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("NotifyBossKilled Called"));
+        LA_GameMode->NotifyEnemyKilled(this);
+    }
 }
 
 void ALA_BossCharacter::CheckPhaseTransition()

@@ -105,4 +105,6 @@ public:
     int32 GetMaxMagazineSize() const { return WeaponData->MaxMagazineSize; }
 
     virtual void UpdateAmmo();
+
+    void RefillAmmo();
 };
