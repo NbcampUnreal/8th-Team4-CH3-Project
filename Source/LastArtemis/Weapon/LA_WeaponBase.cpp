@@ -64,11 +64,24 @@ void ALA_WeaponBase::Tick(float DeltaTime)
     FRotator NewRotation = FMath::RInterpTo(CurrentRotation, TargetRotation, DeltaTime, WeaponData->AimInterpSpeed);
     Mesh->SetRelativeRotation(NewRotation);
 
-    // Spread Angle Recovery
-    if (CurrentSpreadAngle > 0.f)
+    // Spread Angle
+    float TargetSpread = WeaponData->DefaultSpreadAngle;
+    if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
     {
-        CurrentSpreadAngle = FMath::FInterpTo(CurrentSpreadAngle, 0.f, DeltaTime, 1.f / WeaponData->FireRate);
+        float CurrentSpeed = OwnerCharacter->GetVelocity().Size2D();
+        float MaxSpeed = OwnerCharacter->GetCharacterMovement()->MaxWalkSpeed;
+        float SpeedRatio = CurrentSpeed / MaxSpeed;
+        TargetSpread += (SpeedRatio * 2.f);
     }
+
+    if (bIsAiming)
+    {
+        TargetSpread *= 0.5f;
+    }
+
+    TargetSpread = FMath::Clamp(TargetSpread, WeaponData->MinSpreadAngle, WeaponData->MaxSpreadAngle);
+    CurrentSpreadAngle = FMath::FInterpTo(CurrentSpreadAngle, TargetSpread, DeltaTime, 1.f / WeaponData->FireRate);
+    CurrentSpreadAngle = FMath::Clamp(CurrentSpreadAngle, WeaponData->MinSpreadAngle, WeaponData->MaxSpreadAngle);
 
     // Recoil
     if (TargetRecoil != CurrentRecoil)
@@ -140,6 +153,18 @@ void ALA_WeaponBase::Look(FVector InputValue)
     TargetSway = FRotator(PitchOffset, YawOffset, 0.f);
 }
 
+void ALA_WeaponBase::StartAiming()
+{
+    bIsAiming = true;
+    OnAimStateChanged.Broadcast(true);
+}
+
+void ALA_WeaponBase::StopAiming()
+{
+    bIsAiming = false;
+    OnAimStateChanged.Broadcast(false);
+}
+
 void ALA_WeaponBase::StartFire()
 {
     if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo <= 0) return;
@@ -164,27 +189,6 @@ void ALA_WeaponBase::Reload()
     {
         Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
-}
-
-float ALA_WeaponBase::GetDynamicSpreadAngle() const
-{
-    float DynamicSpreadAngle = WeaponData->DefaultSpreadAngle;
-
-    if (bIsAiming)
-    {
-        DynamicSpreadAngle *= 0.5f; // 조준 시 절반 감소
-    }
-
-    if (ACharacter* OwnerCharacter = Cast<ACharacter>(GetOwner()))
-    {
-        float CurrentSpeed = OwnerCharacter->GetVelocity().Size2D();
-        float MaxSpeed = OwnerCharacter->GetCharacterMovement()->MaxWalkSpeed;
-        float SpeedRatio = CurrentSpeed / MaxSpeed;
-        DynamicSpreadAngle += (SpeedRatio * 2.f); // 이동 시 최대 2배 증가
-    }
-
-    DynamicSpreadAngle += CurrentSpreadAngle; // 누적 합
-    return FMath::Clamp(DynamicSpreadAngle, WeaponData->MinSpreadAngle, WeaponData->MaxSpreadAngle);
 }
 
 void ALA_WeaponBase::Fire()
@@ -229,11 +233,9 @@ void ALA_WeaponBase::HitScan()
     Params.AddIgnoredActor(this);
     if (OwnerPawn) Params.AddIgnoredActor(OwnerPawn);
 
-    float SpreadAngle = GetDynamicSpreadAngle();
-
     for (int32 i = 0; i < WeaponData->PelletCount; ++i)
     {
-        FVector RandomizedDirection = FMath::VRandCone(FireDirection, FMath::DegreesToRadians(SpreadAngle));
+        FVector RandomizedDirection = FMath::VRandCone(FireDirection, FMath::DegreesToRadians(CurrentSpreadAngle));
         FVector EndLocation = StartLocation + (RandomizedDirection * WeaponData->MaxRange);
 
         FHitResult HitResult;
@@ -279,7 +281,7 @@ void ALA_WeaponBase::HitScan()
     ApplyRecoil();
 
     // 발사 후 반동에 의한 탄착 범위 증가
-    CurrentSpreadAngle = FMath::Clamp(CurrentSpreadAngle + WeaponData->SpreadIncrement, 0.f, WeaponData->MaxSpreadAngle);
+    CurrentSpreadAngle = FMath::Clamp(CurrentSpreadAngle + WeaponData->SpreadIncrement, WeaponData->MinSpreadAngle, WeaponData->MaxSpreadAngle);
 }
 
 void ALA_WeaponBase::UpdateAmmo()

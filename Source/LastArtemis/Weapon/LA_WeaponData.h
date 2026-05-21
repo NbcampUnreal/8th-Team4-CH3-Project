@@ -70,13 +70,13 @@ public:
     float DefaultSpreadAngle = 2.f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Spread")
-    float MaxSpreadAngle = 8.f;
+    float MaxSpreadAngle = 4.5f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Spread")
     float MinSpreadAngle = 0.5f;
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Spread")
-    float SpreadIncrement = 0.5f;
+    float SpreadIncrement = 0.4f;
 
 
     // Recoil

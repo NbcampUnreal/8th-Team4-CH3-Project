@@ -83,7 +83,7 @@ void ALA_PhaseLockedDoor::BeginPlay()
         );
     }
  
-    GetWorldTimerManager().SetTimerForNextTick(this, &ALA_PhaseLockedDoor::ApplyInitialDoorState);
+    //GetWorldTimerManager().SetTimerForNextTick(this, &ALA_PhaseLockedDoor::ApplyInitialDoorState);
 }
 
 // Called every frame
@@ -250,29 +250,29 @@ void ALA_PhaseLockedDoor::Interact_Implementation(AActor* InteractInstigator)
 // 문 열린 상태로 설정
 void ALA_PhaseLockedDoor::ApplyInitialDoorState()
 {
-    if (!CanOpenDoor())
-        return;
+    //if (!CanOpenDoor())
+    //    return;
 
-    bOpened = true;
-    bOpening = false;
+    //bOpened = true;
+    //bOpening = false;
 
-    if (StaticMeshComponent)
-    {
-        StaticMeshComponent->SetRelativeLocation(OpenedDoorLocation);
-        StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    }
+    //if (StaticMeshComponent)
+    //{
+    //    StaticMeshComponent->SetRelativeLocation(OpenedDoorLocation);
+    //    StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    //}
 
-    if (InteractableIndicator)
-    {
-        InteractableIndicator->SetVisibility(false);
-    }
+    //if (InteractableIndicator)
+    //{
+    //    InteractableIndicator->SetVisibility(false);
+    //}
 
-    if (InteractionSphere)
-    {
-        InteractionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
-    }
+    //if (InteractionSphere)
+    //{
+    //    InteractionSphere->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    //}
 
-    SetActorTickEnabled(false);
+    //SetActorTickEnabled(false);
 }
 
 void ALA_PhaseLockedDoor::ShowLockedMessage()

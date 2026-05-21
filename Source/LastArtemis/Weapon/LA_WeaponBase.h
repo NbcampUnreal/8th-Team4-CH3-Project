@@ -5,6 +5,8 @@
 #include "LA_WeaponData.h"
 #include "LA_WeaponBase.generated.h"
 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnAimStateChanged, bool, bIsAiming);
+
 UENUM(BlueprintType)
 enum class EWeaponState : uint8
 {
@@ -25,8 +27,6 @@ public:
 protected:
     virtual void Tick(float DeltaTime) override;
 
-    virtual float GetDynamicSpreadAngle() const;
-
     virtual void Fire();
     virtual void HitScan();
     virtual void ApplyRecoil();
@@ -44,6 +44,12 @@ public:
     void Look(FVector InputValue);
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    virtual void StartAiming();
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
+    virtual void StopAiming();
+
+    UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     virtual void StartFire();
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
@@ -52,8 +58,8 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
     virtual void Reload();
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Weapon|Action")
-    bool bIsAiming;
+    UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
+    FOnAimStateChanged OnAimStateChanged;
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
     EWeaponState CurrentState;
@@ -86,6 +92,7 @@ private:
     FRotator TargetSway;
     FRotator CurrentSway;
 
+    bool bIsAiming;
     FVector AimMeshLocation;
     FRotator AimMeshRotation;
 
@@ -101,10 +108,15 @@ public:
     UFUNCTION(BlueprintPure, Category = "Weapon|Components")
     class UCameraComponent* GetFirstPersonCamera() const { return Camera; }
 
+    UFUNCTION(BlueprintPure, Category = "Weapon|Action")
+    bool IsAiming() const { return bIsAiming; }
+
+    UFUNCTION(BlueprintPure, Category = "Weapon|Spread")
+    float GetCurrentSpreadAngle() const { return CurrentSpreadAngle; }
+
     int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
     int32 GetMaxMagazineSize() const { return WeaponData->MaxMagazineSize; }
 
-    virtual void UpdateAmmo();
-
+    void UpdateAmmo();
     void RefillAmmo();
 };
