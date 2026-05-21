@@ -397,7 +397,7 @@ void ALA_PlayerCharacter::DeactivateWeapon_Implementation()
     }
 
     // 무기 조준 상태 해제 및 발사 중지
-    EquipedWeapon->bIsAiming = false;
+    EquipedWeapon->StopAiming();
     EquipedWeapon->StopFire();
 
     // 할당된 무기 데이터 제거
@@ -862,12 +862,15 @@ void ALA_PlayerCharacter::AimingStartedAction()
 	if (AimInputMode == EMovementInputMode::Toggle)
 	{
 		// 조준 상태 반전
-        EquipedWeapon->bIsAiming = !EquipedWeapon->bIsAiming;
+        if (EquipedWeapon->IsAiming())
+            EquipedWeapon->StopAiming();
+        else
+            EquipedWeapon->StartAiming();
 		return;
 	}
 
 	// 조준 상태로 설정
-    EquipedWeapon->bIsAiming = true;
+    EquipedWeapon->StartAiming();
 }
 
 void ALA_PlayerCharacter::AimingCompletedAction()
@@ -879,10 +882,10 @@ void ALA_PlayerCharacter::AimingCompletedAction()
     }
 
 	// Hold 옵션이면서 조준 상태의 경우
-	if (AimInputMode == EMovementInputMode::Hold && EquipedWeapon->bIsAiming == true)
+	if (AimInputMode == EMovementInputMode::Hold && EquipedWeapon->IsAiming())
 	{
 		// 비조준 상태로 설정
-        EquipedWeapon->bIsAiming = false;
+        EquipedWeapon->StopAiming();
 		return;
 	}
 }
@@ -1116,7 +1119,7 @@ void ALA_PlayerCharacter::SetSprintState(bool bNewSprint)
     // 달리기 전환 시 조준 상태 해제
     if (bIsSprint == true && EquipedWeapon != nullptr)
     {
-        EquipedWeapon->bIsAiming = false;
+        EquipedWeapon->StopAiming();
     }
 
     // 이동 속도 변경
