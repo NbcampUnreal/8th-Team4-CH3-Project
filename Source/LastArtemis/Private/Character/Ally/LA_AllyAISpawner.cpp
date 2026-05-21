@@ -87,7 +87,6 @@ void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
         const FVector SpawnLocation = GetAllySpawnLocation(PlayerPawn, Index);
         const FRotator SpawnRotation = PlayerPawn->GetActorRotation();
 
-        FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = this;
         SpawnParams.Instigator = PlayerPawn;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
