@@ -905,23 +905,20 @@ void ALA_PlayerCharacter::ReloadStartedAction()
 void ALA_PlayerCharacter::InteractStartedAction()
 {
     if (Controller == nullptr)
-    {
         return;
-    }
 
     // 바라보는 방향 객체 검사
-    FHitResult HitResult = LineTraceForward(100);      // 1 m 검사
+    FHitResult HitResult = LineTraceForward(300);      // 1 m 검사
 
-    if (HitResult.bBlockingHit == true)
-    {
-        // 검출된 액터 nullptr 검사
-        AActor* HitActor = HitResult.GetActor();
-        if (HitActor != nullptr)
-        {
-            // 상호작용 함수 호출
-            ILA_Interactable::Execute_Interact(HitActor, this);
-        }
-    }
+    AActor* HitActor = HitResult.GetActor();
+    if (!IsValid(HitActor))
+        return;
+
+    // 상호작용 인터페이스가 없는 Actor면 무시
+    if (!HitActor->GetClass()->ImplementsInterface(ULA_Interactable::StaticClass()))
+        return;
+
+    ILA_Interactable::Execute_Interact(HitActor, this);
 }
 
 
