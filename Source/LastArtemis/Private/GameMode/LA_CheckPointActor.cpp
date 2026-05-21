@@ -161,6 +161,8 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     // 아군 AI 재생성
     RespawnAllies(InteractingPawn);
 
+    RefillAmmo(InteractingPawn);
+
     UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s, ElapsedGmeTime: %d"),
         CurrentPhaseIndex,
         *SaveLocation.ToString(),
@@ -218,6 +220,18 @@ void ALA_CheckPointActor::RefillItems(APawn* InteractingPawn)
 
     UE_LOG(LogTemp, Warning, TEXT("DecontaminationItemData: %s"),
         DecontaminationItemData ? *DecontaminationItemData->GetName() : TEXT("nullptr"));
+}
+
+void ALA_CheckPointActor::RefillAmmo(APawn* InteractingPawn)
+{
+    if (!InteractingPawn)
+        return;
+
+    ALA_PlayerCharacter* PlayerCharacter = Cast<ALA_PlayerCharacter>(InteractingPawn);
+    if (!PlayerCharacter)
+        return;
+
+    PlayerCharacter->RefillWeaponAmmo();
 }
 
 // 상호작용 시 체크 포인트 처리

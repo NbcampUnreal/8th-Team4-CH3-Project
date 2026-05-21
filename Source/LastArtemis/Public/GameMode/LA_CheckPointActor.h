@@ -59,8 +59,10 @@ public:
     void RecoverPlayer(APawn* InteractingPawn);
     // 플레이어 오염도 제거
     void Decontaminate(APawn* InteractingPawn);
-
+    // 아이템 보급
     void RefillItems(APawn* InteractingPawn);
+    // 탄약 보급
+    void RefillAmmo(APawn* InteractingPawn);
 
     void RespawnAllies(APawn* InteractingPawn);
 
