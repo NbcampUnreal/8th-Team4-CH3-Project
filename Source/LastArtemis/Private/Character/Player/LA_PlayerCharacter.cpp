@@ -20,6 +20,7 @@
 #include "Object/LA_Interactable.h"
 #include "Character/Ally/LA_AllyAI.h"
 #include "Character/Ally/LA_AllyAIController.h"
+#include "Components/WidgetComponent.h"
 
 // Sets default values
 ALA_PlayerCharacter::ALA_PlayerCharacter()
@@ -555,13 +556,10 @@ TArray<AActor*> ALA_PlayerCharacter::GetVisibleEnemies()
 {
     // Team.Enemy 태그 가진 액터만 가져오기
     TArray<AActor*> AllActors;
-    UGameplayStatics::GetAllActorsOfClass(GetWorld(), AActor::StaticClass(), AllActors);
-
-
+    UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_BaseCharacter::StaticClass(), AllActors);
 
     // AllActor Actor 개수 확인
     UE_LOG(LogTemp, Warning, TEXT("AllActors Count: %d"), AllActors.Num());
-
 
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     // 보이는 적 저장
@@ -572,27 +570,35 @@ TArray<AActor*> ALA_PlayerCharacter::GetVisibleEnemies()
 
     for (AActor* Actor : AllActors)
     {
-        // GameplayTag 인터페이스 확인
-        IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(Actor);
-        if (!TagInterface) continue;
+        ALA_BaseCharacter* BaseCharacter = Cast<ALA_BaseCharacter>(Actor);
+        if (!BaseCharacter) continue;
 
-        FGameplayTagContainer OwnedTags;
-        TagInterface->GetOwnedGameplayTags(OwnedTags);
-        // 태그 확인용 로그
-        UE_LOG(LogTemp, Warning, TEXT("Actor: %s, Tags: %s"), *Actor->GetName(), *OwnedTags.ToString());
-        // Team.Enemy 태그 가진 액터만 필터링
-        if (!TagInterface->HasMatchingGameplayTag(EnemyTag)) continue;
+        bool bIsEnemy = false;
+
+        if (BaseCharacter->CharacterTags.HasTag(EnemyTag))
+        {
+            bIsEnemy = true;
+        }
+        else if ( IGameplayTagAssetInterface* TagInterface = Cast<IGameplayTagAssetInterface>(BaseCharacter))
+        {
+            if (TagInterface->HasMatchingGameplayTag(EnemyTag))
+            {
+                bIsEnemy = true;
+            }
+        }
+
+        if (!bIsEnemy) continue;
+
 
         FVector2D ScreenPos;
         // 화면 안에 위치가 투영되는 적군만 필터링
         if (PC->ProjectWorldLocationToScreen(Actor->GetActorLocation(), ScreenPos))
         {
             VisibleEnemies.Add(Actor);
+            UE_LOG(LogTemp, Warning, TEXT("화면에 보이는 적 추가됨 : %s"), *BaseCharacter->GetName());
         }
     }
     return VisibleEnemies;
-
-
 
 }
 
@@ -635,23 +641,31 @@ AActor* ALA_PlayerCharacter::GetCrosshairTarget(const TArray<AActor*>& Enemies)
 
 void ALA_PlayerCharacter::SetTarget(AActor* Target)
 {
+
+
     TArray<AActor*> AllActors;
     UGameplayStatics::GetAllActorsOfClass(GetWorld(), ALA_AllyAI::StaticClass(), AllActors);
 
+
+
+
     for (AActor* Ally : AllActors)
     {
+
         ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(Ally);
         if (!AllyAI) continue;
+        ALA_AllyAIController* AIController = Cast<ALA_AllyAIController>(AllyAI->GetController());
+        if (!AIController) continue;
+        UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent();
+        if (!Blackboard) continue;
 
-        if (ALA_AllyAIController* AIController = Cast<ALA_AllyAIController>(AllyAI->GetController()))
-        {
-            if (UBlackboardComponent* Blackboard = AIController->GetBlackboardComponent())
-            {
-                Blackboard->SetValueAsObject(FName("TargetActor"), Target);
-                Blackboard->SetValueAsBool(FName("IsCommandedTarget"), true);
-                UE_LOG(LogTemp, Warning, TEXT("Command Complete: Target - %s"), *Target->GetName());
-            }
-        }
+
+
+        Blackboard->SetValueAsObject(FName("TargetActor"), Target);
+        Blackboard->SetValueAsBool(FName("IsCommandedTarget"), true);
+        UE_LOG(LogTemp, Warning, TEXT("Command Complete: Target - %s"), *Target->GetName());
+
+
 
 
     }
@@ -940,22 +954,44 @@ void ALA_PlayerCharacter::CommandTargetTriggeredAction()
 
 
 
+    // 기존 타겟 외곽선 지우기
     if (CurrentAimedEnemy != NewAimedEnemy)
     {
         if (CurrentAimedEnemy.IsValid())
         {
-            if (USkeletalMeshComponent* OldMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+            if (USkeletalMeshComponent* SkeletalMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
             {
-                OldMesh->SetOverlayMaterial(nullptr);
+                SkeletalMesh->SetOverlayMaterial(nullptr);
             }
+
+            TArray<UMeshComponent*> StaticMeshes;
+            CurrentAimedEnemy->GetComponents<UMeshComponent>(StaticMeshes);
+            for (UMeshComponent* StaticMesh : StaticMeshes)
+            {
+                StaticMesh->SetOverlayMaterial(nullptr);
+            }
+
+
         }
     }
 
     if (NewAimedEnemy && OutlineMaterial)
     {
-        if (USkeletalMeshComponent* NewMesh = NewAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+
+        if (USkeletalMeshComponent* SkeletalMesh = NewAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
         {
-            NewMesh->SetOverlayMaterial(OutlineMaterial);
+            SkeletalMesh->SetOverlayMaterial(OutlineMaterial);
+        }
+
+        TArray<UMeshComponent*> StaticMeshes;
+        NewAimedEnemy->GetComponents<UMeshComponent>(StaticMeshes);
+
+        for (UMeshComponent* StaticMesh : StaticMeshes)
+        {
+
+
+
+            StaticMesh->SetOverlayMaterial(OutlineMaterial);
         }
     }
 
@@ -983,10 +1019,14 @@ void ALA_PlayerCharacter::CommandTargetCompletedAction()
 
     if (CurrentAimedEnemy.IsValid())
     {
-        if (USkeletalMeshComponent* AimedMesh = CurrentAimedEnemy->FindComponentByClass<USkeletalMeshComponent>())
+        TArray<UMeshComponent*> AimMeshes;
+        CurrentAimedEnemy->GetComponents<UMeshComponent>(AimMeshes);
+
+        for (UMeshComponent* AimMesh : AimMeshes)
         {
-            AimedMesh->SetOverlayMaterial(nullptr);
+            AimMesh->SetOverlayMaterial(nullptr);
         }
+
     }
     CurrentAimedEnemy = nullptr;
 
