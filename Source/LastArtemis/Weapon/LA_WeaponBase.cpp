@@ -298,6 +298,21 @@ void ALA_WeaponBase::UpdateAmmo()
     }
 }
 
+void ALA_WeaponBase::RefillAmmo()
+{
+    if (!WeaponData)
+        return;
+
+    CurrentMagazineAmmo = WeaponData->MaxMagazineSize;
+    CurrentSpareAmmo = 90;
+    CurrentState = EWeaponState::Idle;
+
+    if (GetOwner() && GetOwner()->Implements<ULA_Holder>())
+    {
+        ILA_Holder::Execute_UpdateHUDWidgetOnActor(GetOwner(), this);
+    }
+}
+
 void ALA_WeaponBase::ApplyRecoil()
 {
     if (WeaponData->RecoilCurve)

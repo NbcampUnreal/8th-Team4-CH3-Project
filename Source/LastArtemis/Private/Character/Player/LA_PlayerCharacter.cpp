@@ -1166,3 +1166,11 @@ void ALA_PlayerCharacter::SpawnWeaponActor()
     // 무기 액터 위치 조정
     EquipedWeapon->SetActorRelativeLocation(FVector(0, 0, BaseEyeHeight));
 }
+
+void ALA_PlayerCharacter::RefillWeaponAmmo()
+{
+    if (!EquipedWeapon)
+        return;
+
+    EquipedWeapon->RefillAmmo();
+}

@@ -249,6 +249,7 @@ public:
     /// <returns>바라보고 있는 지점의 좌표</returns>
     virtual FVector GetFocusLocation_Implementation() override;
 
+
 #pragma endregion
 
 #pragma region Skill
@@ -384,4 +385,9 @@ protected:
     void HideCharacterMesh();
 
     void SpawnWeaponActor();
+
+public:
+    // 상호작용 시 탄약 리필
+    void RefillWeaponAmmo();
+
 };
