@@ -2,6 +2,7 @@
 #include "Engine/AssetManager.h"
 #include "Item/LA_ItemDataAsset.h"
 #include "Item/LA_ItemEffect.h"
+#include "Kismet/GameplayStatics.h"
 
 ULA_InventoryComponent::ULA_InventoryComponent()
     :
@@ -174,6 +175,11 @@ bool ULA_InventoryComponent::UseItem(int32 SlotIndex, AActor* UseTarget)
     if (!ItemData->Effect->ApplyEffect(UseTarget))
     {
         return false;
+    }
+
+    if (ItemData->UseSound)
+    {
+        UGameplayStatics::PlaySound2D(this, ItemData->UseSound);
     }
 
     // 효과 적용까지 성공하면 아이템 수량 감소
