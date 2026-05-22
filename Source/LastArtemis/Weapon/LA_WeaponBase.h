@@ -68,8 +68,11 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
     int32 CurrentMagazineAmmo;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
     TMap<TEnumAsByte<EPhysicalSurface>, class UNiagaraSystem*> ImpactParticles;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
+    class UMaterialInterface* DecalMaterial;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")

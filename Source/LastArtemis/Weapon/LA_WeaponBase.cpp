@@ -276,9 +276,14 @@ void ALA_WeaponBase::HitScan()
                 );
             }
 
+            // 거리에 따른 Decal 크기 조절
+            FVector2D DistanceRange(0.f, 5000.f);
+            FVector2D DecalSizeRange(10.f, 2.f);
+            float CalculatedDecalSize = FMath::GetMappedRangeValueClamped(DistanceRange, DecalSizeRange, HitResult.Distance);
+
             UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
-                WeaponData->DecalMaterial,
-                FVector(10.f, 10.f, 10.f),
+                DecalMaterial,
+                FVector(CalculatedDecalSize, CalculatedDecalSize, CalculatedDecalSize),
                 HitResult.GetComponent(),
                 HitResult.BoneName,
                 HitResult.ImpactPoint,
