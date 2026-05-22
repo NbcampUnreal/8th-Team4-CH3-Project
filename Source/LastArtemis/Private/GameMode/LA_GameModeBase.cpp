@@ -70,6 +70,15 @@ void ALA_GameModeBase::BeginPlay()
         // HUD 생성
         APlayerController* PC = GetWorld()->GetFirstPlayerController();
 
+        if (PC && HUDWidgetClass)
+        {
+            ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDWidgetClass);
+            if (NewHUD)
+            {
+                NewHUD->AddToViewport();
+            }
+        }
+
         if (PC)
         {
             FInputModeGameOnly InputMode;
@@ -80,14 +89,7 @@ void ALA_GameModeBase::BeginPlay()
             PC->SetIgnoreMoveInput(false);
         }
 
-        if (PC && HUDClass)
-        {
-            ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDClass);
-            if (NewHUD)
-            {
-                NewHUD->AddToViewport();
-            }
-        }
+
 
         UGameplayStatics::SetGamePaused(GetWorld(), false);
         
@@ -312,6 +314,15 @@ void ALA_GameModeBase::HandleMissionComplete(float FinalTime, int32 FinalScore, 
 
             // 입력 모드 설정
             APlayerController* PC = GetWorld()->GetFirstPlayerController();
+
+        if (PC && HUDWidgetClass)
+        {
+            ULA_HUD* NewHUD = CreateWidget<ULA_HUD>(PC, HUDWidgetClass);
+            if (NewHUD)
+            {
+                NewHUD->AddToViewport();
+            }
+        }
             if (PC)
             {
                 FInputModeUIOnly InputMode;

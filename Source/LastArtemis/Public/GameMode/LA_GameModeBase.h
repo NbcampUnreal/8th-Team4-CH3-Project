@@ -62,7 +62,8 @@ public:
     ////////////////////////
 
     // 위젯 클래스
-    TSubclassOf<UUserWidget> HUDClass;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
+    TSubclassOf<UUserWidget> HUDWidgetClass;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI")
     TSubclassOf<UUserWidget> GameOverWidgetClass;
