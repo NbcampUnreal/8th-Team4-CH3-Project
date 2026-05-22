@@ -9,6 +9,7 @@
 
 class UTexture2D;
 class ULA_ItemEffect;
+class USoundBase;
 
 UCLASS(BlueprintType)
 class LASTARTEMIS_API ULA_ItemDataAsset : public UPrimaryDataAsset
@@ -55,4 +56,7 @@ public:
     // 아이템 효과
     UPROPERTY(EditDefaultsOnly, Instanced, BlueprintReadOnly, Category = "Item")
     TObjectPtr<ULA_ItemEffect> Effect;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Item")
+    TObjectPtr<USoundBase> UseSound;
 };

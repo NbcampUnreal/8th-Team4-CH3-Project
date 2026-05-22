@@ -14,6 +14,7 @@
 #include "Components/WidgetComponent.h"
 #include "Item/LA_InventoryComponent.h"
 #include "GameFramework/Pawn.h"
+#include "Kismet/GameplayStatics.h"
 
 // Sets default values
 ALA_CheckPointActor::ALA_CheckPointActor()
@@ -162,6 +163,11 @@ void ALA_CheckPointActor::InteractCheckPoint(APawn* InteractingPawn)
     RespawnAllies(InteractingPawn);
 
     RefillAmmo(InteractingPawn);
+
+    if (CheckPointSound)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, CheckPointSound, GetActorLocation());
+    }
 
     UE_LOG(LogTemp, Warning, TEXT("Checkpoint Interacted - PhaseIndex: %d, Location: %s, ElapsedGmeTime: %d"),
         CurrentPhaseIndex,
