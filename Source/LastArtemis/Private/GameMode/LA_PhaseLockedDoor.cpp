@@ -10,6 +10,8 @@
 #include "Components/TextBlock.h"
 #include "Blueprint/UserWidget.h"
 #include "TimerManager.h"
+#include "Kismet/GameplayStatics.h"
+#include "Components/AudioComponent.h"
 
 // Sets default values
 ALA_PhaseLockedDoor::ALA_PhaseLockedDoor()
@@ -47,7 +49,7 @@ ALA_PhaseLockedDoor::ALA_PhaseLockedDoor()
 
     OpenLocationOffset = FVector(0.0f, 0.0f, 300.0f);
 
-    OpenInterpSpeed = 3.0f;
+    OpenInterpSpeed = 170.0f;
 
     LockedMessageDisplayTime = 2.0f;
 }
@@ -96,7 +98,7 @@ void ALA_PhaseLockedDoor::Tick(float DeltaTime)
 
     const FVector CurrentLocation = StaticMeshComponent->GetRelativeLocation();
     // 보간 이동
-    const FVector NewLocation = FMath::VInterpTo(
+    const FVector NewLocation = FMath::VInterpConstantTo(
         CurrentLocation,
         OpenedDoorLocation,
         DeltaTime,
@@ -110,6 +112,14 @@ void ALA_PhaseLockedDoor::Tick(float DeltaTime)
     {
         StaticMeshComponent->SetRelativeLocation(OpenedDoorLocation);
         StaticMeshComponent->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+
+        // 사운드 정지
+        if (DoorOpeningAudioComponent)
+        {
+            DoorOpeningAudioComponent->Stop();
+            DoorOpeningAudioComponent = nullptr;
+        }
+
         bOpening = false;
         bOpened = true;
         SetActorTickEnabled(false);
@@ -208,6 +218,25 @@ void ALA_PhaseLockedDoor::OpenDoor()
     // 문 이동 시작 시 tick 활성화
     SetActorTickEnabled(true);
 
+    if (DoorOpeningLoopSound && StaticMeshComponent)
+    {
+        DoorOpeningAudioComponent = UGameplayStatics::SpawnSoundAttached(
+            DoorOpeningLoopSound,
+            StaticMeshComponent,
+            NAME_None,
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            EAttachLocation::KeepRelativeOffset,
+            true,
+            1.0f,
+            1.0f,
+            0.0f,
+            nullptr,
+            nullptr,
+            false
+        );
+    }
+
     HideLockedMessage();
     GetWorldTimerManager().ClearTimer(LockedMessageTimerHandle);
 
@@ -239,6 +268,12 @@ void ALA_PhaseLockedDoor::Interact_Implementation(AActor* InteractInstigator)
     if (!CanOpenDoor())
     {
         ShowLockedMessage();
+
+        if (DoorLockedSound)
+        {
+            UGameplayStatics::PlaySoundAtLocation(this, DoorLockedSound, GetActorLocation());
+        }
+
         return;
     }
 

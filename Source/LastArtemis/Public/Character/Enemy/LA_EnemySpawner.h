@@ -51,4 +51,12 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Spawner Settings")
     int32 TotalMonstersToSpawn = 5;
+
+protected:
+    // 클리어한 Phase인지
+    bool CanSpawnByPhase() const;
+
+    // 특정 Phase 진입 시 몬스터 생성
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Phase Spawn")
+    int32 SpawnBeforePhaseIndex = 0;
 };

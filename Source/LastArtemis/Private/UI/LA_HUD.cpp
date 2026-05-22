@@ -137,7 +137,7 @@ void ULA_HUD::BindContamination()
 
     if (HealthComp)
     {
-        HealthComp->OnContaminationChanged.AddUObject(this, &ULA_HUD::UpdateContamination);
+        HealthComp->OnContaminationChanged.AddDynamic(this, &ULA_HUD::UpdateContamination);
 
         // 바인딩 직후 초기화
         UpdateContamination(HealthComp->GetCurrentContamination(), HealthComp->GetMaxContamination());

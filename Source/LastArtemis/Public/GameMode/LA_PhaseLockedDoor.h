@@ -12,6 +12,8 @@ class UStaticMeshComponent;
 class USphereComponent;
 class UWidgetComponent;
 class APawn;
+class USoundBase;
+class UAudioComponent;
 
 UCLASS(BlueprintType)
 class LASTARTEMIS_API ALA_PhaseLockedDoor : public AActor, public ILA_Interactable
@@ -126,4 +128,14 @@ private:
     FVector ClosedDoorLocation;
     // 열린 상태의 문 상대 위치
     FVector OpenedDoorLocation;
+
+protected:
+    // 사운드
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+    USoundBase* DoorOpeningLoopSound;
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+    USoundBase* DoorLockedSound;
+
+    UPROPERTY()
+    UAudioComponent* DoorOpeningAudioComponent;
 };

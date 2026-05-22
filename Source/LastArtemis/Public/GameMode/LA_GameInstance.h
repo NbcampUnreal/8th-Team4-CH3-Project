@@ -28,15 +28,26 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Settings")
     void UpdateAndSaveSettings(EMovementInputMode NewAimMode, EMovementInputMode NewSprintMode);
 
+    UFUNCTION(BlueprintCallable, Category = "Settings")
+    void UpdateAndSaveVolume(float NewBGMVolume, float NewSFXVolume);
+
     // 캐릭터에게 설정 적용
     UFUNCTION(BlueprintCallable, Category = "Settings")
     void ApplySettingsToCharacter();
 
+    // 게임 플레이 설정 변수
     UPROPERTY(BlueprintReadWrite, Category = "Settings")
     EMovementInputMode CurrentAimInputMode;
 
     UPROPERTY(BlueprintReadWrite, Category = "Settings")
     EMovementInputMode CurrentSprintInputMode;
+
+    // 볼륨 설정 변수
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    float CurrentBGMVolume = 0.5f;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    float CurrentSFXVolume = 0.5f;
 
     // 설정 전용 슬롯
     const FString SettingsSlotName = TEXT("UserSettings");
