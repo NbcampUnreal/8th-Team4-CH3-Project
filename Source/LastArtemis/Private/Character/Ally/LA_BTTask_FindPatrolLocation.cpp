@@ -45,6 +45,25 @@ EBTNodeResult::Type ULA_BTTask_FindPatrolLocation::ExecuteTask(UBehaviorTreeComp
 
     if (Player)
     {
+        // 플레이어와 너무 먼 거리일 시 -> 플레이어 곁으로 텔레포트
+        float DistToPlayer = FVector::Dist(OwnerPawn->GetActorLocation(), Player->GetActorLocation());
+
+        if (DistToPlayer > 2500.f)
+        {
+            FVector TeleportLocation = Player->GetActorLocation() - (Player->GetActorForwardVector() * BehindDistance);
+
+            if (NavSystem->ProjectPointToNavigation(TeleportLocation, NavLocation, FVector(100.f, 100.f, 500.f)))
+            {
+                OwnerPawn->SetActorLocation(TeleportLocation);
+                Blackboard->SetValueAsVector(FName("TargetLocation"), NavLocation.Location);
+
+                UE_LOG(LogTemp, Warning, TEXT("플레이어와 아군의 거리가 너무 멉니다! 플레이어 곁으로 순간이동 합니다."));
+                return EBTNodeResult::Succeeded;
+
+            }
+        }
+
+
         FVector PlayerRight = Player->GetActorRightVector();
 
         // 플레이어 뒤쪽 기준점 계산

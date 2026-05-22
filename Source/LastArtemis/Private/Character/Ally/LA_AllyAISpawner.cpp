@@ -15,9 +15,10 @@ ALA_AllyAISpawner::ALA_AllyAISpawner()
     // Set this actor to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
     PrimaryActorTick.bCanEverTick = false;
 
+    USceneComponent* SceneComp = CreateDefaultSubobject<USceneComponent>(FName("SceneComponent"));
+    SetRootComponent(SceneComp);
     CapsuleComp = CreateDefaultSubobject<UCapsuleComponent>(FName("CapsuleComponent"));
-    SetRootComponent(CapsuleComp);
-
+    CapsuleComp->SetupAttachment(SceneComp);
     CapsuleComp->InitCapsuleSize(87.406487f, 30.018118f);
 
     SpawnDirection = CreateDefaultSubobject<UArrowComponent>("ArrowComponent");
@@ -54,6 +55,21 @@ void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
     if (!World)
         return;
 
+    // 자기 자신의 위치와 회전값 저장
+    FVector Location = CapsuleComp->GetComponentLocation();
+    FRotator Rotation = GetActorRotation();
+
+    // 스폰 파라미터
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.Instigator = Cast<APawn>(GetOwner());
+    SpawnParams.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    // 아군 소환
+    ALA_AllyAI* SpawnedAlly = World->SpawnActor<ALA_AllyAI>(AllyClass, Location, Rotation, SpawnParams);
+
+    if (SpawnedAlly)
     // 기존에 이 스포너가 만든 Ally 제거
     for (ALA_AllyAI* Ally : SpawnedAllies)
     {
@@ -71,7 +87,6 @@ void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
         const FVector SpawnLocation = GetAllySpawnLocation(PlayerPawn, Index);
         const FRotator SpawnRotation = PlayerPawn->GetActorRotation();
 
-        FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = this;
         SpawnParams.Instigator = PlayerPawn;
         SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;

@@ -5,6 +5,7 @@
 
 #include "GameFramework/Character.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "GameMode/LA_GameStateBase.h"
 
 
 // Sets default values
@@ -26,6 +27,14 @@ void ALA_EnemySpawner::BeginPlay()
 
 void ALA_EnemySpawner::SpawnEnemy()
 {
+    // 이미 클리어한 Phase일 경우 타이머 멈춤
+    // 스폰 X
+    if (!CanSpawnByPhase())
+    {
+        GetWorldTimerManager().ClearTimer(SpawnTimerHandle);
+        return;
+    }
+
     // 예외처리: 스폰할 에너미 클래스가 지정 안 됐거나, 이미 최대 마리수라면 스킵
     if (!EnemyClassToSpawn || TotalSpawnedCount >= TotalMonstersToSpawn)
     {
@@ -66,5 +75,18 @@ void ALA_EnemySpawner::OnEnemyDestroyed(AActor* DestroyedActor)
     }
 }
 
+bool ALA_EnemySpawner::CanSpawnByPhase() const
+{
+    const UWorld* World = GetWorld();
+    if (!World)
+        return false;
 
+    const ALA_GameStateBase* LA_GameState = World->GetGameState<ALA_GameStateBase>();
+    if (!LA_GameState)
+        return false;
+
+    const int32 CurrentPhaseIndex = LA_GameState->GetCurrentPhaseIndex();
+
+    return CurrentPhaseIndex < SpawnBeforePhaseIndex;
+}
 

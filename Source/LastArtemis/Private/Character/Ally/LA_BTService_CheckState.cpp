@@ -36,11 +36,6 @@ void ULA_BTService_CheckState::TickNode(UBehaviorTreeComponent& OwnerComp, uint8
     ULA_HealthComponent* HealthComponent = Player->FindComponentByClass<ULA_HealthComponent>();
     if (!HealthComponent) return;
 
-    /*UE_LOG(LogTemp, Warning, TEXT("HP: %f / %f (Percent: %f)"),
-    HealthComponent->GetCurrentHealth(),
-    HealthComponent->GetMaxHealth(),
-    HealthComponent->GetHealthPercent());*/
-
     if (!HealthComponent->IsDead())
     {
         // 체력 50 이하 -> 서포트 모드 true
