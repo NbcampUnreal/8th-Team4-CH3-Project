@@ -158,12 +158,16 @@ void ALA_WeaponBase::Look(FVector InputValue)
 
 void ALA_WeaponBase::StartAiming()
 {
+    if (CurrentState != EWeaponState::Idle) return;
+
     bIsAiming = true;
     OnAimStateChanged.Broadcast(true);
 }
 
 void ALA_WeaponBase::StopAiming()
 {
+    if (!bIsAiming) return;
+
     bIsAiming = false;
     OnAimStateChanged.Broadcast(false);
 }
