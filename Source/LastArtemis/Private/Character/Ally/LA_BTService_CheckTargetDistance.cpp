@@ -2,6 +2,8 @@
 
 
 #include "Character/Ally/LA_BTService_CheckTargetDistance.h"
+
+
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BehaviorTree/BehaviorTreeComponent.h"
 #include "Character/Ally/LA_AllyAIController.h"
@@ -61,7 +63,7 @@ void ULA_BTService_CheckTargetDistance::TickNode(UBehaviorTreeComponent& OwnerCo
 
     }
 
-
+    // 명령받은 타겟이 살아있으면 탐색하지 않고 스킵
     if (bIsCommandedTarget && Target != nullptr)
     {
         return;
@@ -81,42 +83,15 @@ void ULA_BTService_CheckTargetDistance::TickNode(UBehaviorTreeComponent& OwnerCo
         if (Actor == OwnerPawn) continue;
 
         ALA_BaseCharacter* Enemy = Cast<ALA_BaseCharacter>(Actor);
-        if (Enemy || !Enemy->bIsDead)
-        {
 
-
-            if (Enemy->CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally"))))
-            {
-                continue;
-            }
-
-            float DistToEnemySq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Enemy->GetActorLocation());
-
-            if (DistToEnemySq > LoseSightDistSq)
-            {
-
-                if (Target == nullptr || DistToEnemySq < (MinDistSq - SwitchThresholdSq))
-                {
-                    MinDistSq = DistToEnemySq;
-                    BestTarget = Enemy;
-                }
-            }
-
-            if (BestTarget != nullptr && BestTarget != Target)
-            {
-                Blackboard->SetValueAsObject(FName("TargetActor"), BestTarget);
-            }
-
-        }
-
-        // 실제 조건 필터링 및 타겟 갱신 영상
-        if (Enemy->bIsDead) continue;
+        if (!Enemy || Enemy->bIsDead) continue;
         if (Enemy->CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")))) continue;
 
         float DistToEnemySq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Enemy->GetActorLocation());
 
         if (DistToEnemySq < LoseSightDistSq)
         {
+
             if (Target == nullptr || DistToEnemySq < (MinDistSq - SwitchThresholdSq))
             {
                 MinDistSq = DistToEnemySq;

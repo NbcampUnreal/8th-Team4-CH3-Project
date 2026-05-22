@@ -2,16 +2,13 @@
 
 
 #include "Character/Ally/LA_BTTask_Attack.h"
-
-#include "AssetDefinitionAssetInfo.h"
 #include "Character/LA_BaseCharacter.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "DrawDebugHelpers.h"
-#include "PhysicsAssetRenderUtils.h"
 #include "Character/Ally/LA_AllyAI.h"
 #include "Character/Ally/LA_AllyAIController.h"
-#include "Character/Enemy/LA_EnemyCharacter.h"
 #include "Kismet/GameplayStatics.h"
+#include "NiagaraFunctionLibrary.h"                 // 나이아가라 시스템 이펙트
 
 
 ULA_BTTask_Attack::ULA_BTTask_Attack()
@@ -69,16 +66,6 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
     UObject* RawTargetObject = BlackboardComp->GetValueAsObject(FName("TargetActor"));
     ALA_BaseCharacter* Target = Cast<ALA_BaseCharacter>(RawTargetObject);
 
-    /*if (!Target || !IsValid(Target) || Target->bIsDead)
-    {
-        BlackboardComp->ClearValue(FName("TargetActor"));
-        BlackboardComp->SetValueAsBool(FName("IsCommandedTarget"), false);
-        AIController->ClearFocus(EAIFocusPriority::Gameplay);
-        FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
-
-        UE_LOG(LogTemp, Log, TEXT("Target eliminated or destroyed. Clearing Blackboard and returning to Follow mode."));
-        return;
-    }*/
     if (!Target)
     {
         UE_LOG(LogTemp, Error, TEXT("🚨 중단 원인 1: 블랙보드의 Target 값이 강제로 지워졌습니다 (NULL)!"));
@@ -108,8 +95,7 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
     }
     else if (Target->bIsDead)
     {
-        // 💡 여기가 뜬다면? 제 추리대로 C++은 죽었다고 판정했는데 겉모습만 살아있는 '좀비'입니다!
-        UE_LOG(LogTemp, Error, TEXT("🚨 원인 4: 적의 체력이 다 되어 bIsDead가 true가 되었습니다! (적 캐릭터의 죽음 애니메이션/삭제 확인 필요!)"));
+        UE_LOG(LogTemp, Error, TEXT("🚨중단 원인 4: 적의 체력이 다 되어 bIsDead가 true가 되었습니다! (적 캐릭터의 죽음 애니메이션/삭제 확인 필요!)"));
         BlackboardComp->ClearValue(FName("TargetActor"));
         BlackboardComp->SetValueAsBool(FName("IsCommandedTarget"), false);
         AIController->ClearFocus(EAIFocusPriority::Gameplay);
@@ -117,23 +103,7 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
         return;
     }
 
-
-    /*ALA_BaseCharacter* Target = Cast<ALA_BaseCharacter>(BlackboardComp->GetValueAsObject(FName("TargetActor")));
-    if (!Target)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Attack Failed: Target Cast Failed (NULL)! 블랙보드 값이 비었거나 클래스가 다릅니다."));
-        BlackboardComp->ClearValue(FName("TargetActor"));
-        FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
-        return;
-    }
-    if (Target->bIsDead)
-    {
-        UE_LOG(LogTemp, Error, TEXT("Attack Failed: Target is ALREADY DEAD! 적이 이미 죽은 판정입니다."));
-        BlackboardComp->ClearValue(FName("TargetActor"));
-        // FinishLatentTask(OwnerComp, EBTNodeResult::Failed);
-        return;
-    }*/
-
+#pragma region reload
     // ---------------------------------------------------------
     // 1. [재장전 로직] 재장전 중이라면 총을 쏘지 않고 타이머만 올립니다.
     // ---------------------------------------------------------
@@ -150,6 +120,9 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
         }
         return;
     }
+
+#pragma endregion
+
 
     // ---------------------------------------------------------
     // 2. 적의 가슴팍 위치 추적 및 회전
@@ -177,7 +150,7 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
 
     // 총구 좌표 및 방향 가져오기
     FVector PawnLocation = OwnerPawn->GetActorLocation();
-    FVector TargetLocation = Target->GetActorLocation();
+    // FVector TargetLocation = Target->GetActorLocation();
     FVector TraceStart = PawnLocation + FVector(0, 0, 50.f);
     FVector MuzzleForward = OwnerPawn->GetActorForwardVector();
     UStaticMeshComponent* WeaponMesh = OwnerPawn->FindComponentByClass<UStaticMeshComponent>();
@@ -204,7 +177,7 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
     {
         return;
     }
-
+#pragma region Aim
     // ---------------------------------------------------------
     // 5. 조준 검사
     // ---------------------------------------------------------
@@ -221,6 +194,9 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
         return;
     }
 
+#pragma endregion
+
+#pragma region Fire
     if (Memory->CurrentAmmo <= 0)
     {
         Memory->bIsReloading = true;
@@ -233,7 +209,9 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
     UE_LOG(LogTemp, Error, TEXT("FIRE! AttackInterval: %f / ElapsedTime: %f"), AttackInterval, Memory->ElapsedTime);
     Memory->ElapsedTime = 0.f;
     Memory->CurrentAmmo--;
+#pragma endregion
 
+#pragma region attack montage
 
     // 공격 몽타주 재생
     ALA_AllyAI* AllyAI = Cast<ALA_AllyAI>(OwnerPawn);
@@ -256,8 +234,9 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
         UE_LOG(LogTemp, Error, TEXT("AllyAI가 NULL이거나 AttackMontage가 비어있음"));
     }
 
+#pragma endregion
 
-
+#pragma region collision detection
     // ---------------------------------------------------------
     // 7. 충돌 판정 (콜리전 기반 LineTrace)
     // ---------------------------------------------------------
@@ -296,6 +275,8 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
                     BlackboardComp->ClearValue(FName("TargetActor"));
                     BlackboardComp->SetValueAsBool(FName("IsCommandedTarget"), false);
                     AIController->ClearFocus(EAIFocusPriority::Gameplay);
+                    AIController->ClearFocus(EAIFocusPriority::Default);
+                    AIController->ClearFocus(EAIFocusPriority::Move);
                     FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
                     return;
                 }
@@ -307,5 +288,5 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
             UE_LOG(LogTemp, Log, TEXT("Attack blocked by environment."));
         }
     }
-
+#pragma endregion
 }

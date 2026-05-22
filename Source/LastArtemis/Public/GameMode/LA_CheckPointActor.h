@@ -14,6 +14,7 @@ class USphereComponent;
 class UWidgetComponent;
 class APawn;
 class ALA_AllyAISpawner;
+class USoundBase;
 
 UCLASS(BlueprintType)
 class LASTARTEMIS_API ALA_CheckPointActor : public AActor, public ILA_Interactable
@@ -115,4 +116,10 @@ protected:
     // 아군 AI
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ally Spawn")
     TObjectPtr<ALA_AllyAISpawner> AllySpawner;
+
+    ////////////////////
+    // 사운드
+    ////////////////////
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Sound")
+    TObjectPtr<USoundBase> CheckPointSound;
 };

@@ -70,17 +70,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
     EMovementInputMode AimInputMode = EMovementInputMode::Toggle;
 
-    // 걷기 속도 배율
+    // 이동속도가 적용되는 비율
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-    float WalkSpeedFactor = 1;
-
-    // 달리기 속도 배율
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-    float SprintSpeedFactor = 1;
-
-    // 앉은 상태의 속도 배율
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
-    float CrouchSpeedFactor = 1;
+    float MovementSpeedFactor = 1;
 
 #pragma endregion
 
@@ -144,6 +136,9 @@ protected:
 #pragma endregion
 
 #pragma region Weapons Settings
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
+    TSubclassOf<class ALA_WeaponBase> WeaponActor;
 
     // 초기에 사용하는 무기 데이터
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
@@ -310,6 +305,9 @@ protected:
 
     UFUNCTION()
     void OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId WeaponDataID);
+
+    UFUNCTION()
+    void OnContaminationChanged(float CurrentContamination, float MaxContamination);
 
 #pragma region InputAction Binding
 

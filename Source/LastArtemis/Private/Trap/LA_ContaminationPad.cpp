@@ -3,7 +3,7 @@
 
 #include "Trap/LA_ContaminationPad.h"
 #include "Character/LA_BaseCharacter.h"
-
+#include "Character/Player/Component/LA_HealthComponent.h"
 
 // Sets default values
 ALA_ContaminationPad::ALA_ContaminationPad()
@@ -15,16 +15,32 @@ ALA_ContaminationPad::ALA_ContaminationPad()
 
 void ALA_ContaminationPad::ApplyEffect(AActor* TargetActor)
 {
-    // TargetActor를 플레이어 베이스 클래스로 캐스팅
-    ALA_BaseCharacter* Player = Cast<ALA_BaseCharacter>(TargetActor);
-
-    if (Player)
+    if (TargetActor == nullptr)
     {
-        // 아까 플레이어 베이스에 만들어둔 함수 호출
-        Player->IncreaseContamination(ContaminationAmount);
+        return;
+    }
+
+    // TargetActor가 소유한 HealthComponent 확인
+    ULA_HealthComponent* HealthComponent = TargetActor->FindComponentByClass<ULA_HealthComponent>();
+
+    if (HealthComponent != nullptr)
+    {
+        // 오염도 증가 함수 호출
+        HealthComponent->AddContamination(ContaminationAmount);
 
         // 디버그용 로그
         UE_LOG(LogTemp, Warning, TEXT("Player is standing on Contamination Pad! +%f"), ContaminationAmount);
     }
+    //// TargetActor를 플레이어 베이스 클래스로 캐스팅
+    //ALA_BaseCharacter* Player = Cast<ALA_BaseCharacter>(TargetActor);
+
+    //if (Player)
+    //{
+    //    // 아까 플레이어 베이스에 만들어둔 함수 호출
+    //    Player->IncreaseContamination(ContaminationAmount);
+
+    //    // 디버그용 로그
+    //    UE_LOG(LogTemp, Warning, TEXT("Player is standing on Contamination Pad! +%f"), ContaminationAmount);
+    //}
 }
 

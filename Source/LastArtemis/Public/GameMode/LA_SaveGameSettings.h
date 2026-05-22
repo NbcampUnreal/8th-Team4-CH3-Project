@@ -24,5 +24,8 @@ public:
     EMovementInputMode SavedSprintInputMode = EMovementInputMode::Toggle;
 
     UPROPERTY(BlueprintReadWrite, Category = "Settings")
-    float MasterVolume = 1.0f;
+    float SavedBGMVolume = 1.0f;
+
+    UPROPERTY(BlueprintReadWrite, Category = "Settings")
+    float SavedSFXVolume = 1.0f;
 };

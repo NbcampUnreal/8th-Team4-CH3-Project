@@ -51,13 +51,15 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "State")
     bool bIsDead;
 
-
     // --- 기본 함수 ---
     UFUNCTION(BlueprintCallable, Category = "Health")
     virtual void TakeDamageCustom(float DamageAmount);
 
     UFUNCTION(BlueprintCallable, Category = "Health")
     virtual void Die();
+
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Sound")
+    class USoundBase* HitSound;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Animation")
     class UAnimMontage* AttackMontage;

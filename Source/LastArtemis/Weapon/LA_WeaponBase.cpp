@@ -7,6 +7,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
 #include "Curves/CurveVector.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "LastArtemis/Character/LA_Holder.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 
@@ -155,12 +158,16 @@ void ALA_WeaponBase::Look(FVector InputValue)
 
 void ALA_WeaponBase::StartAiming()
 {
+    if (CurrentState != EWeaponState::Idle) return;
+
     bIsAiming = true;
     OnAimStateChanged.Broadcast(true);
 }
 
 void ALA_WeaponBase::StopAiming()
 {
+    if (!bIsAiming) return;
+
     bIsAiming = false;
     OnAimStateChanged.Broadcast(false);
 }
@@ -178,17 +185,19 @@ void ALA_WeaponBase::StopFire()
     GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
 }
 
-void ALA_WeaponBase::Reload()
+bool ALA_WeaponBase::Reload()
 {
-    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == WeaponData->MaxMagazineSize || CurrentSpareAmmo <= 0) return;
+    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == WeaponData->MaxMagazineSize || CurrentSpareAmmo <= 0) return false;
 
     CurrentState = EWeaponState::Reload;
-    bIsAiming = false; // 장전 시 조준 강제 해제
+    StopAiming(); // 장전 시 조준 강제 해제
 
     if (UAnimMontage* AnimMontage = WeaponData->ReloadMontage)
     {
         Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
+
+    return true;
 }
 
 void ALA_WeaponBase::Fire()
@@ -231,7 +240,9 @@ void ALA_WeaponBase::HitScan()
 
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
-    if (OwnerPawn) Params.AddIgnoredActor(OwnerPawn);
+    Params.AddIgnoredActor(OwnerPawn);
+    Params.bReturnPhysicalMaterial = true;
+    Params.bTraceComplex = true;
 
     for (int32 i = 0; i < WeaponData->PelletCount; ++i)
     {
@@ -251,9 +262,30 @@ void ALA_WeaponBase::HitScan()
             DrawDebugLine(GetWorld(), StartLocation, HitResult.ImpactPoint, FColor::Red, false, 2.f, 0, 1.f);
             DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 10.f, FColor::Red, false, 3.f);
 
+            EPhysicalSurface SurfaceType = SurfaceType_Default;
+            if (HitResult.PhysMaterial.IsValid())
+            {
+                SurfaceType = HitResult.PhysMaterial->SurfaceType;
+            }
+
+            if (UNiagaraSystem** ImpactParticle = ImpactParticles.Find(SurfaceType))
+            {
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                    GetWorld(),
+                    *ImpactParticle,
+                    HitResult.ImpactPoint,
+                    HitResult.ImpactNormal.Rotation()
+                );
+            }
+
+            // 거리에 따른 Decal 크기 조절
+            FVector2D DistanceRange(0.f, 5000.f);
+            FVector2D DecalSizeRange(10.f, 2.f);
+            float CalculatedDecalSize = FMath::GetMappedRangeValueClamped(DistanceRange, DecalSizeRange, HitResult.Distance);
+
             UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
-                WeaponData->DecalMaterial,
-                FVector(10.f, 10.f, 10.f),
+                DecalMaterial,
+                FVector(CalculatedDecalSize, CalculatedDecalSize, CalculatedDecalSize),
                 HitResult.GetComponent(),
                 HitResult.BoneName,
                 HitResult.ImpactPoint,

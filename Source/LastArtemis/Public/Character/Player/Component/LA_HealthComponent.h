@@ -8,7 +8,7 @@
 
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnHealthChangedDelegate, float, float);
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnShieldChangedDelegate, float, float);
-DECLARE_MULTICAST_DELEGATE_TwoParams(FOnContaminationDelegate, float, float);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnContaminationDelegate, float, CurrentContamination, float, MaxContamination);
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnDeathDelegate);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
@@ -38,6 +38,7 @@ public:
 	FOnShieldChangedDelegate OnShieldChanged;
 
     // 오염도 변화 이벤트
+        UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnContaminationDelegate OnContaminationChanged;
 
 	// 캐릭터 사망 이벤트
