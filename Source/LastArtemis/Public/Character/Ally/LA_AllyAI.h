@@ -4,6 +4,8 @@
 #include "Character/LA_BaseCharacter.h"
 #include "LA_AllyAI.generated.h"
 
+class UNiagaraSystem;
+
 UCLASS()
 class LASTARTEMIS_API ALA_AllyAI : public ALA_BaseCharacter
 {
@@ -15,12 +17,21 @@ public:
 
     void BeginPlay() override;
 
+    // 몽타주
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Animation")
     UAnimMontage* HitMontage;
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category= "Animation")
     UAnimMontage* DeathMontage;
     UPROPERTY(BlueprintReadOnly, Category = "Character State")
     bool bIsFiring = false;
+
+    // 이펙트
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Effects")
+    UNiagaraSystem* GunFireEffect;
+
+    void PlayGunFireEffect();
+
+
 
     UFUNCTION(BlueprintCallable)
     void SetTargetEnemy(AActor* TargetEnemy);
