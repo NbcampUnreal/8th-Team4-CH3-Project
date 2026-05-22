@@ -39,12 +39,9 @@ protected:
     virtual void BeginPlay() override;
     virtual void PostInitializeComponents() override;
 
-    UFUNCTION()
-    void OnHealthChangedCallback(float CurrentHP, float MaxHP);
-
     // --- 컴포넌트 ---
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-    class ULA_HealthComponent* HealthComp;
+    class ULA_HealthComponent* HealthComponent;
 
     UPROPERTY(VisibleAnywhere, Category = "UI")
     TObjectPtr<class UWidgetComponent> HealthWidgetComp;

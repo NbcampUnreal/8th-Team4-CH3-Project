@@ -24,13 +24,15 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
     PrimaryActorTick.bCanEverTick = false;
-
-    MaxHealth = 80.0f;
-    CurrentHealth = MaxHealth;
-    MaxShield = 30.0f;
-    CurrentShield = MaxShield;
-    AttackPower = 15.0f;
-    Defense = 3.0f;
+    if (HealthComponent)
+    {
+        HealthComponent->SetMaxHealth(80.0f);
+        HealthComponent->SetCurrentHealth(HealthComponent->GetMaxHealth());
+        HealthComponent->SetMaxShield(30.0f);
+        HealthComponent->SetCurrentShield(HealthComponent->GetMaxShield());
+        HealthComponent->SetAttackPower(15.0f);
+        HealthComponent->SetDefense(3.0f);
+    }
 
     bUseControllerRotationYaw = false;
     bUseControllerRotationPitch = false;
@@ -60,35 +62,23 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
 void ALA_EnemyCharacter::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
-    HealthComp = FindComponentByClass<ULA_HealthComponent>();
+    HealthComponent = FindComponentByClass<ULA_HealthComponent>();
 }
 
 void ALA_EnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (HealthComp && HealthWidgetComp)
+    if (HealthComponent && HealthWidgetComp)
     {
         if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
         {
-            HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
-            HealthComp->OnHealthChanged.AddUObject(this, &ALA_EnemyCharacter::OnHealthChangedCallback);
-            HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+            HealthComponent->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
+            HealthBar->UpdateHealthBar(HealthComponent->GetCurrentHealth(), HealthComponent->GetMaxHealth());
         }
     }
 }
 
-void ALA_EnemyCharacter::OnHealthChangedCallback(float CurrentHP, float MaxHP)
-{
-    // BaseCharacter 변수와 동기화 (레거시 코드 호환용)
-    CurrentHealth = CurrentHP;
-    MaxHealth = MaxHP;
-
-    if (OnHealthChanged.IsBound())
-    {
-        OnHealthChanged.Broadcast(CurrentHP);
-    }
-}
 
 void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
 {
@@ -242,9 +232,9 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
     if (bIsDead) return 0.0f;
 
     float ActualDamage = 0.0f;
-    if (HealthComp)
+    if (HealthComponent)
     {
-        ActualDamage = HealthComp->TakeDamage(DamageAmount, false);
+        ActualDamage = HealthComponent->TakeDamage(DamageAmount, false);
         if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
     }
     else
@@ -255,6 +245,7 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
     if (ActualDamage <= 0.0f) return 0.0f;
 
     AccumulatedDamage += ActualDamage;
+
     if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
     {
         GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
@@ -262,8 +253,6 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 
     if (CurrentHealth > 0.0f)
     {
-        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
-
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
         if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())

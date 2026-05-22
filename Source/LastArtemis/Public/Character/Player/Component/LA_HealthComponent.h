@@ -112,6 +112,30 @@ public:
 	float TakeDamage(float RawDamageAmount, bool bIsIgnoreShield = false);
 
     UFUNCTION(BlueprintCallable)
+    float GetAttackPower() const
+    {
+        return AttackPower;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetAttackPower(float NewAttackPower)
+    {
+        AttackPower = NewAttackPower;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    float GetDefense() const
+    {
+        return Defense;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetDefense(float NewDefense)
+    {
+        Defense = NewDefense;
+    }
+
+    UFUNCTION(BlueprintCallable)
     void Heal(float HealAmount);
 
     UFUNCTION(BlueprintCallable)
@@ -140,6 +164,31 @@ public:
     float GetMaxShield() const
     {
         return MaxShield;
+    }
+
+
+    UFUNCTION(BlueprintCallable)
+    void SetCurrentHealth(float NewHealth)
+    {
+        this->CurrentHealth = NewHealth;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetMaxHealth(float NewMaxHealth)
+    {
+        MaxHealth = NewMaxHealth;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetCurrentShield(float NewCurrentShield)
+    {
+        CurrentShield = NewCurrentShield;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetMaxShield(float NewMaxShield)
+    {
+        MaxShield = NewMaxShield;
     }
 
     UFUNCTION(BlueprintCallable)
@@ -175,5 +224,17 @@ public:
     {
         if (MaxContamination <= 0.0f) return 0.0f;
         return CurrentContamination / MaxContamination;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetCurrentContamination(float NewCurrentContamination)
+    {
+        CurrentContamination = NewCurrentContamination;
+    }
+
+    UFUNCTION(BlueprintCallable)
+    void SetMaxContamination(float NewMaxContamination)
+    {
+        MaxContamination = NewMaxContamination;
     }
 };
