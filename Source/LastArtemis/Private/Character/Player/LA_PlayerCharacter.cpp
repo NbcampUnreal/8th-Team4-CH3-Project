@@ -98,6 +98,7 @@ void ALA_PlayerCharacter::BeginPlay()
         }
     }
 
+    HealthComponent->OnContaminationChanged.AddUObject(this, &ALA_PlayerCharacter::OnContaminationChanged);
     HealthComponent->OnDeath.AddDynamic(this, &ALA_PlayerCharacter::OnPlayerDeath);
     OnMovementSpeedChanged.AddDynamic(this, &ALA_PlayerCharacter::UpdateMovementSpeed);
 }
@@ -476,9 +477,9 @@ void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
 void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 {
     // 이동 속도 증가
-    WalkSpeedFactor = 2;
-    SprintSpeedFactor = 2;
-    CrouchSpeedFactor = 2;
+    WalkSpeed *= 2;
+    SprintSpeed *= 2;
+    CrouchSpeed *= 2;
 
     if (OnMovementSpeedChanged.IsBound() == true)
     {
@@ -488,9 +489,9 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
     FTimerDelegate Delegator = FTimerDelegate::CreateLambda([&]()
         {
             // 이동 속도 감소
-            WalkSpeedFactor = 1;
-            SprintSpeedFactor = 1;
-            CrouchSpeedFactor = 1;
+            WalkSpeed /= 2;
+            SprintSpeed /= 2;
+            CrouchSpeed /= 2;
 
             if (OnMovementSpeedChanged.IsBound() == true)
             {
@@ -507,8 +508,8 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 
 void ALA_PlayerCharacter::UpdateMovementSpeed()
 {
-    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed * SprintSpeedFactor : WalkSpeed * WalkSpeedFactor);
-    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed * CrouchSpeedFactor;
+    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed) * MovementSpeedFactor;
+    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed * MovementSpeedFactor;
 }
 
 void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
@@ -537,7 +538,10 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         ULA_WeaponData* DuplicatedData = OwnedWeapons[WeaponDataID];
 
         // 무기의 총알 채워넣기
-        //EquipedWeapon->
+        if (EquipedWeapon != nullptr)
+        {
+            //EquipedWeapon->RefillAmmo();
+        }
         return;
     }
     else
@@ -546,6 +550,13 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         OwnedWeapons.Add(WeaponDataID, WeaponDataAsset);
         WeaponIDIndexer.Add(WeaponDataID);
     }
+}
+
+void ALA_PlayerCharacter::OnContaminationChanged(float CurrentContamination, float MaxContamination)
+{
+    float ContaminationPercentage = CurrentContamination / MaxContamination;
+    MovementSpeedFactor = FMath::Lerp(0.7f, 1.f, ContaminationPercentage);
+    OnMovementSpeedChanged.Broadcast();
 }
 
 #pragma region Select Enemy
