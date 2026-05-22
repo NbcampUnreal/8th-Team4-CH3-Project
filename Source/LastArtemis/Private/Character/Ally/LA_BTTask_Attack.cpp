@@ -275,6 +275,8 @@ void ULA_BTTask_Attack::TickTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeM
                     BlackboardComp->ClearValue(FName("TargetActor"));
                     BlackboardComp->SetValueAsBool(FName("IsCommandedTarget"), false);
                     AIController->ClearFocus(EAIFocusPriority::Gameplay);
+                    AIController->ClearFocus(EAIFocusPriority::Default);
+                    AIController->ClearFocus(EAIFocusPriority::Move);
                     FinishLatentTask(OwnerComp, EBTNodeResult::Succeeded);
                     return;
                 }
