@@ -55,22 +55,7 @@ void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
     if (!World)
         return;
 
-    // 자기 자신의 위치와 회전값 저장
-    FVector Location = CapsuleComp->GetComponentLocation();
-    FRotator Rotation = GetActorRotation();
-
-    // 스폰 파라미터
-    FActorSpawnParameters SpawnParams;
-    SpawnParams.Owner = this;
-    SpawnParams.Instigator = Cast<APawn>(GetOwner());
-    SpawnParams.SpawnCollisionHandlingOverride =
-        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
-
-    // 아군 소환
-    ALA_AllyAI* SpawnedAlly = World->SpawnActor<ALA_AllyAI>(AllyClass, Location, Rotation, SpawnParams);
-
-    if (SpawnedAlly)
-    // 기존에 이 스포너가 만든 Ally 제거
+    // 기존 Ally가 살아있든 죽어있든 전부 제거
     for (ALA_AllyAI* Ally : SpawnedAllies)
     {
         if (IsValid(Ally))
@@ -81,15 +66,17 @@ void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
 
     SpawnedAllies.Empty();
 
-    // 플레이어 뒤 쪽에 설정된 수만큼 Ally 생성
+    FActorSpawnParameters SpawnParams;
+    SpawnParams.Owner = this;
+    SpawnParams.Instigator = PlayerPawn;
+    SpawnParams.SpawnCollisionHandlingOverride =
+        ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
+
+    // 플레이어 뒤쪽에 새 Ally 생성
     for (int32 Index = 0; Index < AllySpawnCount; ++Index)
     {
         const FVector SpawnLocation = GetAllySpawnLocation(PlayerPawn, Index);
         const FRotator SpawnRotation = PlayerPawn->GetActorRotation();
-
-        SpawnParams.Owner = this;
-        SpawnParams.Instigator = PlayerPawn;
-        SpawnParams.SpawnCollisionHandlingOverride = ESpawnActorCollisionHandlingMethod::AdjustIfPossibleButAlwaysSpawn;
 
         ALA_AllyAI* NewAlly = World->SpawnActor<ALA_AllyAI>(
             AllyClass,
@@ -98,18 +85,16 @@ void ALA_AllyAISpawner::RespawnAlliesNearPlayer(APawn* PlayerPawn)
             SpawnParams
         );
 
-        if (NewAlly)
-        {
-            // 재스폰 시 제거할 수 있도록 생성된 Ally 저장
-            SpawnedAllies.Add(NewAlly);
+        if (!NewAlly)
+            continue;
 
-            // 스폰 직후 애니메이션 보정?
-            if (USkeletalMeshComponent* SkeletalMeshComp = NewAlly->GetMesh())
-            {
-                SkeletalMeshComp->SetComponentTickEnabled(true);
-                SkeletalMeshComp->InitializeAnimScriptInstance(true);
-                SkeletalMeshComp->RefreshBoneTransforms();
-            }
+        SpawnedAllies.Add(NewAlly);
+
+        if (USkeletalMeshComponent* SkeletalMeshComp = NewAlly->GetMesh())
+        {
+            SkeletalMeshComp->SetComponentTickEnabled(true);
+            SkeletalMeshComp->InitializeAnimScriptInstance(true);
+            SkeletalMeshComp->RefreshBoneTransforms();
         }
     }
 }
