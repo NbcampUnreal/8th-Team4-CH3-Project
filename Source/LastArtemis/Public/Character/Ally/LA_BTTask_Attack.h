@@ -12,6 +12,8 @@ struct FAttackMemory
     bool bIsReloading = false;    // 재장전 진행 여부
 };
 
+
+
 UCLASS()
 class LASTARTEMIS_API ULA_BTTask_Attack : public UBTTask_BlackboardBase
 {
@@ -37,7 +39,7 @@ public:
     // 최대 탄약 수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Attack")
     int32 TotalAmmo;
-
+    // 발사 이펙트
 
     virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
     virtual uint16 GetInstanceMemorySize() const override

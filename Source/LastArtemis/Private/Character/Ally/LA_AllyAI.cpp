@@ -8,6 +8,7 @@
 #include "UI/LA_HUD.h"
 #include "BehaviorTree/BlackboardComponent.h"
 #include "BrainComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Components/CapsuleComponent.h"
 
@@ -30,6 +31,24 @@ void ALA_AllyAI::BeginPlay()
         {
             HUD->RegisterAllyAuto(this);
         }
+    }
+}
+
+void ALA_AllyAI::PlayGunFireEffect()
+{
+    if (!GunFireEffect) return;
+
+    if (UStaticMeshComponent* WeaponMesh = FindComponentByClass<UStaticMeshComponent>())
+    {
+        UNiagaraFunctionLibrary::SpawnSystemAttached(
+            GunFireEffect,
+            WeaponMesh,
+            FName("Muzzle"),
+            FVector::ZeroVector,
+            FRotator::ZeroRotator,
+            EAttachLocation::SnapToTarget,
+            true
+        );
     }
 }
 
