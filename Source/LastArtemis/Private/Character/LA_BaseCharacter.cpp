@@ -1,5 +1,6 @@
 ﻿#include "Character/LA_BaseCharacter.h"
 #include "Components/CapsuleComponent.h"
+#include "Kismet/GameplayStatics.h"
 
 ALA_BaseCharacter::ALA_BaseCharacter()
 {
@@ -42,6 +43,12 @@ float ALA_BaseCharacter::TakeDamage(float DamageAmount, FDamageEvent const& Dama
     {
         CurrentHealth = FMath::Clamp(CurrentHealth - FinalDamage, 0.0f, MaxHealth);
         if (OnHealthChanged.IsBound()) OnHealthChanged.Broadcast(CurrentHealth);
+
+        if (HitSound)
+        {
+            // 적의 현재 위치(GetActorLocation)에서 사운드를 3D로 입체감 있게 터트립니다.
+            UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
+        }
     }
 
     if (CurrentHealth <= 0.0f) Die();
