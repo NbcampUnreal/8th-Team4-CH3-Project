@@ -4,6 +4,10 @@
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
 #include "Character/LA_BaseCharacter.h"
+
+class ULA_HealthComponent;
+class UWidgetComponent;
+
 #include "LA_EnemyCharacter.generated.h"
 
 UCLASS()
@@ -35,8 +39,11 @@ protected:
     virtual void BeginPlay() override;
     virtual void PostInitializeComponents() override;
 
+    UFUNCTION()
+    void OnHealthChangedCallback(float CurrentHP, float MaxHP);
+
     // --- 컴포넌트 ---
-    UPROPERTY(BlueprintReadOnly, Category = "Components")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
     class ULA_HealthComponent* HealthComp;
 
     UPROPERTY(VisibleAnywhere, Category = "UI")

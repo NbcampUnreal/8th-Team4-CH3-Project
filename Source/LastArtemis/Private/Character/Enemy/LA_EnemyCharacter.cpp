@@ -1,4 +1,9 @@
 ﻿#include "Character/Enemy/LA_EnemyCharacter.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
+#include "Components/WidgetComponent.h"
+#include "UI/LA_EnemyHealthWidget.h"
+#include "UI/LA_EnemyDamageTextWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Character/Enemy/EnemyAI/LA_EnemyController.h"
 #include "Animation/AnimMontage.h"
 #include "Components/WidgetComponent.h"
@@ -67,8 +72,21 @@ void ALA_EnemyCharacter::BeginPlay()
         if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
         {
             HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
+            HealthComp->OnHealthChanged.AddUObject(this, &ALA_EnemyCharacter::OnHealthChangedCallback);
             HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
         }
+    }
+}
+
+void ALA_EnemyCharacter::OnHealthChangedCallback(float CurrentHP, float MaxHP)
+{
+    // BaseCharacter 변수와 동기화 (레거시 코드 호환용)
+    CurrentHealth = CurrentHP;
+    MaxHealth = MaxHP;
+
+    if (OnHealthChanged.IsBound())
+    {
+        OnHealthChanged.Broadcast(CurrentHP);
     }
 }
 
@@ -223,7 +241,16 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 {
     if (bIsDead) return 0.0f;
 
-    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    float ActualDamage = 0.0f;
+    if (HealthComp)
+    {
+        ActualDamage = HealthComp->TakeDamage(DamageAmount, false);
+        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
+    }
+    else
+    {
+        ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    }
 
     if (ActualDamage <= 0.0f) return 0.0f;
 
