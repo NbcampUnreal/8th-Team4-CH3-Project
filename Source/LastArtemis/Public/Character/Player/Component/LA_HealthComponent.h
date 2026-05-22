@@ -38,7 +38,7 @@ public:
 	FOnShieldChangedDelegate OnShieldChanged;
 
     // 오염도 변화 이벤트
-        UPROPERTY(BlueprintAssignable, Category = "Events")
+    UPROPERTY(BlueprintAssignable, Category = "Events")
     FOnContaminationDelegate OnContaminationChanged;
 
 	// 캐릭터 사망 이벤트
