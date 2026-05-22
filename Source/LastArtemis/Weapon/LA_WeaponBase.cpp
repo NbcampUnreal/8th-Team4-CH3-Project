@@ -7,6 +7,9 @@
 #include "Camera/CameraComponent.h"
 #include "Components/DecalComponent.h"
 #include "Curves/CurveVector.h"
+#include "PhysicalMaterials/PhysicalMaterial.h"
+#include "NiagaraFunctionLibrary.h"
+#include "NiagaraSystem.h"
 #include "LastArtemis/Character/LA_Holder.h"
 #include "Character/Player/LA_PlayerCharacter.h"
 
@@ -231,7 +234,9 @@ void ALA_WeaponBase::HitScan()
 
     FCollisionQueryParams Params;
     Params.AddIgnoredActor(this);
-    if (OwnerPawn) Params.AddIgnoredActor(OwnerPawn);
+    Params.AddIgnoredActor(OwnerPawn);
+    Params.bReturnPhysicalMaterial = true;
+    Params.bTraceComplex = true;
 
     for (int32 i = 0; i < WeaponData->PelletCount; ++i)
     {
@@ -250,6 +255,22 @@ void ALA_WeaponBase::HitScan()
 
             DrawDebugLine(GetWorld(), StartLocation, HitResult.ImpactPoint, FColor::Red, false, 2.f, 0, 1.f);
             DrawDebugPoint(GetWorld(), HitResult.ImpactPoint, 10.f, FColor::Red, false, 3.f);
+
+            EPhysicalSurface SurfaceType = SurfaceType_Default;
+            if (HitResult.PhysMaterial.IsValid())
+            {
+                SurfaceType = HitResult.PhysMaterial->SurfaceType;
+            }
+
+            if (UNiagaraSystem** ImpactParticle = ImpactParticles.Find(SurfaceType))
+            {
+                UNiagaraFunctionLibrary::SpawnSystemAtLocation(
+                    GetWorld(),
+                    *ImpactParticle,
+                    HitResult.ImpactPoint,
+                    HitResult.ImpactNormal.Rotation()
+                );
+            }
 
             UDecalComponent* Decal = UGameplayStatics::SpawnDecalAttached(
                 WeaponData->DecalMaterial,

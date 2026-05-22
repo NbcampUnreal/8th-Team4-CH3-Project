@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Chaos/ChaosEngineInterface.h"
 #include "LA_WeaponData.h"
 #include "LA_WeaponBase.generated.h"
 
@@ -66,6 +67,9 @@ public:
 
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
     int32 CurrentMagazineAmmo;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
+    TMap<TEnumAsByte<EPhysicalSurface>, class UNiagaraSystem*> ImpactParticles;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")

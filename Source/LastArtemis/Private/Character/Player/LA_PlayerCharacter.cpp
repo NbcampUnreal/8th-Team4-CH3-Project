@@ -1198,7 +1198,7 @@ void ALA_PlayerCharacter::SpawnWeaponActor()
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;   // 소유자 설정
     SpawnParams.Instigator = this;
-    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(GetActorLocation(), GetActorRotation(), SpawnParams);
+    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(WeaponActor, GetActorLocation(), GetActorRotation(), SpawnParams);
 
     // 무기 액터를 캐릭터의 자식으로 붙이기
     EquipedWeapon->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);
