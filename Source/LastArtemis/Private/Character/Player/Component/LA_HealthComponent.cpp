@@ -157,6 +157,7 @@ void ULA_HealthComponent::AddContamination(float Amount)
         return;
 
     CurrentContamination = FMath::Clamp(CurrentContamination + Amount, 0.0f, MaxContamination);
+    OnContaminationChanged.Broadcast(CurrentContamination, MaxContamination);
 }
 
 void ULA_HealthComponent::Decontaminate(float Amount)
@@ -168,4 +169,5 @@ void ULA_HealthComponent::Decontaminate(float Amount)
         return;
 
     CurrentContamination = FMath::Clamp(CurrentContamination - Amount, 0.0f, MaxContamination);
+    OnContaminationChanged.Broadcast(CurrentContamination, MaxContamination);
 }

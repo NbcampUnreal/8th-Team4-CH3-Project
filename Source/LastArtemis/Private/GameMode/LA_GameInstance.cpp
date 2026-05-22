@@ -44,6 +44,26 @@ void ULA_GameInstance::UpdateAndSaveSettings(EMovementInputMode NewAimMode, EMov
     ApplySettingsToCharacter();
 }
 
+void ULA_GameInstance::UpdateAndSaveVolume(float NewBGMVolume, float NewSFXVolume)
+{
+
+    // 저장할 볼륨 설정
+    CurrentBGMVolume = NewBGMVolume;
+    CurrentSFXVolume = NewSFXVolume;
+
+    // 즉시 파일로 저장
+    ULA_SaveGameSettings* SaveObj = Cast<ULA_SaveGameSettings>(UGameplayStatics::CreateSaveGameObject(ULA_SaveGameSettings::StaticClass()));
+    if (SaveObj)
+    {
+        SaveObj->SavedBGMVolume = CurrentBGMVolume;
+        SaveObj->SavedSFXVolume = CurrentSFXVolume;
+        SaveObj->SavedAimInputMode = CurrentAimInputMode;
+        SaveObj->SavedSprintInputMode = CurrentSprintInputMode;
+
+        UGameplayStatics::SaveGameToSlot(SaveObj, SettingsSlotName, 0);
+    }
+}
+
 void ULA_GameInstance::ApplySettingsToCharacter()
 {
     APlayerController* PC = UGameplayStatics::GetPlayerController(GetWorld(), 0);
@@ -67,6 +87,15 @@ void ULA_GameInstance::LoadSettingsFromDisk()
         {
             CurrentAimInputMode = LoadObj->SavedAimInputMode;
             CurrentSprintInputMode = LoadObj->SavedSprintInputMode;
+            CurrentBGMVolume = LoadObj->SavedBGMVolume;
+            CurrentSFXVolume = LoadObj->SavedSFXVolume;
+        }
+        else
+        {
+        CurrentAimInputMode = EMovementInputMode::Toggle;
+        CurrentSprintInputMode = EMovementInputMode::Toggle;
+        CurrentBGMVolume = 0.5f;
+        CurrentSFXVolume = 0.5f;
         }
     }
 }
