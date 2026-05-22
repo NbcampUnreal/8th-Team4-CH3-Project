@@ -727,7 +727,7 @@ void ALA_PlayerCharacter::LookAction(const FInputActionValue& value)
 
 void ALA_PlayerCharacter::SprintStartedAction()
 {
-	if (Controller == nullptr)
+	if (Controller == nullptr || EquipedWeapon->CurrentState != EWeaponState::Idle)
 	{
 		return;
 	}
@@ -839,12 +839,10 @@ void ALA_PlayerCharacter::FireStartedAction()
     }
 
     // 달리기 상태에서 총이 발사되는 것을 방지
-    if (bIsSprint)
+    if (GetVelocity().Size() <= WalkSpeed * 1.1f)
     {
-        return;
+        EquipedWeapon->StartFire();
     }
-
-    EquipedWeapon->StartFire();
 }
 
 void ALA_PlayerCharacter::FireCompletedAction()
@@ -913,7 +911,14 @@ void ALA_PlayerCharacter::ReloadStartedAction()
     }
 
     // 재장전 실행
-    EquipedWeapon->Reload();
+    if (EquipedWeapon->Reload())
+    {
+        //재장전 시작 시 달리기 상태 강제 해제
+        if (bIsSprint)
+        {
+            SetSprintState(false);
+        }
+    }
 }
 
 void ALA_PlayerCharacter::InteractStartedAction()

@@ -185,17 +185,19 @@ void ALA_WeaponBase::StopFire()
     GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
 }
 
-void ALA_WeaponBase::Reload()
+bool ALA_WeaponBase::Reload()
 {
-    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == WeaponData->MaxMagazineSize || CurrentSpareAmmo <= 0) return;
+    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo == WeaponData->MaxMagazineSize || CurrentSpareAmmo <= 0) return false;
 
     CurrentState = EWeaponState::Reload;
-    bIsAiming = false; // 장전 시 조준 강제 해제
+    StopAiming(); // 장전 시 조준 강제 해제
 
     if (UAnimMontage* AnimMontage = WeaponData->ReloadMontage)
     {
         Mesh->GetAnimInstance()->Montage_Play(AnimMontage);
     }
+
+    return true;
 }
 
 void ALA_WeaponBase::Fire()
