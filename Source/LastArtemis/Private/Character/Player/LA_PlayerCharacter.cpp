@@ -99,6 +99,7 @@ void ALA_PlayerCharacter::BeginPlay()
         }
     }
 
+    HealthComponent->OnContaminationChanged.AddUObject(this, &ALA_PlayerCharacter::OnContaminationChanged);
     HealthComponent->OnDeath.AddDynamic(this, &ALA_PlayerCharacter::OnPlayerDeath);
     OnMovementSpeedChanged.AddDynamic(this, &ALA_PlayerCharacter::UpdateMovementSpeed);
 }
@@ -477,9 +478,9 @@ void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
 void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 {
     // 이동 속도 증가
-    WalkSpeedFactor = 2;
-    SprintSpeedFactor = 2;
-    CrouchSpeedFactor = 2;
+    WalkSpeed *= 2;
+    SprintSpeed *= 2;
+    CrouchSpeed *= 2;
 
     if (OnMovementSpeedChanged.IsBound() == true)
     {
@@ -489,9 +490,9 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
     FTimerDelegate Delegator = FTimerDelegate::CreateLambda([&]()
         {
             // 이동 속도 감소
-            WalkSpeedFactor = 1;
-            SprintSpeedFactor = 1;
-            CrouchSpeedFactor = 1;
+            WalkSpeed /= 2;
+            SprintSpeed /= 2;
+            CrouchSpeed /= 2;
 
             if (OnMovementSpeedChanged.IsBound() == true)
             {
@@ -508,8 +509,8 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 
 void ALA_PlayerCharacter::UpdateMovementSpeed()
 {
-    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed * SprintSpeedFactor : WalkSpeed * WalkSpeedFactor);
-    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed * CrouchSpeedFactor;
+    GetCharacterMovement()->MaxWalkSpeed = (bIsSprint == true ? SprintSpeed : WalkSpeed) * MovementSpeedFactor;
+    GetCharacterMovement()->MaxWalkSpeedCrouched = CrouchSpeed * MovementSpeedFactor;
 }
 
 void ALA_PlayerCharacter::UpdateCameraBoomTargetArmLength(float Value)
@@ -538,7 +539,10 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         ULA_WeaponData* DuplicatedData = OwnedWeapons[WeaponDataID];
 
         // 무기의 총알 채워넣기
-        //EquipedWeapon->
+        if (EquipedWeapon != nullptr)
+        {
+            //EquipedWeapon->RefillAmmo();
+        }
         return;
     }
     else
@@ -547,6 +551,13 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         OwnedWeapons.Add(WeaponDataID, WeaponDataAsset);
         WeaponIDIndexer.Add(WeaponDataID);
     }
+}
+
+void ALA_PlayerCharacter::OnContaminationChanged(float CurrentContamination, float MaxContamination)
+{
+    float ContaminationPercentage = CurrentContamination / MaxContamination;
+    MovementSpeedFactor = FMath::Lerp(0.7f, 1.f, ContaminationPercentage);
+    OnMovementSpeedChanged.Broadcast();
 }
 
 #pragma region Select Enemy
@@ -727,7 +738,7 @@ void ALA_PlayerCharacter::LookAction(const FInputActionValue& value)
 
 void ALA_PlayerCharacter::SprintStartedAction()
 {
-	if (Controller == nullptr)
+	if (Controller == nullptr || EquipedWeapon->CurrentState != EWeaponState::Idle)
 	{
 		return;
 	}
@@ -839,12 +850,10 @@ void ALA_PlayerCharacter::FireStartedAction()
     }
 
     // 달리기 상태에서 총이 발사되는 것을 방지
-    if (bIsSprint)
+    if (GetVelocity().Size() <= WalkSpeed * 1.1f)
     {
-        return;
+        EquipedWeapon->StartFire();
     }
-
-    EquipedWeapon->StartFire();
 }
 
 void ALA_PlayerCharacter::FireCompletedAction()
@@ -913,7 +922,14 @@ void ALA_PlayerCharacter::ReloadStartedAction()
     }
 
     // 재장전 실행
-    EquipedWeapon->Reload();
+    if (EquipedWeapon->Reload())
+    {
+        //재장전 시작 시 달리기 상태 강제 해제
+        if (bIsSprint)
+        {
+            SetSprintState(false);
+        }
+    }
 }
 
 void ALA_PlayerCharacter::InteractStartedAction()
@@ -1198,7 +1214,7 @@ void ALA_PlayerCharacter::SpawnWeaponActor()
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;   // 소유자 설정
     SpawnParams.Instigator = this;
-    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(GetActorLocation(), GetActorRotation(), SpawnParams);
+    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(WeaponActor, GetActorLocation(), GetActorRotation(), SpawnParams);
 
     // 무기 액터를 캐릭터의 자식으로 붙이기
     EquipedWeapon->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);

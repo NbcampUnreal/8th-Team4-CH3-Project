@@ -157,7 +157,14 @@ void ULA_HealthComponent::AddContamination(float Amount)
         return;
 
     CurrentContamination = FMath::Clamp(CurrentContamination + Amount, 0.0f, MaxContamination);
+
+    // 오염도 변화 이벤트 호출
     OnContaminationChanged.Broadcast(CurrentContamination, MaxContamination);
+
+    if (CurrentContamination >= MaxContamination)
+    {
+        // 오염도가 최대치일 때의 페널티 (예: 지속 데미지 등)를 여기에 구현
+    }
 }
 
 void ULA_HealthComponent::Decontaminate(float Amount)
@@ -169,5 +176,7 @@ void ULA_HealthComponent::Decontaminate(float Amount)
         return;
 
     CurrentContamination = FMath::Clamp(CurrentContamination - Amount, 0.0f, MaxContamination);
+
+    // 오염도 변화 이벤트 호출
     OnContaminationChanged.Broadcast(CurrentContamination, MaxContamination);
 }
