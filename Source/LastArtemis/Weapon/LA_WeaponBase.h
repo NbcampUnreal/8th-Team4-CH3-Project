@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
+#include "Chaos/ChaosEngineInterface.h"
 #include "LA_WeaponData.h"
 #include "LA_WeaponBase.generated.h"
 
@@ -56,7 +57,7 @@ public:
     virtual void StopFire();
 
     UFUNCTION(BlueprintCallable, Category = "Weapon|Action")
-    virtual void Reload();
+    virtual bool Reload();
 
     UPROPERTY(BlueprintAssignable, Category = "Weapon|Events")
     FOnAimStateChanged OnAimStateChanged;
@@ -64,8 +65,17 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
     EWeaponState CurrentState;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo")
     int32 CurrentMagazineAmmo;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo")
+    int32 CurrentSpareAmmo;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
+    TMap<TEnumAsByte<EPhysicalSurface>, class UNiagaraSystem*> ImpactParticles;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
+    class UMaterialInterface* DecalMaterial;
 
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
@@ -87,7 +97,6 @@ private:
     float CameraPitch;
     float CameraYaw;
     float CurrentSpreadAngle;
-    int32 CurrentSpareAmmo;
 
     FRotator TargetSway;
     FRotator CurrentSway;

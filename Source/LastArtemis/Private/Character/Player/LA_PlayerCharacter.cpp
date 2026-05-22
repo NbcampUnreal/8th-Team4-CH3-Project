@@ -738,7 +738,7 @@ void ALA_PlayerCharacter::LookAction(const FInputActionValue& value)
 
 void ALA_PlayerCharacter::SprintStartedAction()
 {
-	if (Controller == nullptr)
+	if (Controller == nullptr || EquipedWeapon->CurrentState != EWeaponState::Idle)
 	{
 		return;
 	}
@@ -850,12 +850,10 @@ void ALA_PlayerCharacter::FireStartedAction()
     }
 
     // 달리기 상태에서 총이 발사되는 것을 방지
-    if (bIsSprint)
+    if (GetVelocity().Size() <= WalkSpeed * 1.1f)
     {
-        return;
+        EquipedWeapon->StartFire();
     }
-
-    EquipedWeapon->StartFire();
 }
 
 void ALA_PlayerCharacter::FireCompletedAction()
@@ -924,7 +922,14 @@ void ALA_PlayerCharacter::ReloadStartedAction()
     }
 
     // 재장전 실행
-    EquipedWeapon->Reload();
+    if (EquipedWeapon->Reload())
+    {
+        //재장전 시작 시 달리기 상태 강제 해제
+        if (bIsSprint)
+        {
+            SetSprintState(false);
+        }
+    }
 }
 
 void ALA_PlayerCharacter::InteractStartedAction()
@@ -1209,7 +1214,7 @@ void ALA_PlayerCharacter::SpawnWeaponActor()
     FActorSpawnParameters SpawnParams;
     SpawnParams.Owner = this;   // 소유자 설정
     SpawnParams.Instigator = this;
-    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(GetActorLocation(), GetActorRotation(), SpawnParams);
+    EquipedWeapon = GetWorld()->SpawnActor<ALA_WeaponBase>(WeaponActor, GetActorLocation(), GetActorRotation(), SpawnParams);
 
     // 무기 액터를 캐릭터의 자식으로 붙이기
     EquipedWeapon->AttachToActor(this, FAttachmentTransformRules::SnapToTargetNotIncludingScale);

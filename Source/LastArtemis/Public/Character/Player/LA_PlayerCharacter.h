@@ -137,6 +137,9 @@ protected:
 
 #pragma region Weapons Settings
 
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
+    TSubclassOf<class ALA_WeaponBase> WeaponActor;
+
     // 초기에 사용하는 무기 데이터
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
     FPrimaryAssetId initialWeaponData;

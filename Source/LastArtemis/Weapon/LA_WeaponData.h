@@ -24,9 +24,6 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
     TSubclassOf<class UAnimInstance> WeaponAnimBP = nullptr;
 
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
-    class UMaterialInterface* DecalMaterial;
-
 
     // Stats
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Stats")
