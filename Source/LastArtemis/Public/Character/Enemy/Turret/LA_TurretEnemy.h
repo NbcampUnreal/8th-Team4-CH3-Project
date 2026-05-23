@@ -4,6 +4,10 @@
 
 #include "CoreMinimal.h"
 #include "Character/LA_BaseCharacter.h"
+
+class ULA_HealthComponent;
+class UWidgetComponent;
+
 #include "LA_TurretEnemy.generated.h"
 
 
@@ -18,6 +22,12 @@ public:
 
 protected:
     virtual void BeginPlay() override;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+    ULA_HealthComponent* HealthComp;
+
+    UPROPERTY(VisibleAnywhere, Category = "UI")
+    TObjectPtr<UWidgetComponent> HealthWidgetComp;
 
     virtual void Tick(float DeltaTime) override;
 
@@ -52,6 +62,21 @@ protected:
 
     virtual float TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser) override;
     virtual void Die() override;
+
+    void ExecuteShowDamageText();
+
+    UFUNCTION()
+    void OnHealthChangedCallback(float CurrentHP, float MaxHP);
+
+    UPROPERTY(EditDefaultsOnly, Category = "UI")
+    TSubclassOf<class UUserWidget> DamageTextClass;
+
+    UPROPERTY()
+    TArray<class UUserWidget*> ActiveDamageWidgets;
+
+    float AccumulatedDamage = 0.0f;
+
+    FTimerHandle DamageDisplayTimer;
 
     UPROPERTY()
     AActor* CurrentTarget;

@@ -4,6 +4,10 @@
 #include "GameplayTagContainer.h"
 #include "GameplayTagAssetInterface.h"
 #include "Character/LA_BaseCharacter.h"
+
+class ULA_HealthComponent;
+class UWidgetComponent;
+
 #include "LA_EnemyCharacter.generated.h"
 
 UCLASS()
@@ -36,8 +40,8 @@ protected:
     virtual void PostInitializeComponents() override;
 
     // --- 컴포넌트 ---
-    UPROPERTY(BlueprintReadOnly, Category = "Components")
-    class ULA_HealthComponent* HealthComp;
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
+    class ULA_HealthComponent* HealthComponent;
 
     UPROPERTY(VisibleAnywhere, Category = "UI")
     TObjectPtr<class UWidgetComponent> HealthWidgetComp;
