@@ -99,7 +99,7 @@ void ALA_PlayerCharacter::BeginPlay()
         }
     }
 
-    HealthComponent->OnContaminationChanged.AddUObject(this, &ALA_PlayerCharacter::OnContaminationChanged);
+    HealthComponent->OnContaminationChanged.AddDynamic(this, &ALA_PlayerCharacter::OnContaminationChanged);
     HealthComponent->OnDeath.AddDynamic(this, &ALA_PlayerCharacter::OnPlayerDeath);
     OnMovementSpeedChanged.AddDynamic(this, &ALA_PlayerCharacter::UpdateMovementSpeed);
 }
