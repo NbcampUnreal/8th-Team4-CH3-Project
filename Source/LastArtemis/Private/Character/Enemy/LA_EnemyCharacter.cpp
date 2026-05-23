@@ -1,4 +1,9 @@
 ﻿#include "Character/Enemy/LA_EnemyCharacter.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
+#include "Components/WidgetComponent.h"
+#include "UI/LA_EnemyHealthWidget.h"
+#include "UI/LA_EnemyDamageTextWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
 #include "Character/Enemy/EnemyAI/LA_EnemyController.h"
 #include "Animation/AnimMontage.h"
 #include "Components/WidgetComponent.h"
@@ -19,13 +24,15 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
     AutoPossessAI = EAutoPossessAI::PlacedInWorldOrSpawned;
 
     PrimaryActorTick.bCanEverTick = false;
-
-    MaxHealth = 80.0f;
-    CurrentHealth = MaxHealth;
-    MaxShield = 30.0f;
-    CurrentShield = MaxShield;
-    AttackPower = 15.0f;
-    Defense = 3.0f;
+    if (HealthComponent)
+    {
+        HealthComponent->SetMaxHealth(80.0f);
+        HealthComponent->SetCurrentHealth(HealthComponent->GetMaxHealth());
+        HealthComponent->SetMaxShield(30.0f);
+        HealthComponent->SetCurrentShield(HealthComponent->GetMaxShield());
+        HealthComponent->SetAttackPower(15.0f);
+        HealthComponent->SetDefense(3.0f);
+    }
 
     bUseControllerRotationYaw = false;
     bUseControllerRotationPitch = false;
@@ -55,22 +62,23 @@ ALA_EnemyCharacter::ALA_EnemyCharacter()
 void ALA_EnemyCharacter::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
-    HealthComp = FindComponentByClass<ULA_HealthComponent>();
+    HealthComponent = FindComponentByClass<ULA_HealthComponent>();
 }
 
 void ALA_EnemyCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    if (HealthComp && HealthWidgetComp)
+    if (HealthComponent && HealthWidgetComp)
     {
         if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
         {
-            HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
-            HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+            HealthComponent->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
+            HealthBar->UpdateHealthBar(HealthComponent->GetCurrentHealth(), HealthComponent->GetMaxHealth());
         }
     }
 }
+
 
 void ALA_EnemyCharacter::GetOwnedGameplayTags(FGameplayTagContainer& TagContainer) const
 {
@@ -223,11 +231,21 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 {
     if (bIsDead) return 0.0f;
 
-    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    float ActualDamage = 0.0f;
+    if (HealthComponent)
+    {
+        ActualDamage = HealthComponent->TakeDamage(DamageAmount, false);
+        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
+    }
+    else
+    {
+        ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    }
 
     if (ActualDamage <= 0.0f) return 0.0f;
 
     AccumulatedDamage += ActualDamage;
+
     if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
     {
         GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_EnemyCharacter::ExecuteShowDamageText, 0.05f, false);
@@ -235,8 +253,6 @@ float ALA_EnemyCharacter::TakeDamage(float DamageAmount, struct FDamageEvent con
 
     if (CurrentHealth > 0.0f)
     {
-        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
-
         UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance();
 
         if (AnimInstance && !AnimInstance->IsAnyMontagePlaying())

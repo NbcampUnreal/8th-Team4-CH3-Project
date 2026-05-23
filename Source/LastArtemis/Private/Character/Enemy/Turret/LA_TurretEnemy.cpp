@@ -5,6 +5,12 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 #include "GameMode/LA_GameModeBase.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
+#include "Components/WidgetComponent.h"
+#include "UI/LA_EnemyHealthWidget.h"
+#include "UI/LA_EnemyDamageTextWidget.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "UObject/ConstructorHelpers.h"
 
 // Sets default values
 ALA_TurretEnemy::ALA_TurretEnemy()
@@ -24,6 +30,20 @@ ALA_TurretEnemy::ALA_TurretEnemy()
     CurrentTarget = nullptr;
 
     CharacterTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
+
+    HealthComp = CreateDefaultSubobject<ULA_HealthComponent>(TEXT("HealthComp"));
+
+    HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthWidget"));
+    HealthWidgetComp->SetupAttachment(RootComponent);
+    HealthWidgetComp->SetWidgetSpace(EWidgetSpace::Screen);
+    HealthWidgetComp->SetRelativeLocation(FVector(0.0f, 0.0f, 150.0f));
+    HealthWidgetComp->SetVisibility(false);
+
+    static ConstructorHelpers::FClassFinder<UUserWidget> HB(TEXT("/Game/UI/Common/WBP_EnemyHealthBar.WBP_EnemyHealthBar_C"));
+    if (HB.Succeeded()) HealthWidgetComp->SetWidgetClass(HB.Class);
+
+    static ConstructorHelpers::FClassFinder<UUserWidget> DT(TEXT("/Game/UI/Common/WBP_EnemyDamageText.WBP_EnemyDamageText_C"));
+    if (DT.Succeeded()) DamageTextClass = DT.Class;
 }
 
 // Called when the game starts or when spawned
@@ -46,6 +66,18 @@ void ALA_TurretEnemy::BeginPlay()
 
     GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &ALA_TurretEnemy::FireProjectile, FireRate, true);
 
+    if (HealthComp)
+    {
+        HealthComp->OnHealthChanged.AddUObject(this, &ALA_TurretEnemy::OnHealthChangedCallback);
+        if (HealthWidgetComp)
+        {
+            if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
+            {
+                HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
+                HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+            }
+        }
+    }
 }
 
 // Called every frame
@@ -260,7 +292,25 @@ float ALA_TurretEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const&
     if (bIsDead) return 0.0f;
 
     // 부모의 데미지 공식을 실행시켜 부모 변수(CurrentHealth)를 알아서 깎게 만듭니다.
-    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    float ActualDamage = 0.0f;
+    if (HealthComp)
+    {
+        ActualDamage = HealthComp->TakeDamage(DamageAmount, false);
+        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
+    }
+    else
+    {
+        ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+    }
+
+    if (ActualDamage > 0.0f)
+    {
+        AccumulatedDamage += ActualDamage;
+        if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
+        {
+            GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_TurretEnemy::ExecuteShowDamageText, 0.05f, false);
+        }
+    }
 
 
     return ActualDamage;
@@ -297,4 +347,54 @@ void ALA_TurretEnemy::Die()
 
     // 레벨에서 제거
     SetLifeSpan(2.0f);
+}
+
+void ALA_TurretEnemy::OnHealthChangedCallback(float CurrentHP, float MaxHP)
+{
+    CurrentHealth = CurrentHP;
+    MaxHealth = MaxHP;
+
+    if (OnHealthChanged.IsBound())
+    {
+        OnHealthChanged.Broadcast(CurrentHP);
+    }
+}
+
+void ALA_TurretEnemy::ExecuteShowDamageText()
+{
+    if (!DamageTextClass || AccumulatedDamage <= 0.0f) return;
+
+    ULA_EnemyDamageTextWidget* DamageWidget = CreateWidget<ULA_EnemyDamageTextWidget>(GetWorld(), DamageTextClass);
+    if (DamageWidget)
+    {
+        DamageWidget->SetDamageValue(AccumulatedDamage);
+        DamageWidget->AddToViewport();
+
+        FVector WorldLocation = GetActorLocation() + FVector(0, 0, 100.0f);
+        FVector2D ScreenPosition;
+
+        if (UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(GetWorld()->GetFirstPlayerController(), WorldLocation, ScreenPosition, true))
+        {
+            DamageWidget->SetRenderTranslation(ScreenPosition);
+        }
+
+        ActiveDamageWidgets.Add(DamageWidget);
+
+        TWeakObjectPtr<ALA_TurretEnemy> WeakSelf(this);
+        TWeakObjectPtr<ULA_EnemyDamageTextWidget> WeakWidget(DamageWidget);
+
+        FTimerHandle RemoveTimer;
+        GetWorld()->GetTimerManager().SetTimer(RemoveTimer, [WeakSelf, WeakWidget]()
+            {
+                if (WeakWidget.IsValid())
+                {
+                    WeakWidget->RemoveFromParent();
+                    if (WeakSelf.IsValid())
+                    {
+                        WeakSelf->ActiveDamageWidgets.Remove(WeakWidget.Get());
+                    }
+                }
+            }, 0.5f, false);
+    }
+    AccumulatedDamage = 0.0f;
 }
