@@ -37,6 +37,9 @@ public:
     void UpdateContamination(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
+    void UpdateSkill(int32 Index, float CooldownTime);
+
+    UFUNCTION(BlueprintImplementableEvent)
     void UpdateQuickSlot(float Current, float Max);
 
     UFUNCTION(BlueprintImplementableEvent)
@@ -50,6 +53,8 @@ public:
     void BindHealth();
 
     void BindContamination();
+
+    void BindSkill();
 
     void BindQuickSlot();
 

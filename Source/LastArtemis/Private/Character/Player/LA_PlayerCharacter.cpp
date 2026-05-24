@@ -438,6 +438,12 @@ FVector ALA_PlayerCharacter::GetFocusLocation_Implementation()
 
 void ALA_PlayerCharacter::Blink()
 {
+    if (GetWorldTimerManager().IsTimerActive(BlinkCooldownTimerHandle))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("점멸 스킬이 아직 쿨타임 중입니다."));
+        return;
+    }
+
     // 카메라 얻기
     UCameraComponent* Camera = GetCameraComponent();
 
@@ -452,6 +458,20 @@ void ALA_PlayerCharacter::Blink()
 
     // 순간이동 실행
     TeleportTo(BlinkLocation, GetActorRotation());
+
+
+    // UI 브로드캐스트
+    if (OnSkillCastSignature.IsBound())
+    {
+        // 0번 슬롯 스킬 발동, 쿨타임은 BlinkCooldown
+        OnSkillCastSignature.Broadcast(0, BlinkCooldown);
+    }
+
+    // 내부 쿨타임 카운트다운 가동
+    GetWorldTimerManager().SetTimer(BlinkCooldownTimerHandle, FTimerDelegate::CreateLambda([this]()
+    {
+        UE_LOG(LogTemp, Log, TEXT("점멸 쿨타임 종료."));
+    }), BlinkCooldown, false);
 }
 
 void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
@@ -477,6 +497,13 @@ void ALA_PlayerCharacter::EnhanceWeaponDamage(const float Duration)
 
 void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
 {
+    // 쿨타임 체크
+    if (GetWorldTimerManager().IsTimerActive(SpeedEnhanceCooldownTimerHandle))
+    {
+        UE_LOG(LogTemp, Warning, TEXT("이동속도 강화 스킬이 아직 쿨타임 중입니다."));
+        return;
+    }
+
     // 이동 속도 증가
     WalkSpeed *= 2;
     SprintSpeed *= 2;
@@ -503,6 +530,20 @@ void ALA_PlayerCharacter::EnhanceMovementSpeed(const float Duration)
     // 이동 속도 감소 예약
     FTimerHandle SkillTimer;
     GetWorldTimerManager().SetTimer(SkillTimer, Delegator, Duration, false);
+
+    // UI 전달
+    if (OnSkillCastSignature.IsBound())
+    {
+        OnSkillCastSignature.Broadcast(1, SpeedEnhanceCooldown);
+    }
+
+    // 쿨타임 계산
+    GetWorldTimerManager().SetTimer(SpeedEnhanceCooldownTimerHandle, FTimerDelegate::CreateLambda([this]()
+    {
+        UE_LOG(LogTemp, Log, TEXT("이동속도 강화 쿨타임 종료."));
+    }), SpeedEnhanceCooldown, false);
+
+
 }
 
 #pragma endregion

@@ -30,6 +30,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 // 속도가 변경되었을 경우 호출되는 이벤트의 타입
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
 
+// 스킬 사용 시 호출되는 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FOnSkillCastSignature, int32, float);
+
 UCLASS()
 class LASTARTEMIS_API ALA_PlayerCharacter : public ACharacter, public ILA_Holder
 {
@@ -55,6 +58,8 @@ public:
 
     FOnAmmoChangedSignature OnAmmoChangedSignature;
 
+    FOnSkillCastSignature OnSkillCastSignature;
+
 public:
 #pragma region General Settings
 
@@ -73,6 +78,7 @@ public:
     // 이동속도가 적용되는 비율
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "3_General Settings")
     float MovementSpeedFactor = 1;
+
 
 #pragma endregion
 
@@ -248,7 +254,7 @@ public:
 #pragma endregion
 
 #pragma region Skill
-
+public:
     // 점멸 (순간이동)
     void Blink();
 
@@ -257,6 +263,18 @@ public:
 
     // 이동 속도 증가
     void EnhanceMovementSpeed(const float Duration);
+
+protected:
+    // 스킬 쿨타임
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "6_Skill Settings")
+    float BlinkCooldown = 10.0f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "6_Skill Settings")
+    float SpeedEnhanceCooldown = 5.0f;
+
+private:
+    FTimerHandle BlinkCooldownTimerHandle;
+    FTimerHandle SpeedEnhanceCooldownTimerHandle;
 
 #pragma endregion
 
