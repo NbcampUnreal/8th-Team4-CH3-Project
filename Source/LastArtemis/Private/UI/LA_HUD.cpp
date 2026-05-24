@@ -36,7 +36,10 @@ void ULA_HUD::NativeConstruct()
 
     BindHealth();
     BindContamination();
+    BindSkill();
+    BindQuickSlot();
     BindAmmo();
+
 
     if (HorizontalBox_Ally1) HorizontalBox_Ally1->SetVisibility(ESlateVisibility::Collapsed);
     if (HorizontalBox_Ally2) HorizontalBox_Ally2->SetVisibility(ESlateVisibility::Collapsed);
@@ -142,6 +145,18 @@ void ULA_HUD::BindContamination()
         // 바인딩 직후 초기화
         UpdateContamination(HealthComp->GetCurrentContamination(), HealthComp->GetMaxContamination());
 
+    }
+}
+
+void ULA_HUD::BindSkill()
+{
+        ALA_PlayerCharacter* PlayerCharacter =
+        Cast<ALA_PlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    if (PlayerCharacter)
+    {
+        // 캐릭터의 델리게이트 구독
+        PlayerCharacter->OnSkillCastSignature.AddUObject(this, &ULA_HUD::UpdateSkill);
     }
 }
 
