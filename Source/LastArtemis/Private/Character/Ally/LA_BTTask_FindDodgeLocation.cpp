@@ -26,7 +26,7 @@ EBTNodeResult::Type ULA_BTTask_FindDodgeLocation::ExecuteTask(UBehaviorTreeCompo
     AActor* TargetActor = Cast<AActor>(BlackboardComp->GetValueAsObject(TargetActorKey.SelectedKeyName));
     if (!TargetActor) return EBTNodeResult::Failed;
 
-    UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(GetWorld());
+    UNavigationSystemV1* NavSystem = FNavigationSystem::GetCurrent<UNavigationSystemV1>(OwnerComp.GetWorld());
     if (!NavSystem) return EBTNodeResult::Failed;
 
     FVector TargetLocation = TargetActor->GetActorLocation();
