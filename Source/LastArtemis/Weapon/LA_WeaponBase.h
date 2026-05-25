@@ -125,6 +125,11 @@ public:
 
     int32 GetCurrentMagazineAmmo() const { return CurrentMagazineAmmo; }
     int32 GetMaxMagazineSize() const { return WeaponData->MaxMagazineSize; }
+    int32 GetCurrentSpareAmmo() const { return CurrentSpareAmmo; }
+
+    void SetCurrentSpareAmmo(int32 NewAmmo) { CurrentSpareAmmo = NewAmmo; }
+    void SetCurrentMagazineAmmo(int32 NewAmmo) { CurrentMagazineAmmo = NewAmmo; }
+    ULA_WeaponData* GetWeaponData() const { return WeaponData; }
 
     void UpdateAmmo();
     void RefillAmmo();
