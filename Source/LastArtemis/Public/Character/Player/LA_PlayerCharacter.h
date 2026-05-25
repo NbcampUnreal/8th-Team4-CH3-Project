@@ -30,6 +30,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 // 속도가 변경되었을 경우 호출되는 이벤트의 타입
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
 
+// 무기가 변경되었을 경우 호출되는 이벤트의 타입
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponChangedSignature, ULA_WeaponData*);
+
 // 스킬 사용 시 호출되는 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnSkillCastSignature, int32, float);
 
@@ -142,29 +145,36 @@ protected:
 #pragma endregion
 
 #pragma region Weapons Settings
+    public:
+
+    FOnWeaponChangedSignature OnWeaponChangedSignature;
+
+    protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
     TSubclassOf<class ALA_WeaponBase> WeaponActor;
 
-    // 초기에 사용하는 무기 데이터
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
-    FPrimaryAssetId initialWeaponData;
+    // 소지할 무기들을 할당하는 맵
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    TMap<FPrimaryAssetId, ULA_WeaponData*> OwnedWeapons;
 
     // 무기 퀵슬롯 (1, 2, 3)에 해당하는 OwnedWeapons의 Key 값을 관리하는 배열
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     TArray<FPrimaryAssetId> WeaponIDIndexer;
 
-    // 보유한 무기 목록
-    // { ULA_WeaponData::WeaponName, ULA_WeaponData* }
+    // 각 무기 ID별 남은 예비 탄약(Spare Ammo) 저장소
     UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
-    TMap<FPrimaryAssetId, ULA_WeaponData*> OwnedWeapons;
-    // Key : 무기 데이터 클래스
-    // Value : CDO와 비교하여 달라진 부분을 관리하는 구조체 또는 클래스
-    //TMap<TSubclassOf<ULA_WeaponData>, FLA_WeaponDeltaProperty*> OwnedWeapons;
+    TMap<FPrimaryAssetId, int32> WeaponSpareAmmoMap;
+
+    // 각 무기 ID별 남은 탄창(Magazine) 탄약 저장소
+    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    TMap<FPrimaryAssetId, int32> WeaponMagazineAmmoMap;
 
     // 현재 장착중인 무기를 저장하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     ALA_WeaponBase* EquipedWeapon;
+
+
 
 #pragma endregion
 

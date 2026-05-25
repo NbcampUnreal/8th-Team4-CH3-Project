@@ -357,6 +357,10 @@ bool ULA_InventoryComponent::SetQuickItemSlot(int32 QuickSlotIndex, int32 ItemSl
 
     QuickSlots[QuickSlotIndex] = ItemSlot.ItemAssetId;
 
+    if (OnQuickSlotUpdated.IsBound())
+    {
+        OnQuickSlotUpdated.Broadcast(QuickSlotIndex);
+    }
     return true;
 }
 
@@ -387,7 +391,14 @@ bool ULA_InventoryComponent::UseQuickItem(int32 QuickSlotIndex, AActor* UseTarge
         return false;
     }
 
-    return UseItemByAssetId(ItemAssetId, UseTarget);
+    bool ItemUsed = UseItemByAssetId(ItemAssetId, UseTarget);
+
+    if (ItemUsed && OnQuickSlotUpdated.IsBound())
+    {
+        OnQuickSlotUpdated.Broadcast(QuickSlotIndex);
+    }
+
+    return ItemUsed;
 }
 
 // 퀵 슬롯 비우기
@@ -399,6 +410,11 @@ bool ULA_InventoryComponent::ClearQuickItemSlot(int32 QuickSlotIndex)
     }
 
     QuickSlots[QuickSlotIndex] = FPrimaryAssetId();
+
+    if (OnQuickSlotUpdated.IsBound())
+    {
+        OnQuickSlotUpdated.Broadcast(QuickSlotIndex);
+    }
 
     return true;
 }
@@ -446,6 +462,7 @@ bool ULA_InventoryComponent::UseItemByAssetId(const FPrimaryAssetId& ItemAssetId
         return UseItem(Index, UseTarget);
     }
 
+
     // 인벤토리에 동일한 ID가 없을 시 false
     return false;
 }
@@ -479,9 +496,16 @@ bool ULA_InventoryComponent::AutoAssignToQuickSlot(const FPrimaryAssetId& ItemAs
         {
             QuickSlots[Index] = ItemAssetId;
 
+            if (OnQuickSlotUpdated.IsBound())
+            {
+                OnQuickSlotUpdated.Broadcast(Index);
+            }
+
             return true;
         }
     }
+
+
 
     // 퀵 슬롯 등록 자리 부족할 경우 false
     return false;

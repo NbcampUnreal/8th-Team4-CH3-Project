@@ -41,6 +41,9 @@ public:
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Stats")
     int32 MaxMagazineSize = 30;
 
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Stats")
+    int32 MaxSpareAmmo = 90;
+
 
     // Aim
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Aim")
