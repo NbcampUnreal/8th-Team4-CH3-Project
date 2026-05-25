@@ -30,6 +30,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FOnAmmoChangedSignature, int32, int32);
 // 속도가 변경되었을 경우 호출되는 이벤트의 타입
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnSpeedChanged);
 
+// 무기가 변경되었을 경우 호출되는 이벤트의 타입
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnWeaponChangedSignature, ULA_WeaponData*);
+
 // 스킬 사용 시 호출되는 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FOnSkillCastSignature, int32, float);
 
@@ -142,6 +145,11 @@ protected:
 #pragma endregion
 
 #pragma region Weapons Settings
+    public:
+
+    FOnWeaponChangedSignature OnWeaponChangedSignature;
+
+    protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
     TSubclassOf<class ALA_WeaponBase> WeaponActor;
@@ -165,6 +173,8 @@ protected:
     // 현재 장착중인 무기를 저장하는 변수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     ALA_WeaponBase* EquipedWeapon;
+
+
 
 #pragma endregion
 
