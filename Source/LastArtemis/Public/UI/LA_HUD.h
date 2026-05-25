@@ -40,13 +40,22 @@ public:
     void UpdateSkill(int32 Index, float CooldownTime);
 
     UFUNCTION(BlueprintImplementableEvent)
-    void UpdateQuickSlot(float Current, float Max);
+    void UpdateQuickSlot(UTexture2D* ItemIcon, int32 Quantity);
+
+    UPROPERTY(BlueprintReadOnly)
+    class ULA_InventoryComponent* InventoryComp;
+
+    UFUNCTION()
+    void HandleQuickSlotUpdated(int32 QuickSlotIndex);
 
     UFUNCTION(BlueprintImplementableEvent)
     void UpdateAmmo(int32 CurrentMagazineAmmo, int32 MaxMagazineSize);
 
     UFUNCTION(BlueprintImplementableEvent)
     void UpdateMission(ULA_MissionDataAsset* MissionData, int32 PhaseIndex, int32 CurrentCount);
+
+    UFUNCTION(BlueprintImplementableEvent)
+    void UpdateWeapon();
 
     void RegisterAllyAuto(class ALA_AllyAI* NewAlly);
 

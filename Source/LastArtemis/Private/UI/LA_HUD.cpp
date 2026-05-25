@@ -10,6 +10,7 @@
 #include "Character/Player/LA_PlayerCharacter.h"
 #include "Character/Ally/LA_AllyAI.h"
 #include "Components/HorizontalBox.h"
+#include "Item/LA_InventoryComponent.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
 
 void ULA_HUD::NativeConstruct()
@@ -162,6 +163,16 @@ void ULA_HUD::BindSkill()
 
 void ULA_HUD::BindQuickSlot()
 {
+    ACharacter* PlayerCharacter = UGameplayStatics::GetPlayerCharacter(GetWorld(), 0);
+
+    if (PlayerCharacter)
+    {
+        InventoryComp = PlayerCharacter->FindComponentByClass<ULA_InventoryComponent>();
+        if(InventoryComp)
+        {
+            InventoryComp->OnQuickSlotUpdated.AddDynamic(this, &ULA_HUD::HandleQuickSlotUpdated);
+        }
+    }
 }
 
 void ULA_HUD::BindAmmo()
@@ -173,5 +184,20 @@ void ULA_HUD::BindAmmo()
     {
         // 캐릭터의 델리게이트 구독
         PlayerCharacter->OnAmmoChangedSignature.AddUObject(this, &ULA_HUD::UpdateAmmo);
+    }
+}
+
+void ULA_HUD::HandleQuickSlotUpdated(int32 QuickSlotIndex)
+{
+    if (InventoryComp)
+    {
+        FPrimaryAssetId ItemId = InventoryComp->GetQuickSlot(QuickSlotIndex);
+        ULA_ItemDataAsset* ItemData = Cast<ULA_ItemDataAsset>(UAssetManager::Get().GetPrimaryAssetObject(ItemId));
+
+        int32 Quantity = ItemData ? InventoryComp->GetItemTotalCount(ItemData) : 0;
+        UTexture2D* Icon = ItemData ? ItemData->ItemTexture2D : nullptr;
+
+        UpdateQuickSlot(Icon, Quantity);
+        
     }
 }
