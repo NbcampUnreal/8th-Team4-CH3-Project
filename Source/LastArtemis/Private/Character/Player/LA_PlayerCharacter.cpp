@@ -83,20 +83,29 @@ void ALA_PlayerCharacter::BeginPlay()
     // 무기 인스턴스 생성
     SpawnWeaponActor();
 
-    // 초기 무기의 유효성 확인 획득
-    if (initialWeaponData.IsValid() == true)
+    // 기본 무기(OwnedWeapons) 처리 및 첫 번째 무기 장착
+    if (!OwnedWeapons.IsEmpty())
     {
-        // 동기 방식을 사용하여 초기 무기 획득
-        UAssetManager& AssetManager = UAssetManager::Get();
-        AssetManager.GetStreamableManager().LoadSynchronous(AssetManager.GetPrimaryAssetPath(initialWeaponData));
-        OnCompletedAsyncLoadWeaponDataAsset(initialWeaponData);
+        WeaponIDIndexer.Empty();
 
-        // 보유한 무기의 개수 확인
-        if (WeaponIDIndexer.IsEmpty() == false)
+        for (const auto& WeaponPair : OwnedWeapons)
         {
-            // 0번 인덱스의 무기 장착
-            SwapWeapon(0);
+            FPrimaryAssetId WeaponID = WeaponPair.Key;
+            ULA_WeaponData* DataAsset = WeaponPair.Value;
+
+            // 스왑을 위한 인덱서 배열에 등록
+            WeaponIDIndexer.Add(WeaponID);
+
+            // 블루프린트에서 할당된 무기들의 초기 탄약 데이터를 맵에 등록
+            if (DataAsset != nullptr)
+            {
+                WeaponSpareAmmoMap.Add(WeaponID, DataAsset->MaxSpareAmmo);
+                WeaponMagazineAmmoMap.Add(WeaponID, DataAsset->MaxMagazineSize);
+            }
         }
+
+        // 0번 인덱스의 무기(첫 번째 무기) 장착
+        SwapWeapon(0);
     }
 
     HealthComponent->OnContaminationChanged.AddDynamic(this, &ALA_PlayerCharacter::OnContaminationChanged);
@@ -279,8 +288,14 @@ void ALA_PlayerCharacter::SwapWeapon(int32 WeaponIndex)
         return;
     }
 
-    // 선택한 무기 클래스의 이름 얻기
+    // 선택한 무기의 ID 얻기
     FPrimaryAssetId WeaponID = WeaponIDIndexer[WeaponIndex];
+
+    // 현재 들고 있는 무기와 선택한 인덱스의 무기가 동일한 경우 함수 종료
+    if (EquipedWeapon->GetWeaponData() && EquipedWeapon->GetWeaponData()->GetPrimaryAssetId() == WeaponID)
+    {
+        return;
+    }
 
     // 해당 클래스의 무기를 보유하고 있는지 확인
     if (OwnedWeapons.Contains(WeaponID) == true)
@@ -369,26 +384,32 @@ void ALA_PlayerCharacter::ActivateWeapon_Implementation(ULA_WeaponData* WeaponDa
     FString DebugMessage = FString::Printf(TEXT("무기(%s) 장착"), *WeaponData->GetPrimaryAssetId().ToString());
     GEngine->AddOnScreenDebugMessage(-1, 2.f, FColor::Orange, DebugMessage);
 
-    //// 현재 장착 중인 무기를 활성화하는 경우
-    //if (Weapon == EquipedWeapon)
-    //{
-    //    // 함수 조기 종료
-    //    return;
-    //}
-    //// 다른 무기 활성화 시 현재 무기 비활성화
-    //if (EquipedWeapon != nullptr)
-    //{
-    //    ILA_Holder::Execute_DeactivateWeapon(this, EquipedWeapon);
-    //}
+    if (EquipedWeapon && EquipedWeapon->GetWeaponData())
+    {
+        FPrimaryAssetId CurrentWeaponID = EquipedWeapon->GetWeaponData()->GetPrimaryAssetId();
+        WeaponSpareAmmoMap.Add(CurrentWeaponID, EquipedWeapon->GetCurrentSpareAmmo());
+        WeaponMagazineAmmoMap.Add(CurrentWeaponID, EquipedWeapon->GetCurrentMagazineAmmo());
+    }
 
-    // 장착 무기 교체
+    // 장착 무기의 외형 및 애니메이션 데이터 교체
     EquipedWeapon->SetWeaponData(WeaponData);
+
+    // 새로 장착한 무기의 기존 탄약 기록을 플레이어 주머니(TMap)에서 찾아 무기에 주입
+    FPrimaryAssetId NewWeaponID = WeaponData->GetPrimaryAssetId();
+
+    if (int32* SavedSpareAmmo = WeaponSpareAmmoMap.Find(NewWeaponID))
+    {
+        EquipedWeapon->SetCurrentSpareAmmo(*SavedSpareAmmo);
+    }
+
+    if (int32* SavedMagAmmo = WeaponMagazineAmmoMap.Find(NewWeaponID))
+    {
+        EquipedWeapon->SetCurrentMagazineAmmo(*SavedMagAmmo);
+    }
+
+    // 무기 드로우 애니메이션 재생 및 HUD 실시간 데이터 반영
     EquipedWeapon->Draw();
-
-    // HUD 업데이트
     ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
-
-    return;
 }
 
 void ALA_PlayerCharacter::DeactivateWeapon_Implementation()
@@ -582,7 +603,7 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         // 무기의 총알 채워넣기
         if (EquipedWeapon != nullptr)
         {
-            //EquipedWeapon->RefillAmmo();
+            EquipedWeapon->RefillAmmo();
         }
         return;
     }
@@ -1270,4 +1291,7 @@ void ALA_PlayerCharacter::RefillWeaponAmmo()
         return;
 
     EquipedWeapon->RefillAmmo();
+    FPrimaryAssetId CurrentID = EquipedWeapon->GetWeaponData()->GetPrimaryAssetId();
+    WeaponSpareAmmoMap.Add(CurrentID, EquipedWeapon->GetCurrentSpareAmmo());
+    WeaponMagazineAmmoMap.Add(CurrentID, EquipedWeapon->GetCurrentMagazineAmmo());
 }

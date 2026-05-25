@@ -36,7 +36,6 @@ ALA_WeaponBase::ALA_WeaponBase()
     CameraYaw = 0.f;
     TargetSway = FRotator::ZeroRotator;
     CurrentSway = FRotator::ZeroRotator;
-    CurrentSpareAmmo = 90;
     CurrentState = EWeaponState::Idle;
 }
 
@@ -338,7 +337,7 @@ void ALA_WeaponBase::RefillAmmo()
         return;
 
     CurrentMagazineAmmo = WeaponData->MaxMagazineSize;
-    CurrentSpareAmmo = 90;
+    CurrentSpareAmmo = WeaponData->MaxSpareAmmo;
     CurrentState = EWeaponState::Idle;
 
     if (GetOwner() && GetOwner()->Implements<ULA_Holder>())
