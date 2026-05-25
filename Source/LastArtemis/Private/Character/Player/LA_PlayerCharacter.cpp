@@ -213,6 +213,13 @@ void ALA_PlayerCharacter::SetupPlayerInputComponent(UInputComponent* PlayerInput
             {
                 enhancedInputComponent->BindAction(LA_Controller->PauseInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::PauseAction);
             }
+
+            // Inventory
+            if (LA_Controller->InventoryInputAction != nullptr)
+            {
+                enhancedInputComponent->BindAction(LA_Controller->InventoryInputAction, ETriggerEvent::Started, this, &ALA_PlayerCharacter::InventoryAction);
+            }
+
             // Item QuickSlot InputAction
             for (int32 i = 0; i < LA_Controller->ItemQuickSlotActions.Num(); ++i)
             {
@@ -384,6 +391,11 @@ void ALA_PlayerCharacter::ActivateWeapon_Implementation(ULA_WeaponData* WeaponDa
     // 장착 무기 교체
     EquipedWeapon->SetWeaponData(WeaponData);
     EquipedWeapon->Draw();
+
+    if (OnWeaponChangedSignature.IsBound())
+    {
+        OnWeaponChangedSignature.Broadcast(WeaponData);
+    }
 
     // HUD 업데이트
     ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
@@ -1138,6 +1150,10 @@ void ALA_PlayerCharacter::PauseAction()
     }
 }
 
+#include "UI/LA_InventoryWidget.h"
+
+// ... (existing includes)
+
 void ALA_PlayerCharacter::InventoryAction()
 {
     if (Controller == nullptr) return;
@@ -1150,10 +1166,13 @@ void ALA_PlayerCharacter::InventoryAction()
     // 인벤토리 UI 생성 및 출력
     if (InventoryWidgetClass)
     {
-        UUserWidget* Inventory = CreateWidget<UUserWidget>(GetWorld(), InventoryWidgetClass);
+        ULA_InventoryWidget* Inventory = CreateWidget<ULA_InventoryWidget>(GetWorld(), InventoryWidgetClass);
         if (Inventory)
         {
             Inventory->AddToViewport();
+            
+            // 인벤토리 초기화
+            Inventory->InitializeInventory(InventoryComponent);
 
             // 입력 모드 전환
             if (APlayerController* PC = Cast<APlayerController>(Controller))

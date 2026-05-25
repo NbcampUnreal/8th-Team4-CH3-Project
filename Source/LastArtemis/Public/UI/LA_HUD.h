@@ -55,7 +55,7 @@ public:
     void UpdateMission(ULA_MissionDataAsset* MissionData, int32 PhaseIndex, int32 CurrentCount);
 
     UFUNCTION(BlueprintImplementableEvent)
-    void UpdateWeapon();
+    void UpdateWeapon(ULA_WeaponData* WeaponData);
 
     void RegisterAllyAuto(class ALA_AllyAI* NewAlly);
 
@@ -68,6 +68,8 @@ public:
     void BindQuickSlot();
 
     void BindAmmo();
+
+    void BindWeapon();
 
 protected:
 

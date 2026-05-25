@@ -40,6 +40,7 @@ void ULA_HUD::NativeConstruct()
     BindSkill();
     BindQuickSlot();
     BindAmmo();
+    BindWeapon();
 
 
     if (HorizontalBox_Ally1) HorizontalBox_Ally1->SetVisibility(ESlateVisibility::Collapsed);
@@ -184,6 +185,18 @@ void ULA_HUD::BindAmmo()
     {
         // 캐릭터의 델리게이트 구독
         PlayerCharacter->OnAmmoChangedSignature.AddUObject(this, &ULA_HUD::UpdateAmmo);
+    }
+}
+
+void ULA_HUD::BindWeapon()
+{
+    ALA_PlayerCharacter* PlayerCharacter =
+    Cast<ALA_PlayerCharacter>(UGameplayStatics::GetPlayerCharacter(GetWorld(), 0));
+
+    if (PlayerCharacter)
+    {
+        // 캐릭터의 델리게이트 구독
+        PlayerCharacter->OnWeaponChangedSignature.AddUObject(this, &ULA_HUD::UpdateWeapon);
     }
 }
 
