@@ -48,7 +48,9 @@ EBTNodeResult::Type ULA_BTTask_FindRetreatLocation::ExecuteTask(UBehaviorTreeCom
     if (NavSystem && NavSystem->ProjectPointToNavigation(TargetLocation, SafeNavLocation, FVector(500.f, 500.f, 500.f)))
     {
         Blackboard->SetValueAsVector(BlackboardKey.SelectedKeyName, SafeNavLocation.Location);
+        UE_LOG(LogTemp, Display, TEXT("아군 AI: 회피 발동! 도망 완료"));
         return EBTNodeResult::Succeeded;
     }
-    return Super::ExecuteTask(OwnerComp, NodeMemory);
+    UE_LOG(LogTemp, Error, TEXT("아군 AI: 뒤가 벽으로 막힘. 회피 불가!"));
+    return EBTNodeResult::Failed;
 }
