@@ -43,6 +43,8 @@ void ALA_WeaponBase::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
 
+    if (WeaponData == nullptr) return;
+
     // Sway
     CurrentSway = FMath::RInterpTo(CurrentSway, TargetSway, DeltaTime, WeaponData->SwaySpeed);
     SpringArm->SetRelativeRotation(CurrentSway);
