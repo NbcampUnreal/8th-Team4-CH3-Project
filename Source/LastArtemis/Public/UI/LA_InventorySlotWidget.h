@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -8,6 +8,7 @@
 
 class UImage;
 class UTextBlock;
+class UBorder;
 
 /**
  * 인벤토리의 개별 슬롯을 담당하는 위젯 클래스
@@ -39,6 +40,10 @@ protected:
     // 아이템 아이콘 이미지
     UPROPERTY(meta = (BindWidget))
     UImage* Image_Icon;
+
+    // 아이템 수량 텍스트를 감싸는 보더
+    UPROPERTY(meta = (BindWidget))
+    UBorder* Border_Quantity;
 
     // 아이템 수량 텍스트
     UPROPERTY(meta = (BindWidget))

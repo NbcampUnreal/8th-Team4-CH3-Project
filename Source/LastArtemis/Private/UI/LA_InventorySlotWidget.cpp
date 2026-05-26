@@ -1,9 +1,10 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "UI/LA_InventorySlotWidget.h"
 #include "Components/Image.h"
 #include "Components/TextBlock.h"
+#include "Components/Border.h"
 #include "Item/LA_ItemDataAsset.h"
 #include "Engine/AssetManager.h"
 #include "Item/LA_InventoryComponent.h"
@@ -33,13 +34,27 @@ void ULA_InventorySlotWidget::UpdateSlotData(const FPrimaryAssetId& InItemAssetI
                 Text_Quantity->SetText(FText::AsNumber(InQuantity));
                 Text_Quantity->SetVisibility(ESlateVisibility::Visible);
             }
+
+            // 보더 설정
+            if (Border_Quantity)
+            {
+                Border_Quantity->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+            }
+        }
+        else
+        {
+            // 데이터 로드 전이거나 실패한 경우 숨김
+            if (Image_Icon) Image_Icon->SetVisibility(ESlateVisibility::Collapsed);
+            if (Text_Quantity) Text_Quantity->SetVisibility(ESlateVisibility::Collapsed);
+            if (Border_Quantity) Border_Quantity->SetVisibility(ESlateVisibility::Collapsed);
         }
     }
     else
     {
         // 비어있는 슬롯 처리
-        if (Image_Icon) Image_Icon->SetVisibility(ESlateVisibility::Hidden);
-        if (Text_Quantity) Text_Quantity->SetVisibility(ESlateVisibility::Hidden);
+        if (Image_Icon) Image_Icon->SetVisibility(ESlateVisibility::Collapsed);
+        if (Text_Quantity) Text_Quantity->SetVisibility(ESlateVisibility::Collapsed);
+        if (Border_Quantity) Border_Quantity->SetVisibility(ESlateVisibility::Collapsed);
     }
 }
 
@@ -63,4 +78,3 @@ void ULA_InventorySlotWidget::RegisterQuickSlot(int32 QuickSlotIndex)
         InventoryComponent->SetQuickItemSlot(QuickSlotIndex, SlotIndex);
     }
 }
-
