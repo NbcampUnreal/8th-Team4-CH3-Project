@@ -332,6 +332,14 @@ void ALA_PlayerCharacter::OnPlayerDeath()
     // 캐릭터의 Collision 비활성화
     GetCapsuleComponent()->SetCollisionEnabled(ECollisionEnabled::Type::NoCollision);
 
+    ILA_Holder::Execute_DeactivateWeapon(this);
+    if (EquipedWeapon)
+    {
+        EquipedWeapon->SetActorHiddenInGame(true);
+        EquipedWeapon->SetActorEnableCollision(false);
+        EquipedWeapon->SetActorTickEnabled(false);
+    }
+
     // 장착된 무기 해제
     ILA_Holder::Execute_DeactivateWeapon(this);
     EquipedWeapon = nullptr;
