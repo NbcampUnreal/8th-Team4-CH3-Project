@@ -3,7 +3,7 @@
 
 #include "Trap/LA_ShieldDrainingArea.h"
 #include "Character/LA_BaseCharacter.h"
-
+#include "Character/Player/Component/LA_HealthComponent.h"
 
 // Sets default values
 ALA_ShieldDrainingArea::ALA_ShieldDrainingArea()
@@ -19,19 +19,25 @@ void ALA_ShieldDrainingArea::ApplyEffect(AActor* TargetActor)
 
     if (Player)
     {
-        // 쉴드가 남아있을 때만 감소 로직 실행
-        if (Player->GetCurrentShield() > 0.0f)
-        {
-            // 아까 플레이어 베이스에 만들어둔 쉴드 전용 감소 함수 호출
-            Player->ReduceShieldOnly(ShieldDrainAmount);
+        // 🎯 1. [심볼 에러 완벽 해결]
+        // 플레이어 본체의 제거된 함수 대신, 물려받은 헬스 컴포넌트 파이프라인을 조준합니다!
+        ULA_HealthComponent* HealthComp = Player->GetHealthComponent();
 
-            UE_LOG(LogTemp, Warning, TEXT("Shield is Draining! Remaining: %f"), Player->GetCurrentShield());
-        }
-        else
+        if (HealthComp)
         {
-            // 쉴드가 다 깎였을 때 로그 (필요 시 여기서 체력을 깎게 변경도 가능)
-            UE_LOG(LogTemp, Log, TEXT("Player Shield is already 0."));
+            // 🎯 2. 컴포넌트 내부의 실시간 실드 잔량을 정확히 체크합니다.
+            if (HealthComp->GetCurrentShield() > 0.0f)
+            {
+                // 베이스 캐릭터에 연동해 둔 실드 차감 함수 가동
+                Player->ReduceShieldOnly(ShieldDrainAmount);
+
+                UE_LOG(LogTemp, Warning, TEXT("⚡ [트랩 작동] 플레이어 실드 흡수 중! 남은 실드: %f"), HealthComp->GetCurrentShield());
+            }
+            else
+            {
+                // 쉴드가 다 깎였을 때 로그
+                UE_LOG(LogTemp, Log, TEXT("🛡️ 플레이어 실드가 이미 0입니다. 대미지 변환 대기 상태."));
+            }
         }
     }
 }
-

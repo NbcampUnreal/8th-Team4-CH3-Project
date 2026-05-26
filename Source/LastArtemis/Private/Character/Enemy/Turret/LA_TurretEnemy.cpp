@@ -10,7 +10,6 @@
 #include "UI/LA_EnemyHealthWidget.h"
 #include "UI/LA_EnemyDamageTextWidget.h"
 #include "Blueprint/WidgetLayoutLibrary.h"
-#include "UObject/ConstructorHelpers.h"
 
 // Sets default values
 ALA_TurretEnemy::ALA_TurretEnemy()
@@ -19,9 +18,7 @@ ALA_TurretEnemy::ALA_TurretEnemy()
     TurretHead = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("TurretHead"));
     TurretHead->SetupAttachment(RootComponent);
 
-    MaxHealth = 100.0f;
-    CurrentHealth = MaxHealth;
-    Defense = 5.0f;
+    // 💡 [참고] MaxHealth, Defense 등의 스탯은 컴포넌트에서 관리하므로 여기서 지웁니다.
     bIsDead = false;
     DetectionRange = 2000.0f;
     RotationSpeed = 5.0f;
@@ -31,7 +28,6 @@ ALA_TurretEnemy::ALA_TurretEnemy()
 
     CharacterTags.AddTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
 
-    HealthComp = CreateDefaultSubobject<ULA_HealthComponent>(TEXT("HealthComp"));
 
     HealthWidgetComp = CreateDefaultSubobject<UWidgetComponent>(TEXT("HealthWidget"));
     HealthWidgetComp->SetupAttachment(RootComponent);
@@ -49,16 +45,13 @@ ALA_TurretEnemy::ALA_TurretEnemy()
 // Called when the game starts or when spawned
 void ALA_TurretEnemy::BeginPlay()
 {
-    Super::BeginPlay();
+    Super::BeginPlay(); // 🎯 부모의 BeginPlay가 돌며 중앙 HealthComponent 생성 완료
 
-    // [핵심] 블루프린트 디테일 창이 비어있어도, 게임이 켜지자마자 C++ 단에서 강제로 적군 낙인을 찍어버립니다.
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     if (!CharacterTags.HasTag(EnemyTag))
     {
         CharacterTags.AddTag(EnemyTag);
     }
-
-    // 일반 액터 태그 배열에도 백업으로 심어줍니다.
     if (!ActorHasTag(FName("Team.Enemy")))
     {
         Tags.Add(FName("Team.Enemy"));
@@ -66,34 +59,68 @@ void ALA_TurretEnemy::BeginPlay()
 
     GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &ALA_TurretEnemy::FireProjectile, FireRate, true);
 
-    if (HealthComp)
+    // 🎯 [수정] 델리게이트 릴레이 바인딩 (터렛 본체의 피격 콜백 연결)
+    if (HealthComponent)
     {
-        HealthComp->OnHealthChanged.AddUObject(this, &ALA_TurretEnemy::OnHealthChangedCallback);
-        if (HealthWidgetComp)
+        HealthComponent->OnHealthChanged.AddUObject(this, &ALA_TurretEnemy::OnHealthChangedCallback);
+    }
+
+    // 🎯 [핵심 보안 기믹] 위젯 인스턴스가 안전하게 초기화될 수 있도록 1프레임 뒤(또는 즉시) 타이밍 우회 바인딩
+    if (HealthWidgetComp)
+    {
+        // 안전하게 다음 틱이나 렌더링 준비 단계에서 위젯 오브젝트를 꺼냅니다.
+        GetWorld()->GetTimerManager().SetTimerForNextTick([this]()
         {
-            if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
+            if (HealthWidgetComp && HealthComponent)
             {
-                HealthComp->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
-                HealthBar->UpdateHealthBar(HealthComp->GetCurrentHealth(), HealthComp->GetMaxHealth());
+                if (ULA_EnemyHealthWidget* HealthBar = Cast<ULA_EnemyHealthWidget>(HealthWidgetComp->GetUserWidgetObject()))
+                {
+                    // 컴포넌트 체력 변경 이벤트를 위젯의 UpdateHealthBar 함수와 다이렉트로 결합!
+                    HealthComponent->OnHealthChanged.AddUObject(HealthBar, &ULA_EnemyHealthWidget::UpdateHealthBar);
+
+                    // 초기 체력 바 레이아웃 갱신
+                    HealthBar->UpdateHealthBar(HealthComponent->GetCurrentHealth(), HealthComponent->GetMaxHealth());
+                }
             }
-        }
+        });
     }
 }
 
-// Called every frame
+float ALA_TurretEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+{
+    if (bIsDead) return 0.0f;
+
+    // 부모의 TakeDamage를 호출하여 컴포넌트 피 정산 및 피격음을 안전하게 수신합니다.
+    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
+
+    if (ActualDamage <= 0.0f) return 0.0f;
+
+    // 🔥 [버그 킬러] 평소엔 숨겨져 있던 터렛 전용 체력 바 위젯을 타격당하는 순간 즉시 뷰포트에 오픈!
+    if (HealthWidgetComp)
+    {
+        HealthWidgetComp->SetVisibility(true);
+    }
+
+    // 연사 무기 대비 누적 대미지 텍스트 팝업 프로세서 가동
+    AccumulatedDamage += ActualDamage;
+    if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
+    {
+        GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_TurretEnemy::ExecuteShowDamageText, 0.05f, false);
+    }
+
+    return ActualDamage;
+}
+// 💡 중간 연산 함수들 (Tick, FindTarget, FireProjectile, CheckLineOfSight, SwitchTeam)은 완벽하므로 기존 로직 그대로 유지됩니다.
+
 void ALA_TurretEnemy::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-
     FindTarget();
 
     if (CurrentTarget && TurretHead)
     {
         FRotator TargetRot = UKismetMathLibrary::FindLookAtRotation(TurretHead->GetComponentLocation(), CurrentTarget->GetActorLocation());
-
-        // 포탑 특성상 Pitch(상하)와 Yaw(좌우)만 회전하고 Roll(정크 회전)은 막는 것이 자연스럽습니다.
         TargetRot.Roll = 0.0f;
-
         FRotator SmoothedRot = FMath::RInterpTo(TurretHead->GetComponentRotation(), TargetRot, DeltaTime, RotationSpeed);
         TurretHead->SetWorldRotation(SmoothedRot);
     }
@@ -101,9 +128,8 @@ void ALA_TurretEnemy::Tick(float DeltaTime)
 
 void ALA_TurretEnemy::FindTarget()
 {
-    if (!GetWorld()) return;
+    if (!GetWorld() || !HealthComponent) return;
 
-    // BeginPlay에서 강제 주입했으므로 이제 100% true가 나옵니다.
     bool bIsOriginallyEnemy = CharacterTags.HasTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
 
     TArray<AActor*> AllPawns;
@@ -139,7 +165,6 @@ void ALA_TurretEnemy::FindTarget()
             }
         }
 
-        //  아군/적군 판정 필터링 (가장 안전한 3중 우회 필터)
         bool bIsTargetAlly = false;
         if (TargetTags.HasTag(AllyTag) || Candidate->ActorHasTag(FName("Team.Ally")))
         {
@@ -163,26 +188,15 @@ void ALA_TurretEnemy::FindTarget()
             bIsTargetEnemy = true;
         }
 
-        //  진영 필터 통과 단계
         if (bIsOriginallyEnemy)
         {
-            //  적군 터렛 상태일 때: 아군(플레이어 계열)이 아니면 전부 탈락시킵니다.
-            if (!bIsTargetAlly)
-            {
-                continue;
-            }
+            if (!bIsTargetAlly) continue;
         }
         else
         {
-            //  해킹된 아군 터렛 상태일 때: 적군(몬스터 계열)이 아니면 전부 탈락시킵니다.
-            if (!bIsTargetEnemy)
-            {
-                continue;
-            }
+            if (!bIsTargetEnemy) continue;
         }
 
-
-        // 거리 및 시야 검사
         float Dist = GetDistanceTo(Candidate);
         if (Dist <= ClosestDistance)
         {
@@ -194,60 +208,38 @@ void ALA_TurretEnemy::FindTarget()
         }
     }
 
-    // 최종 록온 성공 (보라색 선)
-    if (ClosestTarget)
-    {
-        CurrentTarget = ClosestTarget;
-    }
-    else
-    {
-        CurrentTarget = nullptr;
-    }
+    if (ClosestTarget) CurrentTarget = ClosestTarget;
+    else CurrentTarget = nullptr;
 }
-
 
 void ALA_TurretEnemy::FireProjectile()
 {
     if (CurrentTarget && ProjectileClass && TurretHead)
     {
-        float TurretHeightOffset = 80.0f; // 머리 높이 오프셋 통일
-        FVector BaseLocation = GetActorLocation();
-        FVector UpVector = GetActorUpVector();
-
-        //  실제 터렛의 눈(포구) 월드 좌표 계산
-        FVector RealEyeLocation = BaseLocation + (UpVector * TurretHeightOffset);
-
+        float TurretHeightOffset = 80.0f;
+        FVector RealEyeLocation = GetActorLocation() + (GetActorUpVector() * TurretHeightOffset);
         FVector Forward = TurretHead->GetForwardVector();
-        FVector ToTarget = (CurrentTarget->GetActorLocation() - RealEyeLocation).GetSafeNormal(); // 기준점 보정
+        FVector ToTarget = (CurrentTarget->GetActorLocation() - RealEyeLocation).GetSafeNormal();
 
         float AngleDot = FVector::DotProduct(Forward, ToTarget);
-
-        // 정면 사잇각 검사 (고개가 완전히 안 돌아갔으면 사격 대기)
-        if (AngleDot < 0.96f)
-        {
-            return;
-        }
+        if (AngleDot < 0.96f) return;
 
         FVector SpawnLocation = RealEyeLocation + (Forward * 80.0f);
         FRotator SpawnRotation = TurretHead->GetComponentRotation();
 
         FActorSpawnParameters SpawnParams;
         SpawnParams.Owner = this;
-        SpawnParams.Instigator = this; // 안 쓰는 AI 컨트롤러 의존성 제거, 자기 자신 등록
+        SpawnParams.Instigator = this;
 
         GetWorld()->SpawnActor<AActor>(ProjectileClass, SpawnLocation, SpawnRotation, SpawnParams);
-
-        UE_LOG(LogTemp, Log, TEXT("[터렛 사격] 타겟 저격 발사 성공!"));
     }
 }
+
 bool ALA_TurretEnemy::CheckLineOfSight(AActor* TargetActor)
 {
     if (!TargetActor || !GetWorld()) return false;
 
     FHitResult HitResult;
-
-    // [핵심 수정] 가짜 바닥 좌표(GetComponentLocation) 대신,
-    // 액터 바닥 위치에서 80 유닛만큼 제대로 들어 올린 '진짜 머리 높이'에서 레이저를 쏩니다!
     float TurretHeightOffset = 80.0f;
     FVector StartLocation = GetActorLocation() + (GetActorUpVector() * TurretHeightOffset);
     FVector EndLocation = TargetActor->GetActorLocation();
@@ -256,126 +248,58 @@ bool ALA_TurretEnemy::CheckLineOfSight(AActor* TargetActor)
     QueryParams.AddIgnoredActor(this);
     QueryParams.AddIgnoredActor(TargetActor);
 
-    // Visibility 채널 레이트레이스 실행
     bool bHit = GetWorld()->LineTraceSingleByChannel(HitResult, StartLocation, EndLocation, ECC_Visibility, QueryParams);
-
-    // [디버깅용 시각화] 포탑 눈에서 타겟까지 레이저 광선을 에디터 화면에 그려줍니다.
-
     return !bHit;
 }
 
 void ALA_TurretEnemy::SwitchTeam(FGameplayTag NewTeamTag)
 {
-    // [수정] UpdateTeamTag 부모 함수 호출 시 컴파일 에러가 난다면,
-    // 터렛 내부 컨테이너를 직접 갱신하는 정석 방식으로 안전장치를 겁니다.
     CharacterTags.RemoveTag(FGameplayTag::RequestGameplayTag(FName("Team.Enemy")));
     CharacterTags.RemoveTag(FGameplayTag::RequestGameplayTag(FName("Team.Ally")));
     CharacterTags.AddTag(NewTeamTag);
 
-    // 타겟 초기화
     CurrentTarget = nullptr;
 
     AAIController* AIC = Cast<AAIController>(GetController());
-    if (AIC)
-    {
-        AIC->StopMovement();
-    }
+    if (AIC) AIC->StopMovement();
 }
 
-float ALA_TurretEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
-{
-    if (bIsDead) return 0.0f;
+// 🎯 [대수술 완료 부위] 자식 고유의 TakeDamage 구현을 완전히 날리거나 최소화하여 부모의 파이프라인으로 태워보냅니다.
 
-    float ActualDamage = 0.0f;
-    if (HealthComp)
-    {
-        ActualDamage = HealthComp->TakeDamage(DamageAmount, false);
-        if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
-
-        // =================================================================
-        // 🎯 [사운드 강제 직통 버그 수정]
-        // =================================================================
-        if (ActualDamage > 0.0f)
-        {
-            // 1. 부모가 물려준 오리지널 HitSound 변수명을 정확히 조준합니다.
-            // (만약 부모 헤더의 변수명이 HitSound가 맞다면 이 코드가 작동합니다)
-            if (HitSound)
-            {
-                UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
-            }
-            // 2. 만약 위 코드로도 소리가 안 난다면, 무기 베이스가 대미지를 가할 때
-            // 꽂아준 DamageCauser(무기)나 EventInstigator(플레이어)의 사운드를 빌려 쓰거나,
-            // 터렛 자체에 변수를 바인딩해야 합니다.
-        }
-
-        if (HealthComp->GetCurrentHealth() <= 0.0f)
-        {
-            Die();
-            return ActualDamage;
-        }
-    }
-    else
-    {
-        // 컴포넌트가 없을 땐 부모 함수를 타므로 부모의 사운드가 재생됩니다.
-        ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
-    }
-
-    // 대미지 텍스트 출력 로직...
-    if (ActualDamage > 0.0f)
-    {
-        AccumulatedDamage += ActualDamage;
-        if (!GetWorldTimerManager().IsTimerActive(DamageDisplayTimer))
-        {
-            GetWorld()->GetTimerManager().SetTimer(DamageDisplayTimer, this, &ALA_TurretEnemy::ExecuteShowDamageText, 0.05f, false);
-        }
-    }
-
-    return ActualDamage;
-}
 void ALA_TurretEnemy::Die()
 {
-    // 부모의 Die() 기능을 먼저 실행시켜 공통 사망 처리(bIsDead = true 등)를 수행합니다.
+    // 🎯 2. 부모의 Die()를 먼저 호출하여 공통 플래그 및 캡슐 콜리전 해제 처리 수행
     Super::Die();
 
-    // 적 사망 시 GameMode에 전달
     if (ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
     {
-        UE_LOG(LogTemp, Warning, TEXT("NotifyEnemyKilled Called"));
         LA_GameMode->NotifyEnemyKilled(this);
     }
 
-    //  터렛 고유의 타이머 및 기능 정지
     GetWorld()->GetTimerManager().ClearTimer(FireTimerHandle);
     CurrentTarget = nullptr;
     PrimaryActorTick.SetTickFunctionEnable(false);
 
-    //  터렛 고유의 폭발 이펙트 스폰
     if (DeathExplosionEffect && TurretHead)
     {
         UGameplayStatics::SpawnEmitterAtLocation(GetWorld(), DeathExplosionEffect, TurretHead->GetComponentLocation(), TurretHead->GetComponentRotation());
     }
 
-    // 콜리전 비활성화
     if (TurretHead)
     {
         TurretHead->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     }
 
-    // 레벨에서 제거
     SetLifeSpan(2.0f);
 }
 
 void ALA_TurretEnemy::OnHealthChangedCallback(float CurrentHP, float MaxHP)
 {
-    CurrentHealth = CurrentHP;
-    MaxHealth = MaxHP;
-
     if (OnHealthChanged.IsBound())
     {
         OnHealthChanged.Broadcast(CurrentHP);
     }
-
-    if (CurrentHealth <= 0.0f && !bIsDead)
+    if (CurrentHP <= 0.0f && !bIsDead)
     {
         Die();
     }
