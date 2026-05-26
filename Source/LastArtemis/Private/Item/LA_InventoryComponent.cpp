@@ -126,9 +126,17 @@ bool ULA_InventoryComponent::AddItem(ULA_ItemDataAsset* ItemData, int32 AddCount
     }
 
     // 아이템 획득 성공 및 소모성 아이템이면 퀵슬롯 자동 등록
-    if (bAddedAny && ItemData->bConsumable)
+    if (bAddedAny)
     {
-        AutoAssignToQuickSlot(ItemAssetId);
+        if (OnInventoryUpdated.IsBound())
+        {
+            OnInventoryUpdated.Broadcast();
+        }
+
+        if (ItemData->bConsumable)
+        {
+            AutoAssignToQuickSlot(ItemAssetId);
+        }
     }
 
     // 요청한 수량을 전부 넣었으면 true
@@ -218,6 +226,11 @@ bool ULA_InventoryComponent::RemoveItem(int32 SlotIndex, int32 RemoveCount)
     if (ItemSlot.CurrentCount <= 0)
     {
         ItemSlot.Clear();
+    }
+
+    if (OnInventoryUpdated.IsBound())
+    {
+        OnInventoryUpdated.Broadcast();
     }
 
     return true;
