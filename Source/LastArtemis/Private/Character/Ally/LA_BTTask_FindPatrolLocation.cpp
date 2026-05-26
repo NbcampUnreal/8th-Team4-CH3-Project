@@ -169,7 +169,7 @@ EBTNodeResult::Type ULA_BTTask_FindPatrolLocation::ExecuteTask(UBehaviorTreeComp
                 DebugColor = FColor::Orange;
 
                 Blackboard->SetValueAsVector(FName("TargetLocation"), NavLocation.Location);
-                DrawDebugSphere(GetWorld(), UltimateDestination, 50.f, 12, DebugColor, 0.2f);
+                DrawDebugSphere(GetWorld(), UltimateDestination, 50.f, 12, DebugColor, false, 0.2f);
 
                 return EBTNodeResult::Succeeded;
             }
