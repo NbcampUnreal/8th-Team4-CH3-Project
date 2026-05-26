@@ -22,6 +22,12 @@ void ULA_InventoryWidget::NativeConstruct()
 void ULA_InventoryWidget::InitializeInventory(ULA_InventoryComponent* InInventoryComp)
 {
     InventoryComponent = InInventoryComp;
+
+    if (InventoryComponent)
+    {
+        InventoryComponent->OnInventoryUpdated.AddDynamic(this, &ULA_InventoryWidget::RefreshInventory);
+    }
+
     RefreshInventory();
 }
 
@@ -43,6 +49,7 @@ void ULA_InventoryWidget::RefreshInventory()
         if (SlotWidget)
         {
             SlotWidget->SlotIndex = i;
+            SlotWidget->SetInventoryComponent(InventoryComponent);
             SlotWidget->UpdateSlotData(ItemSlots[i].ItemAssetId, ItemSlots[i].CurrentCount);
 
             int32 Row = i / ColumnCount;

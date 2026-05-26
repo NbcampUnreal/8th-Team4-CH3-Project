@@ -10,6 +10,7 @@
 class ULA_ItemDataAsset;
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnQuickSlotUpdated, int32, QuickSlotIndex);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInventoryUpdated);
 
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class LASTARTEMIS_API ULA_InventoryComponent : public UActorComponent
@@ -22,6 +23,9 @@ public:
 
     UPROPERTY(BlueprintAssignable, Category = "Inventory|QuickSlot")
     FOnQuickSlotUpdated OnQuickSlotUpdated;
+
+    UPROPERTY(BlueprintAssignable, Category = "Inventory")
+    FOnInventoryUpdated OnInventoryUpdated;
 
 protected:
     // AssetManager에 있는 아이템 Data Asset을 Id로 가져옴
