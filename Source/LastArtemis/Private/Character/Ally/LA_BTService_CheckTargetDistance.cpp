@@ -89,14 +89,34 @@ void ULA_BTService_CheckTargetDistance::TickNode(UBehaviorTreeComponent& OwnerCo
 
         float DistToEnemySq = FVector::DistSquared(OwnerPawn->GetActorLocation(), Enemy->GetActorLocation());
 
+        // 거리가 시야 반경 내일 때 추가 검사
         if (DistToEnemySq < LoseSightDistSq)
         {
+            // AI의 눈에 보이는 위치인지 검사
+            FHitResult HitResult;
+            FCollisionQueryParams CollisionParams;
+            CollisionParams.AddIgnoredActor(OwnerPawn);
 
-            if (Target == nullptr || DistToEnemySq < (MinDistSq - SwitchThresholdSq))
+            bool bHit = GetWorld()->LineTraceSingleByChannel(
+                HitResult,
+                OwnerPawn->GetActorLocation(),
+                Enemy->GetActorLocation(),
+                ECC_Visibility,
+                CollisionParams
+            );
+
+            bool bHasLineOfSight = bHit && (HitResult.GetActor() == Enemy);
+
+            if (bHasLineOfSight)
             {
-                MinDistSq = DistToEnemySq;
-                BestTarget = Enemy;
+                if (Target == nullptr || DistToEnemySq < (MinDistSq - SwitchThresholdSq))
+                {
+                    MinDistSq = DistToEnemySq;
+                    BestTarget = Enemy;
+                }
             }
+
+
         }
     }
 
