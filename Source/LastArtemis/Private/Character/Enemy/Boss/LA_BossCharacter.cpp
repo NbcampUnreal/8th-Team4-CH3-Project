@@ -1,31 +1,50 @@
 ﻿#include "Character/Enemy/Boss/LA_BossCharacter.h"
 #include "Character/LA_BaseCharacter.h"
-#include "Animation/AnimMontage.h"
+#include "Components/StaticMeshComponent.h"
+#include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameplayTagContainer.h"
-#include "Components/CapsuleComponent.h"
+#include "NiagaraFunctionLibrary.h"
 #include "GameMode/LA_GameModeBase.h"
 #include "Kismet/GameplayStatics.h"
+#include "Character/Player/Component/LA_HealthComponent.h"
 
 ALA_BossCharacter::ALA_BossCharacter()
 {
     PrimaryActorTick.bCanEverTick = true;
 
-    // 💡 부모 변수(MaxHealth, CurrentHealth)가 있다면 그대로 할당됩니다.
-    MaxHealth = 500.0f;
-    CurrentHealth = MaxHealth;
+    // [스태틱 메시 컴포넌트 장착]
+    BossStaticMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("BossStaticMesh"));
 
-    MaxShield = 100.0f;
-    CurrentShield = MaxShield;
+    if (GetCapsuleComponent())
+    {
+        BossStaticMesh->SetupAttachment(GetCapsuleComponent());
+    }
 
+    // 💡 참고: 이제 MaxHealth, CurrentShield 등은 부모가 들고 있는 HealthComponent가 제어합니다.
+    // 수치 설정은 생성자 대신 아래 PostInitializeComponents 단계에서 오버라이딩해 줍니다.
     CurrentPhase = EBossPhase::Phase1;
     bIsDead = false;
 
     if (GetCharacterMovement())
     {
-        // 보스가 제자리에 고정되어 패턴을 쓰는 붙박이형이라면 잘 하신 세팅입니다!
-        // 만약 나중에 뛰어다녀야 한다면 이 줄을 지우거나 MOVE_Walking으로 바꿔야 합니다.
         GetCharacterMovement()->SetMovementMode(MOVE_None);
+    }
+}
+
+void ALA_BossCharacter::PostInitializeComponents()
+{
+    Super::PostInitializeComponents();
+
+    // 🎯 1. [보스 전용 수치 강제 주입]
+    // 부모의 생성 주기가 끝난 후 보스 기획에 맞춰 컴포넌트 내부 스탯을 최종 갱신합니다.
+    if (HealthComponent)
+    {
+        HealthComponent->SetMaxHealth(500.0f);
+        HealthComponent->SetCurrentHealth(500.0f);
+        HealthComponent->SetMaxShield(100.0f);
+        HealthComponent->SetCurrentShield(100.0f);
+        HealthComponent->SetDefense(5.0f); // 방어력 수치 세팅
     }
 }
 
@@ -33,7 +52,6 @@ void ALA_BossCharacter::BeginPlay()
 {
     Super::BeginPlay();
 
-    // 🎯 [태그 봉인 치트키] 블루프린트 세팅에 상관없이 게임 시작 시 무조건 적군으로 세팅!
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
 
     if (!CharacterTags.HasTag(EnemyTag))
@@ -47,57 +65,33 @@ void ALA_BossCharacter::BeginPlay()
     }
 }
 
-float ALA_BossCharacter::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
+float ALA_BossCharacter::TakeDamage(float DamageAmount, FDamageEvent const& DamageEvent, AController* EventInstigator, AActor* DamageCauser)
 {
-    if (bIsDead) return 0.0f;
+    if (bIsDead || DamageAmount <= 0.0f) return 0.0f;
 
-    // 🎯 [중요 수술] 이중 차감을 막기 위해 Super 호출을 가두거나 제어해야 합니다.
-    // 만약 부모(BaseCharacter)의 TakeDamage에 "체력을 그냥 깎는 로직"만 들어있다면,
-    // 부모 코드를 실행하지 않고 보스 고유의 [쉴드 -> 체력] 연산만 깔끔하게 돌린 뒤 자식 단에서 정산합니다.
+    // 🎯 2. [대미지 및 사운드 파이프라인 일원화]
+    // 자식에서 직접 피를 깎지 않고 부모의 Super::TakeDamage를 정석대로 실행시킵니다.
+    // 이 한 줄로 부모 내부의 HealthComponent가 실드/피 정산과 블루프린트 UI 알림을 한 번에 처리하고,
+    // 부모에 등록된 찰진 피격 사운드(HitSound)까지 100% 정상 출력해 줍니다.
+    float ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
 
-    if (DamageAmount <= 0.0f) return 0.0f;
+    if (ActualDamage <= 0.0f) return 0.0f;
 
-    float ActualDamage = DamageAmount; // 방어력 공식이 부모에게 있다면 Super 대신 여기서 직접 계산하거나 원본을 씁니다.
-
-    // 🛡️ 쉴드 및 체력 정산 (이중 차감 없이 정직하게 1번만 계산)
-    if (CurrentShield > 0.0f)
+    // [이펙트 연출] 기계형 보스 고유의 피격 스파크 니아가라 스폰
+    if (HitEffect)
     {
-        CurrentShield -= ActualDamage;
-        if (CurrentShield < 0.0f)
-        {
-            CurrentHealth += CurrentShield; // 음수 값만큼 체력 차감
-            CurrentShield = 0.0f;
-        }
-    }
-    else
-    {
-        CurrentHealth -= ActualDamage;
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), HitEffect, GetActorLocation());
     }
 
-    CurrentHealth = FMath::Clamp(CurrentHealth, 0.0f, MaxHealth);
-
-    UE_LOG(LogTemp, Log, TEXT("👹 [보스 피격] 데미지: %f | 쉴드: %f | 체력: %f / %f"), ActualDamage, CurrentShield, CurrentHealth, MaxHealth);
-
-    // 사망 처리
-    if (CurrentHealth <= 0.0f)
+    // 🎯 3. 사망 처리는 부모 단에서 자동으로 감지해 Die()를 부르지만,
+    // 보스 전용 소멸 연출을 매끄럽게 이어가기 위해 더블 가드를 세워둡니다.
+    if (HealthComponent && HealthComponent->GetCurrentHealth() <= 0.0f)
     {
-        Die();
         return ActualDamage;
     }
 
-    // 페이즈 전환 체크 (사망 안 했을 때만)
+    // 🎯 4. 페이즈 전환 체크 (컴포넌트의 실시간 체력 주소를 넘겨서 계산)
     CheckPhaseTransition();
-
-    // 🎯 [센스 옵션] 페이즈가 막 바뀌는 순간에는 피격 모션(HitMontage)이 재생되어
-    // 광폭화/페이즈 변환 연출이 끊기는 걸 방지하는 것이 자연스럽습니다.
-    if (HitMontage)
-    {
-        PlayAnimMontage(HitMontage);
-    }
-
-    // 부모 클래스의 데미지 관련 알림(인터페이스, UI 브로드캐스트 등)이 작동해야 한다면
-    // 체력을 다 깎아놓은 최종 상태에서 0의 대미지로 찔러넣어 알림만 가게 우회할 수도 있습니다.
-    Super::TakeDamage(0.0f, DamageEvent, EventInstigator, DamageCauser);
 
     return ActualDamage;
 }
@@ -105,57 +99,48 @@ float ALA_BossCharacter::TakeDamage(float DamageAmount, struct FDamageEvent cons
 void ALA_BossCharacter::Die()
 {
     if (bIsDead) return;
-    bIsDead = true;
 
-    UE_LOG(LogTemp, Error, TEXT("💀 [보스 사망] 격전 끝에 보스가 완벽하게 처치되었습니다! 💀"));
+    // 🎯 5. 부모의 Die()를 먼저 호출하여 공통 사망 플래그(bIsDead = true)와 캡슐 콜리전 해제 처리 수행
+    Super::Die();
 
-    if (DeathMontage)
+    // [사망 연출] 로봇 코어 폭발 니아가라 스폰
+    if (DeathExplosionEffect)
     {
-        PlayAnimMontage(DeathMontage);
+        UNiagaraFunctionLibrary::SpawnSystemAtLocation(GetWorld(), DeathExplosionEffect, GetActorLocation());
     }
 
-    // 콜리전 비활성화
-    UCapsuleComponent* MyCapsule = GetCapsuleComponent();
-    if (MyCapsule)
+    // 보스 고유의 스태틱 메시 콜리전도 완벽하게 꺼줍니다.
+    if (BossStaticMesh)
     {
-        MyCapsule->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+        BossStaticMesh->SetCollisionEnabled(ECollisionEnabled::NoCollision);
     }
 
-    // 무브먼트 컴포넌트 비활성화
-    if (GetCharacterMovement())
-    {
-        GetCharacterMovement()->DisableMovement();
-    }
-
-    // AI 컨트롤러 작동 중지 및 분리 (패턴 정지)
+    if (GetCharacterMovement()) GetCharacterMovement()->DisableMovement();
     if (GetController())
     {
         GetController()->StopMovement();
         GetController()->UnPossess();
     }
 
-    // 시체가 맵에 머무르는 시간 (10초 뒤 소멸)
-    SetLifeSpan(10.0f);
+    SetLifeSpan(5.0f);
 
     if (ALA_GameModeBase* LA_GameMode = Cast<ALA_GameModeBase>(UGameplayStatics::GetGameMode(GetWorld())))
     {
-        UE_LOG(LogTemp, Warning, TEXT("NotifyBossKilled Called"));
         LA_GameMode->NotifyEnemyKilled(this);
     }
 }
 
 void ALA_BossCharacter::CheckPhaseTransition()
 {
-    if (bIsDead) return;
+    if (bIsDead || !HealthComponent) return;
 
-    float HealthPercent = CurrentHealth / MaxHealth;
+    // 🎯 6. 변수가 날아간 자리를 컴포넌트의 인라인 Getter 함수로 싱크 교정합니다.
+    float HealthPercent = HealthComponent->GetHealthPercent();
 
     if (HealthPercent <= 0.33f && CurrentPhase != EBossPhase::Phase3)
     {
         CurrentPhase = EBossPhase::Phase3;
         UE_LOG(LogTemp, Error, TEXT("❗ [보스 페이즈 변경] >>> 폭주: PHASE 3 진입 <<< ❗"));
-
-        // 💡 팁: 여기에 페이즈 3 진입 시 쓸 광폭화 몽타주나 이펙트 코드를 심으면 좋습니다.
     }
     else if (HealthPercent <= 0.66f && CurrentPhase == EBossPhase::Phase1)
     {

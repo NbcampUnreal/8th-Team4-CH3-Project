@@ -5,7 +5,6 @@
 #include "GameplayTagAssetInterface.h"
 #include "Character/LA_BaseCharacter.h"
 
-class ULA_HealthComponent;
 class UWidgetComponent;
 
 #include "LA_EnemyCharacter.generated.h"
@@ -39,10 +38,10 @@ protected:
     virtual void BeginPlay() override;
     virtual void PostInitializeComponents() override;
 
-    // --- 컴포넌트 ---
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components")
-    class ULA_HealthComponent* HealthComponent;
+    // 💥 [중복 제거 완료] class ULA_HealthComponent* HealthComponent; 선언을 삭제했습니다.
+    // 이제 부모(LA_BaseCharacter)가 물려준 'HealthComponent' 포인터를 그대로 사용합니다.
 
+    // --- 컴포넌트 ---
     UPROPERTY(VisibleAnywhere, Category = "UI")
     TObjectPtr<class UWidgetComponent> HealthWidgetComp;
 

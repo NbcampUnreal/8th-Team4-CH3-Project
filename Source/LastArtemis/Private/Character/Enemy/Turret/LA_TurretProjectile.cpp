@@ -5,20 +5,18 @@
 #include "GameplayTagAssetInterface.h"
 #include "GameplayTagContainer.h"
 #include "Kismet/GameplayStatics.h"
-#include "Components/SphereComponent.h"
-
 
 ALA_TurretProjectile::ALA_TurretProjectile()
 {
     // 생성자에서는 아무것도 만들 필요 없습니다. 부모가 이미 다 만들어 놨습니다!
-    // 원한다면 부모 변수인 Damage의 기본값만 터렛에 맞게 튜닝합니다.
+    // 터렛 밸런스에 맞게 대미지만 기본값 25.0f로 세팅합니다.
     Damage = 25.0f;
 }
 
 void ALA_TurretProjectile::BeginPlay()
 {
-    //  [초특급 중요] 이걸 호출해야 부모의 BeginPlay 안에 있는
-    // CollisionComp->OnComponentBeginOverlap.AddDynamic(...) 코드가 정상 가동됩니다!
+    // 🎯 [필수 호출] 부모의 BeginPlay가 가동되면서
+    // 부모에 장착된 OnComponentBeginOverlap 및 OnComponentHit 델리게이트가 전부 자동 바인딩됩니다!
     Super::BeginPlay();
 }
 
@@ -33,7 +31,7 @@ void ALA_TurretProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, A
     FGameplayTag EnemyTag = FGameplayTag::RequestGameplayTag(FName("Team.Enemy"));
     FGameplayTag AllyTag = FGameplayTag::RequestGameplayTag(FName("Team.Ally"));
 
-    // 발사대(터렛) 팀 추출
+    // 1. 발사대(터렛) 팀 추출
     AActor* MyLauncher = GetInstigator();
     if (!MyLauncher) MyLauncher = GetOwner();
 
@@ -54,7 +52,7 @@ void ALA_TurretProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, A
         }
     }
 
-    // 맞은 대상(플레이어 등) 팀 추출
+    // 2. 맞은 대상(플레이어 등) 팀 추출
     IGameplayTagAssetInterface* TargetTags = Cast<IGameplayTagAssetInterface>(OtherActor);
     if (TargetTags) TargetTags->GetOwnedGameplayTags(TargetTeamTags);
 
@@ -69,7 +67,7 @@ void ALA_TurretProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, A
         }
     }
 
-    // 플레이어 인터페이스 누락 예외 우회 치트키
+    // 3. 플레이어 인터페이스 누락 예외 우회 치트키
     if (TargetTeamTags.IsEmpty())
     {
         if (OtherActor->ActorHasTag(FName("Team.Ally")) || OtherActor->GetName().ToLower().Contains(TEXT("player")) || (Cast<APawn>(OtherActor) && Cast<APawn>(OtherActor)->IsPlayerControlled()))
@@ -78,31 +76,29 @@ void ALA_TurretProjectile::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, A
         }
     }
 
-    // 다른 팀일 때만 대미지 폭격 수행 (피아식별 교차 검증)
+    // 4. 다른 팀일 때만 대미지 폭격 수행 (피아식별 교차 검증)
     if (!MyTeamTags.IsEmpty() && !TargetTeamTags.IsEmpty())
     {
         if (!MyTeamTags.HasAny(TargetTeamTags))
         {
-            // 부모가 물려준 Damage 변수의 값을 그대로 사용합니다.
+            // 🎯 [정석 ApplyDamage 연결] 부모 파이프라인을 관통시켜
+            // 타격 대상의 헬스 컴포넌트 실시간 감쇄 + 공통 피격음을 정확하게 스피커로 출력합니다!
             UGameplayStatics::ApplyDamage(OtherActor, Damage, GetInstigatorController(), this, UDamageType::StaticClass());
 
-            UE_LOG(LogTemp, Warning, TEXT(" [터렛 자식 투사체] %s 타격 대미지 주입 완료! 대미지: %f"), *OtherActor->GetName(), Damage);
+            UE_LOG(LogTemp, Warning, TEXT("🎯 [터렛 투사체 명중] %s 타격 완료! 대미지: %f"), *OtherActor->GetName(), Damage);
 
             Destroy();
             return;
         }
         else
         {
-            // 같은 팀이면 총알만 삭제 (팀킬 방지)
+            // 같은 팀이면 총알만 안전하게 삭제 (팀킬 방지 완벽 구동)
             Destroy();
             return;
         }
     }
 
-    // 캐릭터가 아닌 벽(WorldStatic)에 부딪힌 경우 소멸 (부모의 원래 기능 수행)
-    if (OtherComp && OtherComp->GetCollisionObjectType() == ECC_WorldStatic)
-    {
-        Destroy();
-    }
+    // 🎯 [버그 해결] 캐릭터 처리가 아닌 그 외의 예외 상황(기타 환경 오브젝트 등)은
+    // 부모 클래스가 가지고 있는 기본 베이스 오버랩 예외 처리 함수에게 제어권을 토스합니다!
+    Super::OnOverlapBegin(OverlappedComp, OtherActor, OtherComp, OtherBodyIndex, bFromSweep, SweepResult);
 }
-
