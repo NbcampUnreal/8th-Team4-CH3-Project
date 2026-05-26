@@ -83,7 +83,16 @@ void ALA_PlayerCharacter::BeginPlay()
     // 무기 인스턴스 생성
     SpawnWeaponActor();
 
-    // 기본 무기(OwnedWeapons) 처리 및 첫 번째 무기 장착
+    // 기본 무기(OwnedWeapons) 처리
+    if (InitialWeaponData.IsValid() == true)
+    {
+        UAssetManager& AssetManager = UAssetManager::Get();
+        // 동기 방식 로드
+        AssetManager.GetStreamableManager().LoadSynchronous(AssetManager.GetPrimaryAssetPath(InitialWeaponData));
+        OnCompletedAsyncLoadWeaponDataAsset(InitialWeaponData);
+    }
+
+    // 첫 번째 무기 장착
     if (!OwnedWeapons.IsEmpty())
     {
         WeaponIDIndexer.Empty();
@@ -376,8 +385,7 @@ void ALA_PlayerCharacter::AddWeaponToPawn_Implementation(FPrimaryAssetId WeaponD
         return;
     }
 
-    // 동기 방식 로드
-    AssetManager.GetStreamableManager().LoadSynchronous(AssetManager.GetPrimaryAssetPath(WeaponDataID));
+    // 기존에 로드된 DataAsset을 사용하여 무기 획득 절차 시작
     OnCompletedAsyncLoadWeaponDataAsset(WeaponDataID);
 }
 
@@ -616,11 +624,14 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         GEngine->AddOnScreenDebugMessage(-1, 2.0f, FColor::Red, FString::Printf(TEXT("이미 소유하고 있는 무기입니다. - %s"), *WeaponDataID.ToString()));
         ULA_WeaponData* DuplicatedData = OwnedWeapons[WeaponDataID];
 
-        // 무기의 총알 채워넣기
-        if (EquipedWeapon != nullptr)
-        {
-            EquipedWeapon->RefillAmmo();
-        }
+        // 중복된 무기의 총알 채워넣기
+        int32& SpareAmmo = WeaponSpareAmmoMap.FindOrAdd(WeaponDataID);
+        SpareAmmo = DuplicatedData->MaxSpareAmmo;
+        int32& MagazineAmmo = WeaponMagazineAmmoMap.FindOrAdd(WeaponDataID);
+        MagazineAmmo = DuplicatedData->MaxMagazineSize;
+
+        // UI 업데이트
+        ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
         return;
     }
     else
@@ -628,6 +639,8 @@ void ALA_PlayerCharacter::OnCompletedAsyncLoadWeaponDataAsset(FPrimaryAssetId We
         // 보유한 무기 목록에 추가
         OwnedWeapons.Add(WeaponDataID, WeaponDataAsset);
         WeaponIDIndexer.Add(WeaponDataID);
+        WeaponSpareAmmoMap.Add(WeaponDataID, WeaponDataAsset->MaxSpareAmmo);
+        WeaponMagazineAmmoMap.Add(WeaponDataID, WeaponDataAsset->MaxMagazineSize);
     }
 }
 
@@ -1314,7 +1327,13 @@ void ALA_PlayerCharacter::RefillWeaponAmmo()
         return;
 
     EquipedWeapon->RefillAmmo();
-    FPrimaryAssetId CurrentID = EquipedWeapon->GetWeaponData()->GetPrimaryAssetId();
-    WeaponSpareAmmoMap.Add(CurrentID, EquipedWeapon->GetCurrentSpareAmmo());
-    WeaponMagazineAmmoMap.Add(CurrentID, EquipedWeapon->GetCurrentMagazineAmmo());
+    // 보유하고있는 무기 전체의 총알 보충
+    for (const TPair<FPrimaryAssetId, ULA_WeaponData*>& pair : OwnedWeapons)
+    {
+        WeaponSpareAmmoMap[pair.Key] = pair.Value->MaxSpareAmmo;
+        WeaponMagazineAmmoMap[pair.Key] = pair.Value->MaxMagazineSize;
+    }
+
+    // UI 업데이트
+    ILA_Holder::Execute_UpdateHUDWidgetOnActor(this, EquipedWeapon);
 }
