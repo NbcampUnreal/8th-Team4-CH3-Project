@@ -214,3 +214,74 @@ void ULA_HUD::HandleQuickSlotUpdated(int32 QuickSlotIndex)
         
     }
 }
+
+void ULA_HUD::NativeTick(const FGeometry& MyGeometry, float InDeltaTime)
+{
+    Super::NativeTick(MyGeometry, InDeltaTime);
+
+    bool bNeedsUpdate1 = false;
+    bool bNeedsUpdate2 = false;
+
+    // 아군 1 보간
+    if (Ally1MaxHealth > 0.0f && Ally1DelayedHealth > Ally1CurrentHealth)
+    {
+        Ally1DelayedHealth = FMath::FInterpTo(Ally1DelayedHealth, Ally1CurrentHealth, InDeltaTime, InterpSpeed);
+        if (Ally1DelayedHealth - Ally1CurrentHealth < 0.5f) Ally1DelayedHealth = Ally1CurrentHealth;
+        bNeedsUpdate1 = true;
+    }
+
+    // 아군 2 보간
+    if (Ally2MaxHealth > 0.0f && Ally2DelayedHealth > Ally2CurrentHealth)
+    {
+        Ally2DelayedHealth = FMath::FInterpTo(Ally2DelayedHealth, Ally2CurrentHealth, InDeltaTime, InterpSpeed);
+        if (Ally2DelayedHealth - Ally2CurrentHealth < 0.5f) Ally2DelayedHealth = Ally2CurrentHealth;
+        bNeedsUpdate2 = true;
+    }
+
+    if (bNeedsUpdate1) UpdateAllyRatios(1);
+    if (bNeedsUpdate2) UpdateAllyRatios(2);
+}
+
+void ULA_HUD::UpdateAlly1HP(float Current, float Max)
+{
+    if (Max <= 0.0f) return;
+    if (Ally1MaxHealth <= 0.0f) Ally1DelayedHealth = Current;
+    
+    Ally1CurrentHealth = Current;
+    Ally1MaxHealth = Max;
+
+    if (Ally1CurrentHealth > Ally1DelayedHealth) Ally1DelayedHealth = Ally1CurrentHealth;
+    UpdateAllyRatios(1);
+}
+
+void ULA_HUD::UpdateAlly2HP(float Current, float Max)
+{
+    if (Max <= 0.0f) return;
+    if (Ally2MaxHealth <= 0.0f) Ally2DelayedHealth = Current;
+
+    Ally2CurrentHealth = Current;
+    Ally2MaxHealth = Max;
+
+    if (Ally2CurrentHealth > Ally2DelayedHealth) Ally2DelayedHealth = Ally2CurrentHealth;
+    UpdateAllyRatios(2);
+}
+
+void ULA_HUD::UpdateAllyRatios(int32 AllyIndex)
+{
+    if (AllyIndex == 1)
+    {
+        if (Ally1MaxHealth <= 0.0f) return;
+        float HealthP = Ally1CurrentHealth / Ally1MaxHealth;
+        float DamageP = (Ally1DelayedHealth - Ally1CurrentHealth) / Ally1MaxHealth;
+        float SpaceP = (Ally1MaxHealth - Ally1DelayedHealth) / Ally1MaxHealth;
+        NativeUpdateAlly1HealthBar(HealthP, DamageP, SpaceP);
+    }
+    else if (AllyIndex == 2)
+    {
+        if (Ally2MaxHealth <= 0.0f) return;
+        float HealthP = Ally2CurrentHealth / Ally2MaxHealth;
+        float DamageP = (Ally2DelayedHealth - Ally2CurrentHealth) / Ally2MaxHealth;
+        float SpaceP = (Ally2MaxHealth - Ally2DelayedHealth) / Ally2MaxHealth;
+        NativeUpdateAlly2HealthBar(HealthP, DamageP, SpaceP);
+    }
+}
