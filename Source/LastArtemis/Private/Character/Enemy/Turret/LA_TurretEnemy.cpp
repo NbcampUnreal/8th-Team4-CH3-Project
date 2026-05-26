@@ -284,25 +284,43 @@ void ALA_TurretEnemy::SwitchTeam(FGameplayTag NewTeamTag)
 
 float ALA_TurretEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const& DamageEvent, class AController* EventInstigator, AActor* DamageCauser)
 {
-    // [수정] 만약 부모(BaseCharacter)의 TakeDamage 내부에 이미
-    // "실드 차감 -> 체력 차감 -> CurrentHealth <= 0 일 때 Die() 호출" 로직이 완벽하게 짜여 있다면?
-    // 터렛 C++ 파일에서는 TakeDamage 함수를 통째로 지워버려도 자동으로 부모 코드가 작동합니다!
-
-    // 하지만 터렛만 방어력 연산을 다르게 하거나 로그를 찍어야 한다면 아래처럼 부모 함수를 먼저 호출해 줍니다.
     if (bIsDead) return 0.0f;
 
-    // 부모의 데미지 공식을 실행시켜 부모 변수(CurrentHealth)를 알아서 깎게 만듭니다.
     float ActualDamage = 0.0f;
     if (HealthComp)
     {
         ActualDamage = HealthComp->TakeDamage(DamageAmount, false);
         if (HealthWidgetComp) HealthWidgetComp->SetVisibility(true);
+
+        // =================================================================
+        // 🎯 [사운드 강제 직통 버그 수정]
+        // =================================================================
+        if (ActualDamage > 0.0f)
+        {
+            // 1. 부모가 물려준 오리지널 HitSound 변수명을 정확히 조준합니다.
+            // (만약 부모 헤더의 변수명이 HitSound가 맞다면 이 코드가 작동합니다)
+            if (HitSound)
+            {
+                UGameplayStatics::PlaySoundAtLocation(this, HitSound, GetActorLocation());
+            }
+            // 2. 만약 위 코드로도 소리가 안 난다면, 무기 베이스가 대미지를 가할 때
+            // 꽂아준 DamageCauser(무기)나 EventInstigator(플레이어)의 사운드를 빌려 쓰거나,
+            // 터렛 자체에 변수를 바인딩해야 합니다.
+        }
+
+        if (HealthComp->GetCurrentHealth() <= 0.0f)
+        {
+            Die();
+            return ActualDamage;
+        }
     }
     else
     {
+        // 컴포넌트가 없을 땐 부모 함수를 타므로 부모의 사운드가 재생됩니다.
         ActualDamage = Super::TakeDamage(DamageAmount, DamageEvent, EventInstigator, DamageCauser);
     }
 
+    // 대미지 텍스트 출력 로직...
     if (ActualDamage > 0.0f)
     {
         AccumulatedDamage += ActualDamage;
@@ -312,10 +330,8 @@ float ALA_TurretEnemy::TakeDamage(float DamageAmount, struct FDamageEvent const&
         }
     }
 
-
     return ActualDamage;
 }
-
 void ALA_TurretEnemy::Die()
 {
     // 부모의 Die() 기능을 먼저 실행시켜 공통 사망 처리(bIsDead = true 등)를 수행합니다.
@@ -357,6 +373,11 @@ void ALA_TurretEnemy::OnHealthChangedCallback(float CurrentHP, float MaxHP)
     if (OnHealthChanged.IsBound())
     {
         OnHealthChanged.Broadcast(CurrentHP);
+    }
+
+    if (CurrentHealth <= 0.0f && !bIsDead)
+    {
+        Die();
     }
 }
 
