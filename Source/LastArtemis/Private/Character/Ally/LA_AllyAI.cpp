@@ -8,6 +8,8 @@
 #include "NiagaraFunctionLibrary.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "Character/Player/Component/LA_HealthComponent.h"
+#include "Components/CapsuleComponent.h"
+#include "Components/SkeletalMeshComponent.h"
 
 ALA_AllyAI::ALA_AllyAI()
 {
@@ -144,6 +146,13 @@ void ALA_AllyAI::Die()
         GetCharacterMovement()->StopMovementImmediately();
     }
 
+    // 충돌 제거
+    SetActorEnableCollision(false);
+    if (UCapsuleComponent* AllyCapsuleComp = GetCapsuleComponent())
+    {
+        AllyCapsuleComp->SetCollisionEnabled(ECollisionEnabled::NoCollision);
+    }
+
     // 사망 연출 (기존 로직 보존)
     if (DeathMontage)
     {
@@ -159,7 +168,15 @@ void ALA_AllyAI::Die()
         GetMesh()->SetSimulatePhysics(true);
     }
 
-    SetLifeSpan(5.0f);
+    GetWorldTimerManager().ClearTimer(HideDeadAllyTimerHandle);
+    GetWorldTimerManager().SetTimer(
+        HideDeadAllyTimerHandle,
+        this,
+        &ALA_AllyAI::HideDeadAlly,
+        5.0f,
+        false
+    );
+    //SetLifeSpan(5.0f);
 }
 
 void ALA_AllyAI::ResetHitState()
@@ -187,4 +204,61 @@ void ALA_AllyAI::OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted)
 void ALA_AllyAI::ResetFiringState()
 {
     bIsFiring = false;
+}
+
+// 사망한 ally 화면에서 숨김 처리
+void ALA_AllyAI::HideDeadAlly()
+{
+    SetActorHiddenInGame(true);
+}
+
+// 체크 포인트 상호작용 시 기존 Ally 활성화
+// 부활 위치는 스포너에서 계산
+void ALA_AllyAI::ReviveAtLocation(const FVector& NewLocation, const FRotator& NewRotation)
+{
+    GetWorldTimerManager().ClearTimer(HideDeadAllyTimerHandle);
+
+    bIsDead = false;
+
+    // 스포너에서 계산한 위치로 복구
+    SetActorLocationAndRotation(
+        NewLocation,
+        NewRotation,
+        false,
+        nullptr,
+        ETeleportType::TeleportPhysics
+    );
+
+    SetActorHiddenInGame(false);
+
+    // 이동 상태 복구
+    if (GetCharacterMovement())
+    {
+        GetCharacterMovement()->SetMovementMode(MOVE_Walking);
+    }
+
+    // 애니메이션 tick 복구
+    if (USkeletalMeshComponent* AllyMesh = GetMesh())
+    {
+        AllyMesh->bPauseAnims = false;
+        AllyMesh->SetComponentTickEnabled(true);
+        AllyMesh->InitializeAnimScriptInstance(true);
+    }
+
+    // 체력 회복
+    if (HealthComponent)
+    {
+        HealthComponent->Heal(
+            HealthComponent->GetMaxHealth() - HealthComponent->GetCurrentHealth()
+        );
+    }
+
+    // behavior tree 재시작
+    if (ALA_AllyAIController* AIController = Cast<ALA_AllyAIController>(GetController()))
+    {
+        if (AIController->GetBrainComponent())
+        {
+            AIController->GetBrainComponent()->RestartLogic();
+        }
+    }
 }
