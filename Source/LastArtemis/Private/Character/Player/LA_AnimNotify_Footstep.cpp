@@ -30,8 +30,11 @@ void ULA_AnimNotify_Footstep::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     if (OwnerCharacter == nullptr) return;
 
     // 플레이어가 공중에 떠 있는 상태라면 발소리를 생략
-    UCharacterMovementComponent* MovementComp = OwnerCharacter->GetCharacterMovement();
-    if (MovementComp && MovementComp->IsFalling()) return;
+    UCharacterMovementComponent* Movement = OwnerCharacter->GetCharacterMovement();
+    if (Movement && Movement->IsFalling()) return;
+
+    // 플레이어가 움직이지 않으면 발소리를 생략
+    if (OwnerCharacter->GetVelocity().Size2D() < 10.f) return;
 
     FVector StartLocation = OwnerCharacter->GetActorLocation();
     FVector EndLocation = StartLocation - FVector(0.f, 0.f, TraceDistance);

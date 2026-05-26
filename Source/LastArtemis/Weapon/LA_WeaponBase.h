@@ -65,18 +65,6 @@ public:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|State")
     EWeaponState CurrentState;
 
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo")
-    int32 CurrentMagazineAmmo;
-
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo")
-    int32 CurrentSpareAmmo;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
-    TMap<TEnumAsByte<EPhysicalSurface>, class UNiagaraSystem*> ImpactParticles;
-
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
-    class UMaterialInterface* DecalMaterial;
-
 protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Components")
     USceneComponent* Root;
@@ -92,6 +80,21 @@ protected:
 
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Data")
     ULA_WeaponData* WeaponData;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo")
+    int32 CurrentMagazineAmmo;
+
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Weapon|Ammo")
+    int32 CurrentSpareAmmo;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
+    TMap<TEnumAsByte<EPhysicalSurface>, class UNiagaraSystem*> ImpactParticles;
+
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Weapon|Visual")
+    class UMaterialInterface* DecalMaterial;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Weapon|Sound")
+    class USoundBase* DryFireSound;
 
 private:
     float CameraPitch;

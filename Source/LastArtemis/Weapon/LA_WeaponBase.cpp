@@ -175,7 +175,13 @@ void ALA_WeaponBase::StopAiming()
 
 void ALA_WeaponBase::StartFire()
 {
-    if (CurrentState != EWeaponState::Idle || CurrentMagazineAmmo <= 0) return;
+    if (CurrentState != EWeaponState::Idle) return;
+
+    if (CurrentMagazineAmmo <= 0)
+    {
+        UGameplayStatics::PlaySoundAtLocation(this, DryFireSound, GetActorLocation());
+        return;
+    }
 
     Fire();
     GetWorld()->GetTimerManager().SetTimer(FireTimerHandle, this, &ALA_WeaponBase::Fire, WeaponData->FireRate, true);
@@ -205,6 +211,7 @@ void ALA_WeaponBase::Fire()
 {
     if (CurrentMagazineAmmo <= 0)
     {
+        UGameplayStatics::PlaySoundAtLocation(this, DryFireSound, GetActorLocation());
         StopFire();
         return;
     }

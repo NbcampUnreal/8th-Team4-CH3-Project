@@ -1208,7 +1208,7 @@ void ALA_PlayerCharacter::InventoryAction()
         if (Inventory)
         {
             Inventory->AddToViewport();
-            
+
             // 인벤토리 초기화
             Inventory->InitializeInventory(InventoryComponent);
 
