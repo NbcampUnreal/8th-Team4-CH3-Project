@@ -50,4 +50,12 @@ protected:
 
     UFUNCTION()
     void OnDeathMontageEnded(UAnimMontage* Montage, bool bInterrupted);
+
+public:
+    void ReviveAtLocation(const FVector& NewLocation, const FRotator& NewRotation);
+
+private:
+    FTimerHandle HideDeadAllyTimerHandle;
+
+    void HideDeadAlly();
 };

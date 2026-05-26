@@ -177,7 +177,7 @@ void ALA_BossController::ShootSingleShot()
 
     FVector ForwardVector = BossPawn->GetActorForwardVector();
 
-    FVector SpawnLocation = BossPawn->GetActorLocation() + (ForwardVector * 150.0f) + FVector(0.f, 0.f, 80.f);
+    FVector SpawnLocation = BossPawn->GetActorLocation() + (ForwardVector * 90.0f) + FVector(0.f, 0.f, 80.f);
     FRotator SpawnRotation = ForwardVector.Rotation();
 
     GetWorld()->SpawnActor<AActor>(
@@ -216,7 +216,7 @@ void ALA_BossController::ShootFanPattern()
         SpawnParams.Owner = BossPawn;
         SpawnParams.Instigator = BossPawn;
 
-        FVector SpawnLocation = BossPawn->GetActorLocation() + (FinalRotation.Vector() * 150.0f) + FVector(0.f, 0.f, 80.f);
+        FVector SpawnLocation = BossPawn->GetActorLocation() + (FinalRotation.Vector() * 90.0f) + FVector(0.f, 0.f, 80.f);
 
         GetWorld()->SpawnActor<AActor>(ProjectileClass, SpawnLocation, FinalRotation, SpawnParams);
     }
@@ -242,7 +242,7 @@ void ALA_BossController::ShootBomb()
     SpawnParams.Owner = BossPawn;
     SpawnParams.Instigator = BossPawn;
 
-    FVector StartLocation = BossPawn->GetActorLocation() + (BossPawn->GetActorForwardVector() * 150.0f) + FVector(0.f, 0.f, 120.f);
+    FVector StartLocation = BossPawn->GetActorLocation() + (BossPawn->GetActorForwardVector() * 90.0f) + FVector(0.f, 0.f, 120.f);
     FVector TargetLocation = TargetPlayer->GetActorLocation();
 
     AActor* SpawnedBomb = GetWorld()->SpawnActor<AActor>(BombClass, StartLocation, FRotator::ZeroRotator, SpawnParams);
