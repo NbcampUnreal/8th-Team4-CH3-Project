@@ -24,11 +24,16 @@ public:
     UFUNCTION(BlueprintImplementableEvent)
     void UpdateHP(float Current, float Max);
 
-    UFUNCTION(BlueprintImplementableEvent)
+    // 아군 체력 업데이트용 C++ 함수 (Delegate 연결용)
     void UpdateAlly1HP(float Current, float Max);
-
-    UFUNCTION(BlueprintImplementableEvent)
     void UpdateAlly2HP(float Current, float Max);
+
+    // 블루프린트에서 세 개의 바 비율을 받아 처리하는 이벤트
+    UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+    void NativeUpdateAlly1HealthBar(float HealthPercent, float DamagePercent, float SpacePercent);
+
+    UFUNCTION(BlueprintImplementableEvent, Category = "UI")
+    void NativeUpdateAlly2HealthBar(float HealthPercent, float DamagePercent, float SpacePercent);
 
     UFUNCTION(BlueprintImplementableEvent)
     void UpdateShield(float Current, float Max);
@@ -71,6 +76,8 @@ public:
 
     void BindWeapon();
 
+    virtual void NativeTick(const FGeometry& MyGeometry, float InDeltaTime) override;
+
 protected:
 
     UPROPERTY(BlueprintReadOnly, Category = "Reference")
@@ -88,5 +95,22 @@ protected:
 
     UPROPERTY()
     TObjectPtr<AActor> Ally2Actor;
+
+private:
+    // 아군 1 체력 정보
+    float Ally1CurrentHealth = 0.0f;
+    float Ally1MaxHealth = 0.0f;
+    float Ally1DelayedHealth = 0.0f;
+
+    // 아군 2 체력 정보
+    float Ally2CurrentHealth = 0.0f;
+    float Ally2MaxHealth = 0.0f;
+    float Ally2DelayedHealth = 0.0f;
+
+    // 보간 속도
+    UPROPERTY(EditAnywhere, Category = "UI")
+    float InterpSpeed = 10.0f;
+
+    void UpdateAllyRatios(int32 AllyIndex);
 
 };
