@@ -154,12 +154,15 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "4_Weapon Settings")
     TSubclassOf<class ALA_WeaponBase> WeaponActor;
 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    FPrimaryAssetId InitialWeaponData;
+
     // 소지할 무기들을 할당하는 맵
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     TMap<FPrimaryAssetId, ULA_WeaponData*> OwnedWeapons;
 
     // 무기 퀵슬롯 (1, 2, 3)에 해당하는 OwnedWeapons의 Key 값을 관리하는 배열
-    UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "4_Weapon Settings")
     TArray<FPrimaryAssetId> WeaponIDIndexer;
 
     // 각 무기 ID별 남은 예비 탄약(Spare Ammo) 저장소
